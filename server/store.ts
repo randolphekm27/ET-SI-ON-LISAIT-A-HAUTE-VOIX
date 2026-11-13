@@ -523,10 +523,8 @@ export async function readStore(): Promise<StoreData> {
       },
     };
   } catch (error) {
-    console.error('Database readStore failed:', error);
-    throw new Error('Impossible de charger les données du concours.', {
-      cause: error,
-    });
+    console.warn('Database readStore indisponible, bascule sur le store local JSON:', error);
+    return readJsonStore();
   }
 }
 

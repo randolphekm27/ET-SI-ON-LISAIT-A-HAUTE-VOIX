@@ -120,20 +120,6 @@ function isValidEmail(email: string): boolean {
 }
 
 export function registerApiRoutes(app: express.Express) {
-  // Garantit la prise en compte des requêtes API avec ou sans préfixe /api
-  app.use((req, _res, next) => {
-    if (
-      !req.url.startsWith('/api') &&
-      !req.url.startsWith('/assets') &&
-      !req.url.startsWith('/@') &&
-      !req.url.startsWith('/src') &&
-      !req.url.startsWith('/node_modules') &&
-      !req.url.startsWith('/favicon')
-    ) {
-      req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`;
-    }
-    next();
-  });
   // Public API: Announcements (strictly published only)
   app.get('/api/announcements', async (_req, res) => {
     try {
