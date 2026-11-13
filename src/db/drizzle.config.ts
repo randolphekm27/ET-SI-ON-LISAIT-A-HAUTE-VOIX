@@ -1,24 +1,22 @@
 import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
+import fs from 'node:fs';
+import path from 'node:path';
 
+// Charge les variables d'environnement depuis .env puis .env.local
 dotenv.config();
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath, override: true });
+}
 
-const sqlHost = process.env.SQL_HOST;
-const sqlDbName = process.env.SQL_DB_NAME;
-const user = process.env.SQL_ADMIN_USER;
-const password = process.env.SQL_ADMIN_PASSWORD;
+const databaseUrl = process.env.DATABASE_URL;
 
-if (!sqlHost) {
-  throw new Error('SQL_HOST must be set in environment variables.');
-}
-if (!sqlDbName) {
-  throw new Error('SQL_DB_NAME must be set in environment variables.');
-}
-if (!user) {
-  throw new Error('SQL_ADMIN_USER must be set in environment variables.');
-}
-if (!password) {
-  throw new Error('SQL_ADMIN_PASSWORD must be set in environment variables.');
+if (!databaseUrl) {
+  throw new Error(
+    "DATABASE_URL est manquante dans les variables d'environnement. " +
+      'Renseignez votre chaîne de connexion Supabase (Transaction Pooler port 6543) dans votre fichier .env ou .env.local.',
+  );
 }
 
 export default defineConfig({
@@ -27,11 +25,8 @@ export default defineConfig({
   dialect: 'postgresql',
   schemaFilter: ['public'],
   dbCredentials: {
-    host: sqlHost,
-    user,
-    password,
-    database: sqlDbName,
-    ssl: false,
+    url: databaseUrl,
+    ssl: { rejectUnauthorized: false },
   },
   verbose: true,
 });

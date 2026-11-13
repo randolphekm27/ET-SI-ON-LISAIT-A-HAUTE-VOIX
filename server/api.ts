@@ -19,6 +19,7 @@ import {
   saveContactMessage,
   saveRegistration,
   updateAnnouncementRecord,
+  updateNewsRecord,
   updatePhaseRecord,
   updateSettingsRecord,
 } from './store';
@@ -36,14 +37,27 @@ const ORGANIZER_ALLOWLIST = new Set(
     .filter(Boolean),
 );
 
-function getOrganizerCode(): string {
-  return (process.env.ORGANIZER_ACCESS_CODE || 'UCAEP-LOKOSSA-2026').trim();
+function getOrganizerCode(): string | null {
+  const code = process.env.ORGANIZER_ACCESS_CODE;
+  return code && code.trim() ? code.trim() : null;
+}
+
+function isOrganizerCodeValid(inputCode: string): boolean {
+  const configured = getOrganizerCode();
+  if (!configured) return false;
+  const inputBuffer = Buffer.from(inputCode.trim());
+  const configuredBuffer = Buffer.from(configured);
+  if (inputBuffer.length !== configuredBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(inputBuffer, configuredBuffer);
 }
 
 function getTokenSecret(): string {
+  const code = getOrganizerCode() || 'ucaep-static-auth-secret';
   return crypto
     .createHash('sha256')
-    .update(`ucaep-session:${getOrganizerCode()}`)
+    .update(`ucaep-session:${code}`)
     .digest('hex');
 }
 
@@ -159,8 +173,16 @@ export function registerApiRoutes(app: express.Express) {
     requireAuth,
     async (req: AuthRequest, res) => {
       try {
+        const configured = getOrganizerCode();
+        if (!configured) {
+          res.status(503).json({
+            error:
+              "Le code d'accès organisateur n'est pas configuré sur le serveur (ORGANIZER_ACCESS_CODE manquant).",
+          });
+          return;
+        }
         const { code } = (req.body || {}) as { code?: string };
-        if (!code || code.trim() !== getOrganizerCode()) {
+        if (!code || !isOrganizerCodeValid(code)) {
           res.status(401).json({ error: "Ce code d'accès ne correspond pas." });
           return;
         }
@@ -280,9 +302,53 @@ export function registerApiRoutes(app: express.Express) {
         return;
       }
 
+      const phoneTrim = (body.phone || '').trim();
+      if (
+        phoneTrim.length < 6 ||
+        phoneTrim.length > 30 ||
+        !/^[0-9+() \-.]+$/.test(phoneTrim)
+      ) {
+        res.status(400).json({
+          error: 'Indiquez un numéro de téléphone joignable valide.',
+        });
+        return;
+      }
+
+      if (body.firstName!.trim().length > 100 || body.lastName!.trim().length > 100) {
+        res.status(400).json({
+          error:
+            'Le prénom ou le nom dépasse la longueur maximale autorisée (100 caractères).',
+        });
+        return;
+      }
+
+      if (body.studentId!.trim().length > 50) {
+        res.status(400).json({
+          error: 'Le numéro matricule ne doit pas dépasser 50 caractères.',
+        });
+        return;
+      }
+
+      if (
+        body.institution!.trim().length > 150 ||
+        body.department!.trim().length > 150
+      ) {
+        res.status(400).json({
+          error: "L'établissement ou la filière dépasse la longueur maximale autorisée.",
+        });
+        return;
+      }
+
       if ((body.motivation || '').trim().length < 25) {
         res.status(400).json({
           error: 'Dites-nous en au moins 25 caractères ce qui vous donne envie de participer.',
+        });
+        return;
+      }
+
+      if ((body.motivation || '').trim().length > 2500) {
+        res.status(400).json({
+          error: 'Le texte de motivation ne doit pas dépasser 2500 caractères.',
         });
         return;
       }
@@ -330,6 +396,10 @@ export function registerApiRoutes(app: express.Express) {
         res.status(409).json({ error: err.message });
         return;
       }
+      if (err.statusCode === 503) {
+        res.status(503).json({ error: err.message });
+        return;
+      }
       res.status(502).json({
         error:
           err.message ||
@@ -350,6 +420,19 @@ export function registerApiRoutes(app: express.Express) {
         res.status(400).json({ error: 'Cette adresse e-mail ne semble pas correcte.' });
         return;
       }
+      if (name.trim().length > 100) {
+        res.status(400).json({ error: 'Le nom ne doit pas dépasser 100 caractères.' });
+        return;
+      }
+      if (subject.trim().length > 150) {
+        res.status(400).json({ error: "L'objet ne doit pas dépasser 150 caractères." });
+        return;
+      }
+      if (message.trim().length > 3000) {
+        res.status(400).json({ error: 'Le message ne doit pas dépasser 3000 caractères.' });
+        return;
+      }
+
       const saved = await saveContactMessage({
         name: name.trim(),
         email: email.trim(),
@@ -357,17 +440,32 @@ export function registerApiRoutes(app: express.Express) {
         message: message.trim(),
       });
       res.status(201).json({ saved: true, id: saved.id });
-    } catch {
+    } catch (error) {
+      const err = error as Error & { statusCode?: number };
+      if (err.statusCode === 503) {
+        res.status(503).json({ error: err.message });
+        return;
+      }
       res.status(500).json({
-        error: "Votre message n'a pas pu être envoyé pour le moment. Réessayez dans un instant.",
+        error:
+          err.message ||
+          "Votre message n'a pas pu être envoyé pour le moment. Réessayez dans un instant.",
       });
     }
   });
 
   // Organizer CMS Auth (access code)
   app.post('/api/admin/auth', (req, res) => {
+    const configured = getOrganizerCode();
+    if (!configured) {
+      res.status(503).json({
+        error:
+          "Le code d'accès organisateur n'est pas configuré sur le serveur (ORGANIZER_ACCESS_CODE manquant).",
+      });
+      return;
+    }
     const { code } = (req.body || {}) as { code?: string };
-    if (!code || code.trim() !== getOrganizerCode()) {
+    if (!code || !isOrganizerCodeValid(code)) {
       res.status(401).json({ error: "Ce code d'accès ne correspond pas." });
       return;
     }
@@ -498,6 +596,28 @@ export function registerApiRoutes(app: express.Express) {
     } catch (error) {
       const err = error as Error;
       res.status(500).json({ error: err.message || "Impossible d'enregistrer l'article." });
+    }
+  });
+
+  // Organizer CMS: Update News Article
+  app.patch('/api/admin/news/:id', requireAdmin, async (req, res) => {
+    try {
+      const updated = await updateNewsRecord(String(req.params.id), {
+        title: req.body.title,
+        excerpt: req.body.excerpt,
+        content: req.body.content,
+        category: req.body.category,
+        status: req.body.status,
+        imageKey: req.body.imageKey,
+      });
+      if (!updated) {
+        res.status(404).json({ error: 'Article introuvable.' });
+        return;
+      }
+      res.json({ article: updated });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || 'Mise à jour impossible.' });
     }
   });
 

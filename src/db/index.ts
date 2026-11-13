@@ -7,24 +7,20 @@ declare global {
 }
 
 export function isCloudSqlConfigured(): boolean {
-  return Boolean(
-    process.env.SQL_HOST && process.env.SQL_USER && process.env.SQL_DB_NAME,
-  );
+  return Boolean(process.env.DATABASE_URL);
 }
 
 export const createPool = () => {
   if (!global._postgresPool) {
     global._postgresPool = new Pool({
-      host: process.env.SQL_HOST,
-      user: process.env.SQL_USER,
-      password: process.env.SQL_PASSWORD,
-      database: process.env.SQL_DB_NAME,
-      max: 10,
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 5,
       connectionTimeoutMillis: 15000,
     });
 
     global._postgresPool.on('error', (err) => {
-      console.error('Unexpected error on idle SQL pool client:', err);
+      console.error('Unexpected error on idle SQL pool client:', err.message);
     });
   }
   return global._postgresPool;

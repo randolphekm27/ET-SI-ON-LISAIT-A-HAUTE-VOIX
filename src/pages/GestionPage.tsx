@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Download, Lock, LogOut, Plus, Unlock } from 'lucide-react';
+import { useState, type FormEvent, useMemo } from 'react';
+import { Download, Lock, LogOut, Plus, Search, Unlock } from 'lucide-react';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../lib/firebase';
 import { fetchApiJson } from '../lib/api';
@@ -32,6 +32,8 @@ const STATUS_LABELS: Record<PublicationStatus, string> = {
   archived: 'Archivé',
 };
 
+const CANDIDATES_PER_PAGE = 50;
+
 export function GestionPage() {
   usePageSeo(
     'Espace organisateurs',
@@ -46,9 +48,9 @@ export function GestionPage() {
   const [accessCode, setAccessCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [data, setData] = useState<AdminOverview | null>(null);
-  const [tab, setTab] = useState<'annonces' | 'parcours' | 'candidats' | 'config'>(
-    'annonces',
-  );
+  const [tab, setTab] = useState<
+    'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config'
+  >('annonces');
   const [notice, setNotice] = useState('');
 
   // Announcement creation form
@@ -59,6 +61,18 @@ export function GestionPage() {
   const [annStatus, setAnnStatus] = useState<PublicationStatus>('draft');
   const [annScheduledAt, setAnnScheduledAt] = useState('');
   const [annImage, setAnnImage] = useState<MediaAssetKey>('campus');
+
+  // News creation form
+  const [newsTitle, setNewsTitle] = useState('');
+  const [newsCategory, setNewsCategory] = useState<NewsArticle['category']>('Vie du concours');
+  const [newsExcerpt, setNewsExcerpt] = useState('');
+  const [newsContent, setNewsContent] = useState('');
+  const [newsStatus, setNewsStatus] = useState<PublicationStatus>('published');
+  const [newsImage, setNewsImage] = useState<MediaAssetKey>('campus');
+
+  // Candidate search & pagination
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const [candidatePage, setCandidatePage] = useState(1);
 
   // Settings form
   const [gasUrl, setGasUrl] = useState('');
@@ -85,11 +99,21 @@ export function GestionPage() {
     overrideAdminToken?: string,
     overrideFirebaseToken?: string,
   ) {
-    const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
-      headers: buildAuthHeaders(undefined, overrideAdminToken, overrideFirebaseToken),
-    });
-    setData(json);
-    setGasUrl(json.settings.googleAppsScriptUrl || '');
+    try {
+      const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
+        headers: buildAuthHeaders(undefined, overrideAdminToken, overrideFirebaseToken),
+      });
+      setData(json);
+      setGasUrl(json.settings.googleAppsScriptUrl || '');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur de chargement.';
+      setAuthError(msg);
+      if (msg.includes('401') || msg.includes('requise') || msg.includes('expirée')) {
+        setToken('');
+        setFirebaseToken('');
+        setData(null);
+      }
+    }
   }
 
   async function handleGoogleLogin() {
@@ -169,7 +193,7 @@ export function GestionPage() {
     try {
       await signOut(auth);
     } catch {
-      // ignore if user only signed in with access code
+      // ignore
     }
   }
 
@@ -193,7 +217,7 @@ export function GestionPage() {
       setAnnTitle('');
       setAnnExcerpt('');
       setAnnContent('');
-      setNotice('Annonce enregistrée.');
+      setNotice('Annonce enregistrée dans la base.');
       await loadOverview();
     } catch (err) {
       setNotice(
@@ -203,36 +227,89 @@ export function GestionPage() {
   }
 
   async function handleAnnouncementStatus(id: string, status: PublicationStatus) {
-    await fetchApiJson(`/api/admin/announcements/${id}`, {
-      method: 'PATCH',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ status }),
-    });
-    await loadOverview();
+    try {
+      await fetchApiJson(`/api/admin/announcements/${id}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ status }),
+      });
+      await loadOverview();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
+  }
+
+  async function handleCreateNews(e: FormEvent) {
+    e.preventDefault();
+    setNotice('');
+    try {
+      await fetchApiJson('/api/admin/news', {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          title: newsTitle,
+          category: newsCategory,
+          excerpt: newsExcerpt,
+          content: newsContent,
+          status: newsStatus,
+          imageKey: newsImage,
+        }),
+      });
+      setNewsTitle('');
+      setNewsExcerpt('');
+      setNewsContent('');
+      setNotice('Actualité enregistrée dans la base.');
+      await loadOverview();
+    } catch (err) {
+      setNotice(
+        err instanceof Error ? err.message : "Impossible d'enregistrer cette actualité.",
+      );
+    }
+  }
+
+  async function handleNewsStatus(id: string, status: PublicationStatus) {
+    try {
+      await fetchApiJson(`/api/admin/news/${id}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ status }),
+      });
+      await loadOverview();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
   }
 
   async function handleTogglePhaseReveal(phase: CompetitionPhase) {
-    await fetchApiJson(`/api/admin/phases/${phase.id}`, {
-      method: 'PATCH',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        isRevealed: !phase.isRevealed,
-        statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
-      }),
-    });
-    await loadOverview();
+    try {
+      await fetchApiJson(`/api/admin/phases/${phase.id}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          isRevealed: !phase.isRevealed,
+          statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
+        }),
+      });
+      await loadOverview();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
   }
 
   async function handlePhaseStatusLabel(
     phaseId: string,
     statusLabel: CompetitionPhase['statusLabel'],
   ) {
-    await fetchApiJson(`/api/admin/phases/${phaseId}`, {
-      method: 'PATCH',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ statusLabel }),
-    });
-    await loadOverview();
+    try {
+      await fetchApiJson(`/api/admin/phases/${phaseId}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ statusLabel }),
+      });
+      await loadOverview();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
   }
 
   async function handleSaveSettings(e: FormEvent) {
@@ -246,7 +323,7 @@ export function GestionPage() {
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ googleAppsScriptUrl: gasUrl }),
       });
-      setNotice('Lien Google Sheets enregistré.');
+      setNotice('Lien Google Sheets enregistré dans la base.');
       await loadOverview();
     } catch (err) {
       setGasTestError(err instanceof Error ? err.message : "Impossible d'enregistrer.");
@@ -279,15 +356,20 @@ export function GestionPage() {
     if (!data?.registrations.length) return;
     const headers = [
       'Référence',
-      'Date',
+      'Date inscription',
       'Prénom',
       'Nom',
       'E-mail',
       'Téléphone',
+      'Date de naissance',
+      'Genre',
       'Établissement',
       'Filière',
       'Niveau',
       'Matricule',
+      'Motivation',
+      'Expérience',
+      'Synchro Google Sheets',
     ];
     const rows = data.registrations.map((r) => [
       r.referenceCode,
@@ -296,38 +378,87 @@ export function GestionPage() {
       r.lastName,
       r.email,
       r.phone,
+      r.birthDate,
+      r.gender,
       r.institution,
       r.department,
       r.studyLevel,
       r.studentId,
+      r.motivation,
+      r.readingExperience || '',
+      r.syncedToGoogleSheets ? 'Oui' : 'Non',
     ]);
-    const csv = [headers, ...rows]
+    const csvContent = [headers, ...rows]
       .map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+        row
+          .map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`)
+          .join(';'),
       )
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      .join('\r\n');
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'inscriptions-ucaep-2026.csv';
+    link.download = `inscriptions-ucaep-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
 
+  const filteredCandidates = useMemo(() => {
+    if (!data?.registrations) return [];
+    if (!candidateSearch.trim()) return data.registrations;
+    const q = candidateSearch.trim().toLowerCase();
+    return data.registrations.filter(
+      (r) =>
+        r.referenceCode.toLowerCase().includes(q) ||
+        r.firstName.toLowerCase().includes(q) ||
+        r.lastName.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q) ||
+        r.studentId.toLowerCase().includes(q) ||
+        r.department.toLowerCase().includes(q) ||
+        r.institution.toLowerCase().includes(q),
+    );
+  }, [data?.registrations, candidateSearch]);
+
+  const totalCandidatePages =
+    Math.ceil(filteredCandidates.length / CANDIDATES_PER_PAGE) || 1;
+  const paginatedCandidates = useMemo(() => {
+    const start = (candidatePage - 1) * CANDIDATES_PER_PAGE;
+    return filteredCandidates.slice(start, start + CANDIDATES_PER_PAGE);
+  }, [filteredCandidates, candidatePage]);
+
+  const stats = useMemo(() => {
+    if (!data?.registrations) return { total: 0, byDept: {}, byLevel: {} };
+    const byDept: Record<string, number> = {};
+    const byLevel: Record<string, number> = {};
+    for (const r of data.registrations) {
+      byDept[r.department] = (byDept[r.department] || 0) + 1;
+      byLevel[r.studyLevel] = (byLevel[r.studyLevel] || 0) + 1;
+    }
+    return {
+      total: data.registrations.length,
+      byDept,
+      byLevel,
+    };
+  }, [data?.registrations]);
+
   if ((!token && !firebaseToken) || !data) {
     return (
-      <div className="py-20 bg-[#FBF9F5]">
+      <div className="py-20 bg-ucaep-paper">
         <div className="max-w-md mx-auto px-4">
-          <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-6">
+          <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
+              <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-green">
                 Équipe UCAEP
               </p>
-              <h1 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
+              <h1 className="font-serif text-3xl font-semibold text-ucaep-brown">
                 Espace organisateurs
               </h1>
-              <p className="text-sm text-[#1A1A1A]/75">
+              <p className="text-sm text-ucaep-ink/75">
                 {needsOrganizerLink
                   ? `Compte connecté (${googleEmail}). Saisissez le code de l'équipe une fois pour activer votre accès.`
                   : 'Modifier les annonces, ouvrir ou fermer les phases du concours et suivre les inscriptions reçues.'}
@@ -346,7 +477,7 @@ export function GestionPage() {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={googleLoading}
-                  className="w-full py-3 px-4 text-sm font-semibold rounded-sm border border-[#4E2A1E]/25 bg-[#FBF9F5] text-[#4E2A1E] hover:bg-[#F7E6C8]/50 transition-colors disabled:opacity-50"
+                  className="w-full py-3 px-4 text-sm font-semibold rounded-sm border border-ucaep-brown/25 bg-ucaep-paper text-ucaep-brown hover:bg-ucaep-ivory/50 transition-colors disabled:opacity-50"
                 >
                   {googleLoading
                     ? 'Connexion avec Google...'
@@ -354,11 +485,11 @@ export function GestionPage() {
                 </button>
 
                 <div className="relative flex items-center py-1">
-                  <div className="flex-grow border-t border-[#4E2A1E]/12" />
-                  <span className="mx-3 text-[11px] uppercase tracking-widest text-[#4E2A1E]/55">
+                  <div className="grow border-t border-ucaep-brown/12" />
+                  <span className="mx-3 text-[11px] uppercase tracking-widest text-ucaep-brown/55">
                     ou
                   </span>
-                  <div className="flex-grow border-t border-[#4E2A1E]/12" />
+                  <div className="grow border-t border-ucaep-brown/12" />
                 </div>
               </>
             )}
@@ -367,7 +498,7 @@ export function GestionPage() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="org-code"
-                  className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
                 >
                   Code d&apos;accès
                 </label>
@@ -378,12 +509,12 @@ export function GestionPage() {
                   onChange={(e) => setAccessCode(e.target.value)}
                   placeholder="Entrez le code de l'équipe"
                   required
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-sm border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
+                className="w-full py-3 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors"
               >
                 {needsOrganizerLink ? 'Activer mon accès' : 'Se connecter'}
               </button>
@@ -395,21 +526,21 @@ export function GestionPage() {
   }
 
   return (
-    <div className="py-14 bg-[#FBF9F5]">
+    <div className="py-14 bg-ucaep-paper">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#4E2A1E]/15 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-ucaep-brown/15 pb-6">
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-green">
               Équipe UCAEP · Organisation
             </p>
             <div className="flex flex-wrap items-center gap-4">
-              <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
+              <h1 className="font-serif text-4xl font-semibold text-ucaep-brown">
                 Gestion du concours
               </h1>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm border border-[#4E2A1E]/20 text-[#4E2A1E] hover:bg-[#4E2A1E]/5 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Déconnexion</span>
@@ -417,13 +548,14 @@ export function GestionPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F7E6C8]/45 rounded-sm border border-[#4E2A1E]/12">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-ucaep-ivory/45 rounded-sm border border-ucaep-brown/12">
             {(
               [
                 ['annonces', 'Annonces'],
+                ['actualites', `Actualités (${data.news.length})`],
                 ['parcours', 'Phases'],
                 ['candidats', `Inscrits (${data.registrations.length})`],
-                ['config', 'Google Sheets'],
+                ['config', 'Paramètres'],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -432,8 +564,8 @@ export function GestionPage() {
                 onClick={() => setTab(id)}
                 className={`px-3.5 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 ${
                   tab === id
-                    ? 'bg-[#4E2A1E] text-[#FBF9F5]'
-                    : 'text-[#4E2A1E] hover:bg-white/60'
+                    ? 'bg-ucaep-brown text-ucaep-paper'
+                    : 'text-ucaep-brown hover:bg-white/60'
                 }`}
               >
                 {label}
@@ -443,15 +575,16 @@ export function GestionPage() {
         </div>
 
         {notice && (
-          <div className="p-3.5 text-sm bg-[#2E4D32]/10 text-[#2E4D32] border border-[#2E4D32]/25 rounded-sm">
+          <div className="p-3.5 text-sm bg-ucaep-green/10 text-ucaep-green border border-ucaep-green/25 rounded-sm">
             {notice}
           </div>
         )}
 
+        {/* ONGLET ANNONCES */}
         {tab === 'annonces' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <div className="lg:col-span-5 p-6 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-5 h-fit">
-              <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E] flex items-center gap-2">
+            <div className="lg:col-span-5 p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-5 h-fit">
+              <h2 className="font-serif text-2xl font-semibold text-ucaep-brown flex items-center gap-2">
                 <Plus className="w-5 h-5" />
                 <span>Nouvelle annonce</span>
               </h2>
@@ -462,7 +595,7 @@ export function GestionPage() {
                   value={annTitle}
                   onChange={(e) => setAnnTitle(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <input
@@ -470,12 +603,12 @@ export function GestionPage() {
                     placeholder="Catégorie"
                     value={annCategory}
                     onChange={(e) => setAnnCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
                   />
                   <select
                     value={annImage}
                     onChange={(e) => setAnnImage(e.target.value as MediaAssetKey)}
-                    className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm bg-white"
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white"
                   >
                     <option value="campus">Photo Campus</option>
                     <option value="hero">Photo Lecture</option>
@@ -490,7 +623,7 @@ export function GestionPage() {
                   value={annExcerpt}
                   onChange={(e) => setAnnExcerpt(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
                 />
                 <textarea
                   rows={4}
@@ -498,13 +631,13 @@ export function GestionPage() {
                   value={annContent}
                   onChange={(e) => setAnnContent(e.target.value)}
                   required
-                  className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <select
                     value={annStatus}
                     onChange={(e) => setAnnStatus(e.target.value as PublicationStatus)}
-                    className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm bg-white"
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white"
                   >
                     <option value="draft">Brouillon</option>
                     <option value="scheduled">Programmé</option>
@@ -516,13 +649,13 @@ export function GestionPage() {
                       type="datetime-local"
                       value={annScheduledAt}
                       onChange={(e) => setAnnScheduledAt(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                      className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
                     />
                   )}
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d]"
+                  className="w-full py-2.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                 >
                   Enregistrer l&apos;annonce
                 </button>
@@ -531,27 +664,27 @@ export function GestionPage() {
 
             <div className="lg:col-span-7 space-y-4">
               {data.announcements.length === 0 ? (
-                <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm text-sm text-[#1A1A1A]/70">
+                <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/70">
                   Il n&apos;y a encore aucune publication ici.
                 </div>
               ) : (
                 data.announcements.map((item) => (
                   <div
                     key={item.id}
-                    className="p-5 bg-white border border-[#4E2A1E]/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="p-5 bg-white border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="space-y-1">
-                      <div className="text-xs text-[#4E2A1E]/75 tabular-nums">
+                      <div className="text-xs text-ucaep-brown/75 tabular-nums">
                         <span>{STATUS_LABELS[item.status]}</span>
                         <span aria-hidden="true"> · </span>
                         <span>{item.category}</span>
                         <span aria-hidden="true"> · </span>
                         <span>{formatFrenchDate(item.publishedAt)}</span>
                       </div>
-                      <h3 className="font-serif text-xl font-semibold text-[#1A1A1A]">
+                      <h3 className="font-serif text-xl font-semibold text-ucaep-ink">
                         {item.title}
                       </h3>
-                      <p className="text-xs text-[#1A1A1A]/70">{item.excerpt}</p>
+                      <p className="text-xs text-ucaep-ink/70">{item.excerpt}</p>
                     </div>
                     <select
                       aria-label={`Changer le statut de ${item.title}`}
@@ -562,7 +695,7 @@ export function GestionPage() {
                           e.target.value as PublicationStatus,
                         )
                       }
-                      className="px-3 py-2 text-xs font-medium border border-[#4E2A1E]/25 rounded-sm bg-[#FBF9F5] shrink-0"
+                      className="px-3 py-2 text-xs font-medium border border-ucaep-brown/25 rounded-sm bg-ucaep-paper shrink-0"
                     >
                       <option value="draft">Brouillon</option>
                       <option value="scheduled">Programmé</option>
@@ -576,27 +709,154 @@ export function GestionPage() {
           </div>
         )}
 
+        {/* ONGLET ACTUALITÉS */}
+        {tab === 'actualites' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-5 p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-5 h-fit">
+              <h2 className="font-serif text-2xl font-semibold text-ucaep-brown flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                <span>Nouvel article</span>
+              </h2>
+              <form onSubmit={handleCreateNews} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Titre de l'article"
+                  value={newsTitle}
+                  onChange={(e) => setNewsTitle(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <select
+                    value={newsCategory}
+                    onChange={(e) =>
+                      setNewsCategory(e.target.value as NewsArticle['category'])
+                    }
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white"
+                  >
+                    <option value="Vie du concours">Vie du concours</option>
+                    <option value="Conseils de lecture">Conseils de lecture</option>
+                    <option value="Portrait">Portrait</option>
+                    <option value="Grand angle">Grand angle</option>
+                  </select>
+                  <select
+                    value={newsImage}
+                    onChange={(e) => setNewsImage(e.target.value as MediaAssetKey)}
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white"
+                  >
+                    <option value="campus">Photo Campus</option>
+                    <option value="hero">Photo Lecture</option>
+                    <option value="plume">Photo La Plume</option>
+                    <option value="connaissance">Photo Connaissance</option>
+                    <option value="eloquence">Photo Éloquence</option>
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Accroche ou extrait court"
+                  value={newsExcerpt}
+                  onChange={(e) => setNewsExcerpt(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                />
+                <textarea
+                  rows={6}
+                  placeholder="Corps de l'article (séparez les paragraphes par une ligne vide)"
+                  value={newsContent}
+                  onChange={(e) => setNewsContent(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                />
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-ucaep-brown">
+                    Statut de publication
+                  </label>
+                  <select
+                    value={newsStatus}
+                    onChange={(e) =>
+                      setNewsStatus(e.target.value as PublicationStatus)
+                    }
+                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white"
+                  >
+                    <option value="published">Publié (visible immédiatement)</option>
+                    <option value="draft">Brouillon (invisible du public)</option>
+                    <option value="archived">Archivé</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                >
+                  Enregistrer l&apos;actualité
+                </button>
+              </form>
+            </div>
+
+            <div className="lg:col-span-7 space-y-4">
+              {data.news.length === 0 ? (
+                <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/70">
+                  Aucun article d&apos;actualité pour le moment.
+                </div>
+              ) : (
+                data.news.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-5 bg-white border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-xs text-ucaep-brown/75 tabular-nums">
+                        <span>{STATUS_LABELS[item.status]}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{item.category}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{formatFrenchDate(item.publishedAt)}</span>
+                      </div>
+                      <h3 className="font-serif text-xl font-semibold text-ucaep-ink">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-ucaep-ink/70">{item.excerpt}</p>
+                    </div>
+                    <select
+                      aria-label={`Changer le statut de ${item.title}`}
+                      value={item.status}
+                      onChange={(e) =>
+                        handleNewsStatus(item.id, e.target.value as PublicationStatus)
+                      }
+                      className="px-3 py-2 text-xs font-medium border border-ucaep-brown/25 rounded-sm bg-ucaep-paper shrink-0"
+                    >
+                      <option value="draft">Brouillon</option>
+                      <option value="published">Publié</option>
+                      <option value="archived">Archivé</option>
+                    </select>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET PARCOURS */}
         {tab === 'parcours' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {data.phases.map((phase) => (
               <div
                 key={phase.id}
-                className="p-6 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-4"
+                className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4"
               >
-                <div className="flex items-center justify-between text-xs text-[#4E2A1E]/75 tabular-nums">
+                <div className="flex items-center justify-between text-xs text-ucaep-brown/75 tabular-nums">
                   <span>Phase {phase.number}</span>
                   <span>{phase.format}</span>
                 </div>
-                <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+                <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
                   {phase.title}
                 </h2>
-                <p className="text-xs text-[#1A1A1A]/75 leading-relaxed">
+                <p className="text-xs text-ucaep-ink/75 leading-relaxed">
                   {phase.shortDescription}
                 </p>
 
-                <div className="pt-2 space-y-3 border-t border-[#4E2A1E]/10">
+                <div className="pt-2 space-y-3 border-t border-ucaep-brown/10">
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-[#4E2A1E]">
+                    <label className="block text-xs font-medium text-ucaep-brown">
                       Statut affiché aux étudiants
                     </label>
                     <select
@@ -607,7 +867,7 @@ export function GestionPage() {
                           e.target.value as CompetitionPhase['statusLabel'],
                         )
                       }
-                      className="w-full px-3 py-2 text-xs border border-[#4E2A1E]/25 rounded-sm bg-[#FBF9F5]"
+                      className="w-full px-3 py-2 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper"
                     >
                       <option value="À venir">À venir</option>
                       <option value="Ouverte">Ouverte</option>
@@ -622,8 +882,8 @@ export function GestionPage() {
                     onClick={() => handleTogglePhaseReveal(phase)}
                     className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 transition-colors ${
                       phase.isRevealed
-                        ? 'bg-[#2E4D32] text-[#FBF9F5]'
-                        : 'bg-[#F7E6C8] text-[#4E2A1E]'
+                        ? 'bg-ucaep-green text-ucaep-paper'
+                        : 'bg-ucaep-ivory text-ucaep-brown'
                     }`}
                   >
                     {phase.isRevealed ? (
@@ -644,81 +904,166 @@ export function GestionPage() {
           </div>
         )}
 
+        {/* ONGLET CANDIDATS */}
         {tab === 'candidats' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#1A1A1A]/75 tabular-nums">
-                {data.registrations.length} inscription(s) reçue(s).
-              </p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 bg-white border border-ucaep-brown/15 rounded-sm space-y-1">
+                <p className="text-xs uppercase tracking-wider text-ucaep-brown/75 font-medium">
+                  Total des inscrits
+                </p>
+                <p className="text-3xl font-serif font-bold text-ucaep-brown tabular-nums">
+                  {stats.total}
+                </p>
+              </div>
+
+              <div className="p-5 bg-white border border-ucaep-brown/15 rounded-sm space-y-2 md:col-span-2">
+                <p className="text-xs uppercase tracking-wider text-ucaep-brown/75 font-medium">
+                  Répartition par filière et niveau
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {Object.entries(stats.byDept).map(([dept, count]) => (
+                    <span
+                      key={dept}
+                      className="px-2.5 py-1 bg-ucaep-ivory/60 text-ucaep-brown rounded-sm font-medium"
+                    >
+                      {dept} : <strong className="tabular-nums">{count}</strong>
+                    </span>
+                  ))}
+                  {Object.entries(stats.byLevel).map(([level, count]) => (
+                    <span
+                      key={level}
+                      className="px-2.5 py-1 bg-ucaep-green/10 text-ucaep-green rounded-sm font-medium"
+                    >
+                      {level} : <strong className="tabular-nums">{count}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ucaep-brown/50" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, e-mail, matricule, code..."
+                  value={candidateSearch}
+                  onChange={(e) => {
+                    setCandidateSearch(e.target.value);
+                    setCandidatePage(1);
+                  }}
+                  className="w-full pl-9 pr-3.5 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white focus:outline-none focus:border-ucaep-gold"
+                />
+              </div>
+
               <button
                 type="button"
                 onClick={exportCsv}
                 disabled={!data.registrations.length}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] disabled:opacity-40"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-40"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Télécharger en CSV</span>
+                <span>Exporter en CSV (Excel)</span>
               </button>
             </div>
 
-            {data.registrations.length === 0 ? (
-              <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm text-sm text-[#1A1A1A]/70">
-                Personne ne s&apos;est encore inscrit pour le moment.
+            {filteredCandidates.length === 0 ? (
+              <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/70">
+                {candidateSearch
+                  ? 'Aucun inscrit ne correspond à votre recherche.'
+                  : "Personne ne s'est encore inscrit pour le moment."}
               </div>
             ) : (
-              <div className="overflow-x-auto bg-white border border-[#4E2A1E]/15 rounded-sm">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-[#4E2A1E]/15 text-xs uppercase tracking-wider text-[#4E2A1E]">
-                    <tr>
-                      <th className="py-3 px-4">Référence</th>
-                      <th className="py-3 px-4">Participant</th>
-                      <th className="py-3 px-4">Filière &amp; Niveau</th>
-                      <th className="py-3 px-4">Matricule</th>
-                      <th className="py-3 px-4">Contact</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#4E2A1E]/10 tabular-nums">
-                    {data.registrations.map((r) => (
-                      <tr key={r.id}>
-                        <td className="py-3 px-4 font-medium">{r.referenceCode}</td>
-                        <td className="py-3 px-4">
-                          {r.firstName} {r.lastName}
-                        </td>
-                        <td className="py-3 px-4">
-                          {r.department} · {r.studyLevel}
-                        </td>
-                        <td className="py-3 px-4">{r.studentId}</td>
-                        <td className="py-3 px-4 text-xs text-[#1A1A1A]/75">
-                          {r.email} · {r.phone}
-                        </td>
+              <div className="space-y-4">
+                <div className="overflow-x-auto bg-white border border-ucaep-brown/15 rounded-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-ucaep-brown/15 text-xs uppercase tracking-wider text-ucaep-brown bg-ucaep-paper">
+                      <tr>
+                        <th className="py-3 px-4">Référence</th>
+                        <th className="py-3 px-4">Participant</th>
+                        <th className="py-3 px-4">Filière &amp; Niveau</th>
+                        <th className="py-3 px-4">Matricule</th>
+                        <th className="py-3 px-4">Contact</th>
+                        <th className="py-3 px-4 text-right">Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-ucaep-brown/10 tabular-nums">
+                      {paginatedCandidates.map((r) => (
+                        <tr key={r.id} className="hover:bg-ucaep-paper/60 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-ucaep-brown">
+                            {r.referenceCode}
+                          </td>
+                          <td className="py-3 px-4">
+                            {r.firstName} {r.lastName}
+                          </td>
+                          <td className="py-3 px-4 text-xs text-ucaep-ink/80">
+                            {r.department} · {r.studyLevel}
+                          </td>
+                          <td className="py-3 px-4 text-xs font-mono">{r.studentId}</td>
+                          <td className="py-3 px-4 text-xs text-ucaep-ink/75">
+                            {r.email} · {r.phone}
+                          </td>
+                          <td className="py-3 px-4 text-xs text-right text-ucaep-ink/60">
+                            {formatFrenchDate(r.createdAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {totalCandidatePages > 1 && (
+                  <div className="flex items-center justify-between text-xs text-ucaep-brown">
+                    <span>
+                      Page {candidatePage} sur {totalCandidatePages} (
+                      {filteredCandidates.length} inscrits affichés)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCandidatePage((p) => Math.max(1, p - 1))}
+                        disabled={candidatePage === 1}
+                        className="px-3 py-1.5 border border-ucaep-brown/25 rounded-sm disabled:opacity-30 bg-white"
+                      >
+                        Précédent
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCandidatePage((p) =>
+                            Math.min(totalCandidatePages, p + 1),
+                          )
+                        }
+                        disabled={candidatePage === totalCandidatePages}
+                        className="px-3 py-1.5 border border-ucaep-brown/25 rounded-sm disabled:opacity-30 bg-white"
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
+        {/* ONGLET CONFIG */}
         {tab === 'config' && (
-          <div className="max-w-2xl p-6 sm:p-8 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-5">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+          <div className="max-w-2xl p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Lien Google Apps Script / Google Sheets
             </h2>
-            <p className="text-sm text-[#1A1A1A]/75 leading-relaxed">
+            <p className="text-sm text-ucaep-ink/75 leading-relaxed">
               Quand cette adresse Web App est renseignée, chaque inscription envoyée sur
-              le site est automatiquement ajoutée dans votre feuille Google Sheets avant
-              de confirmer au participant. Sur Vercel, ajoutez aussi la variable{' '}
-              <code className="px-1.5 py-0.5 bg-[#F7E6C8]/60 rounded-sm text-xs">
-                GOOGLE_APPS_SCRIPT_URL
-              </code>{' '}
-              dans les paramètres du projet pour la garder en permanence.
+              le site est automatiquement transmise à votre feuille Google Sheets sans
+              bloquer l&apos;enregistrement dans Supabase.
             </p>
             <form onSubmit={handleSaveSettings} className="space-y-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="gas-url"
-                  className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
                 >
                   Adresse Web App Google Apps Script
                 </label>
@@ -728,11 +1073,11 @@ export function GestionPage() {
                   value={gasUrl}
                   onChange={(e) => setGasUrl(e.target.value)}
                   placeholder="https://script.google.com/macros/s/.../exec"
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm"
+                  className="w-full px-3.5 py-2.5 text-sm border border-ucaep-brown/25 rounded-sm"
                 />
               </div>
               {gasTestMsg && (
-                <p className="p-3 text-xs bg-[#2E4D32]/10 text-[#2E4D32] border border-[#2E4D32]/25 rounded-sm">
+                <p className="p-3 text-xs bg-ucaep-green/10 text-ucaep-green border border-ucaep-green/25 rounded-sm">
                   {gasTestMsg}
                 </p>
               )}
@@ -744,14 +1089,14 @@ export function GestionPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d]"
+                  className="px-5 py-2.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                 >
                   Enregistrer le lien
                 </button>
                 <button
                   type="button"
                   onClick={handleTestGas}
-                  className="px-5 py-2.5 text-sm font-medium rounded-sm border border-[#4E2A1E]/25 text-[#4E2A1E] hover:bg-[#4E2A1E]/5"
+                  className="px-5 py-2.5 text-sm font-medium rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-brown/5"
                 >
                   Tester la connexion
                 </button>

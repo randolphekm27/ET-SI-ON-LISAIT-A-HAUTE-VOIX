@@ -828,6 +828,75 @@ export async function createNewsRecord(input: {
   }
 }
 
+export async function updateNewsRecord(
+  id: string,
+  patch: {
+    title?: string;
+    excerpt?: string;
+    content?: string | string[];
+    category?: NewsArticle['category'];
+    status?: PublicationStatus;
+    imageKey?: MediaAssetKey;
+  },
+): Promise<NewsArticle | null> {
+  const paragraphs =
+    typeof patch.content === 'string'
+      ? patch.content
+          .split('\n\n')
+          .map((p) => p.trim())
+          .filter(Boolean)
+      : Array.isArray(patch.content)
+        ? patch.content
+        : undefined;
+
+  if (!isCloudSqlConfigured()) {
+    return withJsonStoreLock((store) => {
+      const idx = store.news.findIndex((n) => n.id === id);
+      if (idx === -1) return null;
+      const current = store.news[idx];
+      store.news[idx] = {
+        ...current,
+        title: patch.title?.trim() || current.title,
+        excerpt: patch.excerpt?.trim() || current.excerpt,
+        content: paragraphs || current.content,
+        category: patch.category || current.category,
+        status: patch.status || current.status,
+        imageKey: patch.imageKey || current.imageKey,
+      };
+      return store.news[idx];
+    });
+  }
+
+  try {
+    await ensureDbSeeded();
+    const rows = await db
+      .select()
+      .from(newsArticlesTable)
+      .where(eq(newsArticlesTable.id, id))
+      .limit(1);
+    if (!rows[0]) return null;
+    const current = rows[0];
+
+    const updated = await db
+      .update(newsArticlesTable)
+      .set({
+        title: patch.title?.trim() || current.title,
+        excerpt: patch.excerpt?.trim() || current.excerpt,
+        content: paragraphs || current.content,
+        category: patch.category || current.category,
+        status: patch.status || current.status,
+        imageKey: patch.imageKey || current.imageKey,
+      })
+      .where(eq(newsArticlesTable.id, id))
+      .returning();
+
+    return updated[0] ? mapNewsRow(updated[0]) : null;
+  } catch (error) {
+    console.error('Database updateNewsRecord error:', (error as Error).message);
+    throw new Error('Impossible de mettre à jour cet article.', { cause: error });
+  }
+}
+
 export async function updateSettingsRecord(googleAppsScriptUrl: string) {
   const cleanUrl = googleAppsScriptUrl.trim();
   if (!isCloudSqlConfigured()) {
@@ -973,6 +1042,14 @@ export async function saveRegistration(
   const normalizedMatricule = payload.studentId.trim().toUpperCase();
 
   if (!isCloudSqlConfigured()) {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      const err = new Error(
+        "La base de données n'est pas configurée sur le serveur. Les inscriptions sont temporairement suspendues.",
+      );
+      (err as Error & { statusCode?: number }).statusCode = 503;
+      throw err;
+    }
+
     return withJsonStoreLock(async (store) => {
       const duplicate = store.registrations.find(
         (r) =>
@@ -1003,12 +1080,17 @@ export async function saveRegistration(
         syncTarget: gasUrl ? 'google_apps_script' : 'local_archive',
       };
 
+      store.registrations.push(record);
+
       if (gasUrl) {
-        await forwardToGoogleAppsScript(gasUrl, record);
-        record.syncedToGoogleSheets = true;
+        try {
+          await forwardToGoogleAppsScript(gasUrl, record);
+          record.syncedToGoogleSheets = true;
+        } catch {
+          console.error('Google Sheets sync skipped or failed in local store mode');
+        }
       }
 
-      store.registrations.push(record);
       return record;
     });
   }
@@ -1035,12 +1117,23 @@ export async function saveRegistration(
       throw err;
     }
 
-    const [{ total }] = await db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(registrationsTable);
+    let seqNumber = 1;
+    try {
+      const seqResult = await db.execute<{ seq: string | number }>(
+        sql`SELECT nextval('public.registration_ref_seq')::int AS seq`,
+      );
+      const val = seqResult.rows?.[0]?.seq;
+      if (val !== undefined && val !== null) {
+        seqNumber = Number(val);
+      }
+    } catch {
+      const [{ total }] = await db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(registrationsTable);
+      seqNumber = (total || 0) + 1;
+    }
 
-    const seq = String((total || 0) + 1).padStart(4, '0');
-    const referenceCode = `UCAEP-2026-${seq}`;
+    const referenceCode = `UCAEP-2026-${String(seqNumber).padStart(4, '0')}`;
 
     const gasRow = await db
       .select({ value: appSettingsTable.value })
@@ -1061,11 +1154,7 @@ export async function saveRegistration(
       syncTarget: gasUrl ? 'google_apps_script' : 'local_archive',
     };
 
-    if (gasUrl) {
-      await forwardToGoogleAppsScript(gasUrl, record);
-      record.syncedToGoogleSheets = true;
-    }
-
+    // 1. Insertion prioritaire dans PostgreSQL (Supabase)
     await db.insert(registrationsTable).values({
       id: record.id,
       referenceCode: record.referenceCode,
@@ -1082,10 +1171,24 @@ export async function saveRegistration(
       motivation: record.motivation,
       readingExperience: record.readingExperience,
       acceptRules: record.acceptRules,
-      syncedToGoogleSheets: record.syncedToGoogleSheets,
+      syncedToGoogleSheets: false,
       syncTarget: record.syncTarget,
       createdAt: record.createdAt,
     });
+
+    // 2. Synchronisation secondaire et non bloquante avec Google Sheets
+    if (gasUrl) {
+      try {
+        await forwardToGoogleAppsScript(gasUrl, record);
+        record.syncedToGoogleSheets = true;
+        await db
+          .update(registrationsTable)
+          .set({ syncedToGoogleSheets: true })
+          .where(eq(registrationsTable.id, record.id));
+      } catch {
+        console.error('Google Sheets sync skipped or failed for ID:', record.id);
+      }
+    }
 
     return record;
   } catch (error) {
@@ -1093,9 +1196,9 @@ export async function saveRegistration(
     if (err.statusCode === 409) {
       throw err;
     }
-    console.error('Database saveRegistration failed:', error);
+    console.error('Database saveRegistration error:', err.message);
     throw new Error(
-      "L'envoi de votre inscription n'a pas abouti. Rien n'a été enregistré, merci de réessayer.",
+      "L'enregistrement de votre inscription n'a pas abouti. Merci de réessayer dans un instant.",
       { cause: error },
     );
   }
@@ -1105,6 +1208,13 @@ export async function saveContactMessage(
   payload: ContactPayload,
 ): Promise<ContactMessageRecord> {
   if (!isCloudSqlConfigured()) {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      const err = new Error(
+        "La base de données n'est pas configurée sur le serveur. L'envoi de messages est temporairement suspendu.",
+      );
+      (err as Error & { statusCode?: number }).statusCode = 503;
+      throw err;
+    }
     return withJsonStoreLock(async (store) => {
       const record: ContactMessageRecord = {
         ...payload,
@@ -1126,7 +1236,7 @@ export async function saveContactMessage(
     await db.insert(contactMessagesTable).values(record);
     return record;
   } catch (error) {
-    console.error('Database saveContactMessage failed:', error);
+    console.error('Database saveContactMessage error:', (error as Error).message);
     throw new Error("Impossible d'enregistrer votre message pour le moment.", {
       cause: error,
     });
