@@ -22,7 +22,7 @@ import {
   updateNewsRecord,
   updatePhaseRecord,
   updateSettingsRecord,
-} from './store';
+} from './store.ts';
 import type {
   MediaAssetKey,
   NewsArticle,

@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerApiRoutes } from '../server/api';
+import { registerApiRoutes } from '../server/api.ts';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
