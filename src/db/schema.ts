@@ -25,9 +25,9 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const phases = pgTable('phases', {
+export const phases = pgTable('competition_phases', {
   id: text('id').primaryKey(),
-  number: text('number').notNull(),
+  number: integer('phase_number').notNull(),
   title: text('title').notNull(),
   shortDescription: text('short_description').notNull(),
   format: text('format').$type<'En ligne' | 'En présentiel'>().notNull(),
@@ -37,7 +37,7 @@ export const phases = pgTable('phases', {
   isRevealed: boolean('is_revealed').notNull().default(false),
   imageKey: text('image_key').$type<MediaAssetKey>().notNull(),
   testDetails: jsonb('test_details').$type<PhaseTestDetails | null>(),
-  sortOrder: integer('sort_order').notNull().default(0),
+  sortOrder: integer('display_order').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -47,8 +47,8 @@ export const announcements = pgTable('announcements', {
   title: text('title').notNull(),
   excerpt: text('excerpt').notNull(),
   content: text('content').notNull(),
-  publishedAt: text('published_at').notNull(),
-  scheduledAt: text('scheduled_at'),
+  publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   status: text('status').$type<PublicationStatus>().notNull().default('draft'),
   category: text('category').notNull(),
   imageKey: text('image_key').$type<MediaAssetKey>().notNull().default('campus'),
@@ -61,14 +61,16 @@ export const newsArticles = pgTable('news_articles', {
   slug: text('slug').notNull().unique(),
   title: text('title').notNull(),
   category: text('category').$type<NewsArticle['category']>().notNull(),
-  publishedAt: text('published_at').notNull(),
+  publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
   readTime: text('read_time').notNull(),
   excerpt: text('excerpt').notNull(),
   content: jsonb('content').$type<string[]>().notNull(),
   imageKey: text('image_key').$type<MediaAssetKey>().notNull().default('campus'),
   featured: boolean('featured').notNull().default(false),
   status: text('status').$type<PublicationStatus>().notNull().default('published'),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
 export const registrations = pgTable('registrations', {
@@ -90,12 +92,14 @@ export const registrations = pgTable('registrations', {
   motivation: text('motivation').notNull(),
   readingExperience: text('reading_experience').notNull().default(''),
   acceptRules: boolean('accept_rules').notNull().default(true),
+  status: text('status').notNull().default('registered'),
   syncedToGoogleSheets: boolean('synced_to_google_sheets').notNull().default(false),
   syncTarget: text('sync_target')
     .$type<'google_apps_script' | 'google_forms' | 'local_archive'>()
     .notNull()
     .default('local_archive'),
-  createdAt: text('created_at').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
 export const contactMessages = pgTable('contact_messages', {
@@ -104,12 +108,13 @@ export const contactMessages = pgTable('contact_messages', {
   email: text('email').notNull(),
   subject: text('subject').notNull(),
   message: text('message').notNull(),
-  createdAt: text('created_at').notNull(),
+  status: text('status').notNull().default('non_lu'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const appSettings = pgTable('app_settings', {
+export const appSettings = pgTable('site_settings', {
   key: text('key').primaryKey(),
-  value: text('value').notNull(),
+  value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

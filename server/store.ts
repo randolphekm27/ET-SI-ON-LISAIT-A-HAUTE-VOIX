@@ -252,7 +252,7 @@ async function ensureDbSeeded(): Promise<void> {
             .values(
               DEFAULT_STORE.phases.map((p, idx) => ({
                 id: p.id,
-                number: p.number,
+                number: parseInt(p.number, 10) || idx + 1,
                 title: p.title,
                 shortDescription: p.shortDescription,
                 format: p.format,
@@ -276,13 +276,13 @@ async function ensureDbSeeded(): Promise<void> {
             .insert(announcementsTable)
             .values(
               DEFAULT_STORE.announcements.map((a) => ({
-                id: a.id,
+                id: crypto.randomUUID(),
                 slug: a.slug,
                 title: a.title,
                 excerpt: a.excerpt,
                 content: a.content,
-                publishedAt: a.publishedAt,
-                scheduledAt: a.scheduledAt || null,
+                publishedAt: new Date(a.publishedAt),
+                scheduledAt: a.scheduledAt ? new Date(a.scheduledAt) : null,
                 status: a.status,
                 category: a.category,
                 imageKey: a.imageKey,
@@ -301,11 +301,11 @@ async function ensureDbSeeded(): Promise<void> {
             .insert(newsArticlesTable)
             .values(
               DEFAULT_STORE.news.map((n) => ({
-                id: n.id,
+                id: crypto.randomUUID(),
                 slug: n.slug,
                 title: n.title,
                 category: n.category,
-                publishedAt: n.publishedAt,
+                publishedAt: new Date(n.publishedAt),
                 readTime: n.readTime,
                 excerpt: n.excerpt,
                 content: n.content,
@@ -322,7 +322,7 @@ async function ensureDbSeeded(): Promise<void> {
             .insert(appSettingsTable)
             .values({
               key: 'googleAppsScriptUrl',
-              value: process.env.GOOGLE_APPS_SCRIPT_URL,
+              value: { url: process.env.GOOGLE_APPS_SCRIPT_URL },
             })
             .onConflictDoNothing();
         }
@@ -406,8 +406,8 @@ function mapAnnouncementRow(row: typeof announcementsTable.$inferSelect): Announ
     title: row.title,
     excerpt: row.excerpt,
     content: row.content,
-    publishedAt: row.publishedAt,
-    scheduledAt: row.scheduledAt || undefined,
+    publishedAt: row.publishedAt instanceof Date ? row.publishedAt.toISOString() : String(row.publishedAt),
+    scheduledAt: row.scheduledAt ? (row.scheduledAt instanceof Date ? row.scheduledAt.toISOString() : String(row.scheduledAt)) : undefined,
     status: row.status,
     category: row.category,
     imageKey: row.imageKey,
@@ -417,7 +417,7 @@ function mapAnnouncementRow(row: typeof announcementsTable.$inferSelect): Announ
 function mapPhaseRow(row: typeof phasesTable.$inferSelect): CompetitionPhase {
   return {
     id: row.id,
-    number: row.number,
+    number: String(row.number).padStart(2, '0'),
     title: row.title,
     shortDescription: row.shortDescription,
     format: row.format,
@@ -434,7 +434,7 @@ function mapNewsRow(row: typeof newsArticlesTable.$inferSelect): NewsArticle {
     slug: row.slug,
     title: row.title,
     category: row.category,
-    publishedAt: row.publishedAt,
+    publishedAt: row.publishedAt instanceof Date ? row.publishedAt.toISOString() : String(row.publishedAt),
     readTime: row.readTime,
     excerpt: row.excerpt,
     content: Array.isArray(row.content) ? row.content : [],
@@ -465,7 +465,7 @@ function mapRegistrationRow(
     acceptRules: row.acceptRules,
     syncedToGoogleSheets: row.syncedToGoogleSheets,
     syncTarget: row.syncTarget,
-    createdAt: row.createdAt,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
   };
 }
 
@@ -486,7 +486,16 @@ export async function readStore(): Promise<StoreData> {
         db.select().from(appSettingsTable),
       ]);
 
-    const settingsMap = new Map(settingsRows.map((s) => [s.key, s.value]));
+    const settingsMap = new Map(
+      settingsRows.map((s) => [
+        s.key,
+        typeof s.value === 'string'
+          ? s.value
+          : typeof s.value === 'object' && s.value !== null
+            ? (s.value as { url?: string; value?: string }).url || (s.value as { url?: string; value?: string }).value || JSON.stringify(s.value)
+            : String(s.value || ''),
+      ]),
+    );
 
     return {
       phases: phaseRows.map(mapPhaseRow),
@@ -499,7 +508,7 @@ export async function readStore(): Promise<StoreData> {
         email: c.email,
         subject: c.subject,
         message: c.message,
-        createdAt: c.createdAt,
+        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
       })),
       settings: {
         googleAppsScriptUrl:
@@ -579,8 +588,8 @@ export async function createAnnouncementRecord(input: {
         category: (input.category || 'Officiel').trim(),
         status: input.status || 'draft',
         scheduledAt:
-          input.status === 'scheduled' && input.scheduledAt ? input.scheduledAt : null,
-        publishedAt: new Date().toISOString(),
+          input.status === 'scheduled' && input.scheduledAt ? new Date(input.scheduledAt) : null,
+        publishedAt: new Date(),
         imageKey: input.imageKey || 'campus',
       })
       .returning();
@@ -650,11 +659,11 @@ export async function updateAnnouncementRecord(
         status: nextStatus,
         scheduledAt:
           nextStatus === 'scheduled'
-            ? patch.scheduledAt || current.scheduledAt
+            ? patch.scheduledAt ? new Date(patch.scheduledAt) : current.scheduledAt
             : null,
         publishedAt:
           nextStatus === 'published' && current.status !== 'published'
-            ? new Date().toISOString()
+            ? new Date()
             : current.publishedAt,
         updatedAt: new Date(),
       })
@@ -811,7 +820,7 @@ export async function createNewsRecord(input: {
         slug: uniqueSlug,
         title: input.title.trim(),
         category: input.category || 'Vie du concours',
-        publishedAt: new Date().toISOString(),
+        publishedAt: new Date(),
         readTime,
         excerpt: input.excerpt.trim(),
         content: paragraphs,
@@ -912,12 +921,12 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
       .insert(appSettingsTable)
       .values({
         key: 'googleAppsScriptUrl',
-        value: cleanUrl,
+        value: { url: cleanUrl },
       })
       .onConflictDoUpdate({
         target: appSettingsTable.key,
         set: {
-          value: cleanUrl,
+          value: { url: cleanUrl },
           updatedAt: new Date(),
         },
       });
@@ -1120,17 +1129,27 @@ export async function saveRegistration(
     let seqNumber = 1;
     try {
       const seqResult = await db.execute<{ seq: string | number }>(
-        sql`SELECT nextval('public.registration_ref_seq')::int AS seq`,
+        sql`SELECT nextval('public.registration_reference_seq')::int AS seq`,
       );
       const val = seqResult.rows?.[0]?.seq;
       if (val !== undefined && val !== null) {
         seqNumber = Number(val);
       }
     } catch {
-      const [{ total }] = await db
-        .select({ total: sql<number>`count(*)::int` })
-        .from(registrationsTable);
-      seqNumber = (total || 0) + 1;
+      try {
+        const seqResult2 = await db.execute<{ seq: string | number }>(
+          sql`SELECT nextval('public.registration_ref_seq')::int AS seq`,
+        );
+        const val2 = seqResult2.rows?.[0]?.seq;
+        if (val2 !== undefined && val2 !== null) {
+          seqNumber = Number(val2);
+        }
+      } catch {
+        const [{ total }] = await db
+          .select({ total: sql<number>`count(*)::int` })
+          .from(registrationsTable);
+        seqNumber = (total || 0) + 1;
+      }
     }
 
     const referenceCode = `UCAEP-2026-${String(seqNumber).padStart(4, '0')}`;
@@ -1141,7 +1160,13 @@ export async function saveRegistration(
       .where(eq(appSettingsTable.key, 'googleAppsScriptUrl'))
       .limit(1);
 
-    const gasUrl = gasRow[0]?.value || process.env.GOOGLE_APPS_SCRIPT_URL || '';
+    const rawGas = gasRow[0]?.value;
+    const gasUrl =
+      (typeof rawGas === 'string'
+        ? rawGas
+        : (rawGas as { url?: string } | null)?.url) ||
+      process.env.GOOGLE_APPS_SCRIPT_URL ||
+      '';
 
     const record: RegistrationRecord = {
       ...payload,
@@ -1171,9 +1196,10 @@ export async function saveRegistration(
       motivation: record.motivation,
       readingExperience: record.readingExperience,
       acceptRules: record.acceptRules,
+      status: 'registered',
       syncedToGoogleSheets: false,
       syncTarget: record.syncTarget,
-      createdAt: record.createdAt,
+      createdAt: new Date(),
     });
 
     // 2. Synchronisation secondaire et non bloquante avec Google Sheets
@@ -1233,7 +1259,15 @@ export async function saveContactMessage(
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
     };
-    await db.insert(contactMessagesTable).values(record);
+    await db.insert(contactMessagesTable).values({
+      id: record.id,
+      name: record.name,
+      email: record.email,
+      subject: record.subject,
+      message: record.message,
+      status: 'non_lu',
+      createdAt: new Date(),
+    });
     return record;
   } catch (error) {
     console.error('Database saveContactMessage error:', (error as Error).message);
