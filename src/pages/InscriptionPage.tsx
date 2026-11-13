@@ -160,7 +160,8 @@ export function InscriptionPage() {
             Inscription au concours
           </h1>
           <p className="text-sm sm:text-base text-[#1A1A1A]/75">
-            Participation gratuite ouverte aux étudiants de l&apos;ENSET de Lokossa.
+            Participation gratuite ouverte aux étudiants de l&apos;ENSET de Lokossa
+            jusqu&apos;au vendredi 20 novembre 2026.
           </p>
         </div>
       </section>

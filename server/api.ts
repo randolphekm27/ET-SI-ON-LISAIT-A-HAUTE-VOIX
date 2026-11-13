@@ -20,7 +20,7 @@ import type {
 } from '../src/types/competition';
 
 function getOrganizerCode(): string {
-  return process.env.ORGANIZER_ACCESS_CODE || 'UCAEP-LOKOSSA-2026';
+  return (process.env.ORGANIZER_ACCESS_CODE || 'UCAEP-LOKOSSA-2026').trim();
 }
 
 function getTokenSecret(): string {

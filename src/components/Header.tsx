@@ -14,46 +14,16 @@ const NAV_ITEMS = [
 
 export function UcaepMark({ light = false }: { light?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-3 whitespace-nowrap shrink-0">
-      <svg
-        width="28"
-        height="28"
-        viewBox="0 0 28 28"
-        fill="none"
-        aria-hidden="true"
-        className="shrink-0"
-      >
-        <rect
-          x="1"
-          y="1"
-          width="26"
-          height="26"
-          rx="2"
-          stroke={light ? '#F7E6C8' : '#4E2A1E'}
-          strokeWidth="1.25"
-        />
-        <path
-          d="M7 9.5C9.5 8.5 12 9 14 10.5C16 9 18.5 8.5 21 9.5V19.5C18.5 18.5 16 19 14 20.5C12 19 9.5 18.5 7 19.5V9.5Z"
-          stroke="#D19A3A"
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-        />
-        <line
-          x1="14"
-          y1="10.5"
-          x2="14"
-          y2="20.5"
-          stroke={light ? '#F7E6C8' : '#4E2A1E'}
-          strokeWidth="1.1"
-        />
-      </svg>
-      <span
-        className={`font-serif text-xl font-semibold tracking-tight ${
-          light ? 'text-[#F7E6C8]' : 'text-[#4E2A1E]'
-        }`}
-      >
-        UCAEP
-      </span>
+    <span className="inline-flex items-center whitespace-nowrap shrink-0">
+      <img
+        src={
+          light
+            ? '/assets/aistudio/Fichier_3300x-8_bbec6aad.png'
+            : '/assets/aistudio/Fichier_6300x-8_cf8d966b.png'
+        }
+        alt="UCAEP — Union Culturelle et Artistique des Élèves-Professeurs"
+        className="h-9 sm:h-10 w-auto object-contain"
+      />
     </span>
   );
 }

@@ -34,7 +34,7 @@ export function ConcoursPage() {
     <div className="bg-[#FBF9F5]">
       {/* Editorial Title & Short Intro */}
       <section className="py-16 lg:py-24 border-b border-[#4E2A1E]/12 paper-grain">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-8 space-y-5">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
               Le concours · UCAEP
@@ -47,15 +47,22 @@ export function ConcoursPage() {
               Lokossa à explorer l&apos;écriture, la culture générale et la prise de
               parole sur scène.
             </p>
+            <div>
+              <Link
+                to="/parcours"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#D19A3A] transition-colors"
+              >
+                <span>Explorer les 3 phases</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-          <div className="lg:col-span-4 lg:text-right">
-            <Link
-              to="/parcours"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#D19A3A] transition-colors"
-            >
-              <span>Explorer les 3 phases</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+          <div className="lg:col-span-4 flex lg:justify-end">
+            <img
+              src="/assets/aistudio/LOGO_CONCOURS_8664fa5e.png"
+              alt="Logo officiel Et si on lisait à haute voix ? 2026"
+              className="w-44 sm:w-52 h-auto object-contain"
+            />
           </div>
         </div>
       </section>

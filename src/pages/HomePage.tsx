@@ -167,17 +167,18 @@ export function HomePage() {
               réunissent dans un même concours ouvert aux étudiants de l&apos;ENSET de
               Lokossa.
             </p>
-          </div>
-          <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-[#4E2A1E]/15 pt-6 lg:pt-0 lg:pl-10 space-y-4">
-            <p className="font-serif text-2xl italic text-[#4E2A1E] leading-snug">
-              « Porter la lecture hors du silence pour faire entendre la justesse d&apos;une
-              pensée. »
-            </p>
-            <div className="flex items-center gap-3 text-xs text-[#1A1A1A]/60">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-[#4E2A1E]/75 pt-1">
               <span>Participation gratuite</span>
               <span aria-hidden="true">·</span>
-              <span>Ouvert aux étudiants ENSET</span>
+              <span>Ouvert jusqu&apos;au vendredi 20 novembre 2026</span>
             </div>
+          </div>
+          <div className="lg:col-span-5 flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-center gap-6 border-t lg:border-t-0 lg:border-l border-[#4E2A1E]/15 pt-8 lg:pt-0 lg:pl-10">
+            <img
+              src="/assets/aistudio/LOGO_CONCOURS_8664fa5e.png"
+              alt="Logo officiel du concours Et si on lisait à haute voix ? 2026"
+              className="w-44 sm:w-52 h-auto object-contain"
+            />
           </div>
         </div>
       </section>

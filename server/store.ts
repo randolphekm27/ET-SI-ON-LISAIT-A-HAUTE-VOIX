@@ -235,9 +235,9 @@ async function ensureStoreFile(): Promise<void> {
 }
 
 export async function readStore(): Promise<StoreData> {
-  await ensureStoreFile();
-  const raw = await fs.readFile(STORE_PATH, 'utf-8');
   try {
+    await ensureStoreFile();
+    const raw = await fs.readFile(STORE_PATH, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<StoreData>;
     return {
       settings: {

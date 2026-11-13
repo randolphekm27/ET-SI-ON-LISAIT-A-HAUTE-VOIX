@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { CheckCircle2, MapPin, Send } from 'lucide-react';
+import { CheckCircle2, Mail, MapPin, Phone, Send } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
 
@@ -79,8 +79,29 @@ export function ContactPage() {
                   Organisateur
                 </dt>
                 <dd className="mt-1 font-medium text-[#1A1A1A]">
-                  UCAEP — Comité d&apos;organisation du concours « Et si on lisait à haute
-                  voix ? »
+                  UCAEP — Union Culturelle et Artistique des Élèves-Professeurs
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]/75">
+                  Téléphone &amp; Courriel officiels
+                </dt>
+                <dd className="mt-2 space-y-2 text-[#1A1A1A]">
+                  <a
+                    href="tel:+2290168624600"
+                    className="flex items-center gap-2 hover:text-[#4E2A1E] tabular-nums"
+                  >
+                    <Phone className="w-4 h-4 text-[#D19A3A] shrink-0" />
+                    <span>+229 01 68 62 46 00</span>
+                  </a>
+                  <a
+                    href="mailto:ucaeplokossa@gmail.com"
+                    className="flex items-center gap-2 hover:text-[#4E2A1E]"
+                  >
+                    <Mail className="w-4 h-4 text-[#D19A3A] shrink-0" />
+                    <span>ucaeplokossa@gmail.com</span>
+                  </a>
                 </dd>
               </div>
 
@@ -95,17 +116,6 @@ export function ContactPage() {
                     <br />
                     Lokossa, Département du Mono, Bénin
                   </span>
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]/75">
-                  Canaux campus &amp; réseaux
-                </dt>
-                <dd className="mt-1 text-[#1A1A1A]/80 leading-relaxed">
-                  Les liens vers les canaux numériques officiels de l&apos;UCAEP sont
-                  relayés auprès des étudiants sur les panneaux du campus et dans la
-                  rubrique Annonces.
                 </dd>
               </div>
             </dl>

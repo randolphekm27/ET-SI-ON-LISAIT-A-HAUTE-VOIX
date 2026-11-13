@@ -7,12 +7,23 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-14">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-10 border-b border-white/10">
           <div className="md:col-span-5 space-y-4">
-            <Link to="/" className="inline-block">
-              <UcaepMark light />
-            </Link>
+            <div className="flex items-center gap-5">
+              <Link to="/" className="inline-block shrink-0">
+                <UcaepMark light />
+              </Link>
+              <img
+                src="/assets/aistudio/LOGO_CONCOURS_8664fa5e.png"
+                alt="Logo du concours Et si on lisait à haute voix ? 2026"
+                className="h-12 w-auto object-contain shrink-0"
+              />
+            </div>
             <p className="text-sm text-[#F7E6C8]/75 max-w-sm leading-relaxed">
-              « Et si on lisait à haute voix ? » — Concours culturel étudiant
-              organisé par l&apos;UCAEP à l&apos;ENSET de Lokossa, Bénin.
+              « Et si on lisait à haute voix ? » — Concours organisé par l&apos;Union
+              Culturelle et Artistique des Élèves-Professeurs (UCAEP) à l&apos;ENSET de
+              Lokossa.
+            </p>
+            <p className="text-xs text-[#F7E6C8]/65 tabular-nums">
+              +229 01 68 62 46 00 · ucaeplokossa@gmail.com
             </p>
           </div>
 
