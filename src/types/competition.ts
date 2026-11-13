@@ -1,0 +1,94 @@
+export type PublicationStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+
+export type MediaAssetKey =
+  | 'hero'
+  | 'plume'
+  | 'connaissance'
+  | 'eloquence'
+  | 'campus';
+
+export interface Announcement {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  publishedAt: string;
+  scheduledAt?: string;
+  status: PublicationStatus;
+  category: string;
+  imageKey: MediaAssetKey;
+}
+
+export type PublicAnnouncement = Omit<Announcement, 'status' | 'scheduledAt'>;
+
+export interface PhaseTestDetails {
+  instructionsTitle: string;
+  theme: string;
+  instructions: string;
+  submissionNote: string;
+}
+
+export interface CompetitionPhase {
+  id: string;
+  number: string;
+  title: string;
+  shortDescription: string;
+  format: 'En ligne' | 'En présentiel';
+  statusLabel: 'À venir' | 'Ouverte' | 'En cours' | 'Verrouillée' | 'Clôturée';
+  isRevealed: boolean;
+  imageKey: MediaAssetKey;
+  testDetails?: PhaseTestDetails | null;
+}
+
+export interface NewsArticle {
+  id: string;
+  slug: string;
+  title: string;
+  category: 'Vie du concours' | 'Coulisses' | 'Candidats' | 'Résultats';
+  publishedAt: string;
+  readTime: string;
+  excerpt: string;
+  content: string[];
+  imageKey: MediaAssetKey;
+  featured?: boolean;
+  status: PublicationStatus;
+}
+
+export type PublicNewsArticle = Omit<NewsArticle, 'status'>;
+
+export interface RegistrationPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  birthDate: string;
+  gender: 'Féminin' | 'Masculin' | 'Préfère ne pas préciser';
+  institution: string;
+  department: string;
+  studyLevel: string;
+  studentId: string;
+  motivation: string;
+  readingExperience: string;
+  acceptRules: boolean;
+}
+
+export interface RegistrationRecord extends RegistrationPayload {
+  id: string;
+  referenceCode: string;
+  createdAt: string;
+  syncedToGoogleSheets: boolean;
+  syncTarget: 'google_apps_script' | 'google_forms' | 'local_archive';
+}
+
+export interface ContactPayload {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+export interface ContactMessageRecord extends ContactPayload {
+  id: string;
+  createdAt: string;
+}

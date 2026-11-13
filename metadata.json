@@ -1,0 +1,6 @@
+{
+  "name": "Et si on lisait à haute voix ? — UCAEP",
+  "description": "Concours culturel étudiant de l'UCAEP à l'ENSET de Lokossa autour de l'écriture, de la connaissance et de l'éloquence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
