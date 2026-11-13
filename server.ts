@@ -1,11 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
-import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
-import { registerApiRoutes } from './server/api';
-
-dotenv.config();
+import { registerApiRoutes } from './server/api.ts';
 
 const PORT = Number(process.env.PORT) || 3000;
 

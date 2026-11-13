@@ -219,6 +219,7 @@ export function GestionPage() {
         }),
       });
       await loadOverview();
+      setNotice(`Phase ${phase.number} mise à jour avec succès.`);
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
     }
@@ -235,6 +236,7 @@ export function GestionPage() {
         body: JSON.stringify({ statusLabel }),
       });
       await loadOverview();
+      setNotice('Statut de la phase mis à jour avec succès.');
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
     }

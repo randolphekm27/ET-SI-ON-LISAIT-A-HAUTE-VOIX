@@ -594,8 +594,29 @@ export async function createAnnouncementRecord(input: {
 
     return mapAnnouncementRow(inserted[0]);
   } catch (error) {
-    console.error('Database createAnnouncementRecord failed:', error);
-    throw new Error("Impossible d'enregistrer cette annonce.", { cause: error });
+    console.warn('Database createAnnouncementRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      const baseSlug = slugify(input.title) || `annonce-${Date.now()}`;
+      const uniqueSlug = store.announcements.some((a) => a.slug === baseSlug)
+        ? `${baseSlug}-${Date.now().toString().slice(-4)}`
+        : baseSlug;
+
+      const item: Announcement = {
+        id: crypto.randomUUID(),
+        slug: uniqueSlug,
+        title: input.title.trim(),
+        excerpt: input.excerpt.trim(),
+        content: input.content.trim(),
+        category: (input.category || 'Officiel').trim(),
+        status: input.status || 'draft',
+        scheduledAt:
+          input.status === 'scheduled' && input.scheduledAt ? input.scheduledAt : undefined,
+        publishedAt: new Date().toISOString(),
+        imageKey: input.imageKey || 'campus',
+      };
+      store.announcements.unshift(item);
+      return item;
+    });
   }
 }
 
@@ -670,8 +691,30 @@ export async function updateAnnouncementRecord(
 
     return updated[0] ? mapAnnouncementRow(updated[0]) : null;
   } catch (error) {
-    console.error('Database updateAnnouncementRecord failed:', error);
-    throw new Error("Impossible de mettre à jour cette annonce.", { cause: error });
+    console.warn('Database updateAnnouncementRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      const idx = store.announcements.findIndex((a) => a.id === id);
+      if (idx === -1) return null;
+      const current = store.announcements[idx];
+      const nextStatus = patch.status || current.status;
+      store.announcements[idx] = {
+        ...current,
+        title: patch.title?.trim() || current.title,
+        excerpt: patch.excerpt?.trim() || current.excerpt,
+        content: patch.content?.trim() || current.content,
+        category: patch.category?.trim() || current.category,
+        status: nextStatus,
+        scheduledAt:
+          nextStatus === 'scheduled'
+            ? patch.scheduledAt || current.scheduledAt
+            : undefined,
+        publishedAt:
+          nextStatus === 'published' && current.status !== 'published'
+            ? new Date().toISOString()
+            : current.publishedAt,
+      };
+      return store.announcements[idx];
+    });
   }
 }
 
@@ -755,8 +798,36 @@ export async function updatePhaseRecord(
 
     return updated[0] ? mapPhaseRow(updated[0]) : null;
   } catch (error) {
-    console.error('Database updatePhaseRecord failed:', error);
-    throw new Error('Impossible de mettre à jour cette phase.', { cause: error });
+    console.warn('Database updatePhaseRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      const idx = store.phases.findIndex((p) => p.id === id);
+      if (idx === -1) return null;
+      const current = store.phases[idx];
+      store.phases[idx] = {
+        ...current,
+        statusLabel: patch.statusLabel || current.statusLabel,
+        isRevealed:
+          typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
+        testDetails: patch.testDetails
+          ? {
+              instructionsTitle:
+                patch.testDetails.instructionsTitle ||
+                current.testDetails?.instructionsTitle ||
+                '',
+              theme: patch.testDetails.theme || current.testDetails?.theme || '',
+              instructions:
+                patch.testDetails.instructions ||
+                current.testDetails?.instructions ||
+                '',
+              submissionNote:
+                patch.testDetails.submissionNote ||
+                current.testDetails?.submissionNote ||
+                '',
+            }
+          : current.testDetails,
+      };
+      return store.phases[idx];
+    });
   }
 }
 
@@ -830,8 +901,28 @@ export async function createNewsRecord(input: {
 
     return mapNewsRow(inserted[0]);
   } catch (error) {
-    console.error('Database createNewsRecord failed:', error);
-    throw new Error("Impossible d'enregistrer cet article.", { cause: error });
+    console.warn('Database createNewsRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      const baseSlug = slugify(input.title) || `actualite-${Date.now()}`;
+      const uniqueSlug = store.news.some((n) => n.slug === baseSlug)
+        ? `${baseSlug}-${Date.now().toString().slice(-4)}`
+        : baseSlug;
+      const item: NewsArticle = {
+        id: crypto.randomUUID(),
+        slug: uniqueSlug,
+        title: input.title.trim(),
+        category: input.category || 'Vie du concours',
+        publishedAt: new Date().toISOString(),
+        readTime,
+        excerpt: input.excerpt.trim(),
+        content: paragraphs,
+        imageKey: input.imageKey || 'campus',
+        featured: false,
+        status: input.status || 'published',
+      };
+      store.news.unshift(item);
+      return item;
+    });
   }
 }
 
@@ -899,8 +990,22 @@ export async function updateNewsRecord(
 
     return updated[0] ? mapNewsRow(updated[0]) : null;
   } catch (error) {
-    console.error('Database updateNewsRecord error:', (error as Error).message);
-    throw new Error('Impossible de mettre à jour cet article.', { cause: error });
+    console.warn('Database updateNewsRecord error, bascule sur JSON:', (error as Error).message);
+    return withJsonStoreLock((store) => {
+      const idx = store.news.findIndex((n) => n.id === id);
+      if (idx === -1) return null;
+      const current = store.news[idx];
+      store.news[idx] = {
+        ...current,
+        title: patch.title?.trim() || current.title,
+        excerpt: patch.excerpt?.trim() || current.excerpt,
+        content: paragraphs || current.content,
+        category: patch.category || current.category,
+        status: patch.status || current.status,
+        imageKey: patch.imageKey || current.imageKey,
+      };
+      return store.news[idx];
+    });
   }
 }
 
@@ -934,8 +1039,11 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
       officialEmail: 'ucaeplokossa@gmail.com',
     };
   } catch (error) {
-    console.error('Database updateSettingsRecord failed:', error);
-    throw new Error("Impossible d'enregistrer les paramètres.", { cause: error });
+    console.warn('Database updateSettingsRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      store.settings.googleAppsScriptUrl = cleanUrl;
+      return store.settings;
+    });
   }
 }
 
@@ -1216,15 +1324,56 @@ export async function saveRegistration(
 
     return record;
   } catch (error) {
-    const err = error as Error & { statusCode?: number };
-    if (err.statusCode === 409) {
-      throw err;
+    const err = error as Error & { statusCode?: number; code?: string; constraint?: string };
+    if (err.statusCode === 409 || err.code === '23505') {
+      const duplicateMsg = err.constraint?.includes('student_id')
+        ? 'Une inscription existe déjà avec ce numéro matricule.'
+        : 'Une inscription existe déjà avec cette adresse e-mail.';
+      const conflictErr = new Error(err.message?.includes('déjà') ? err.message : duplicateMsg);
+      (conflictErr as Error & { statusCode?: number }).statusCode = 409;
+      throw conflictErr;
     }
-    console.error('Database saveRegistration error:', err.message);
-    throw new Error(
-      "L'enregistrement de votre inscription n'a pas abouti. Merci de réessayer dans un instant.",
-      { cause: error },
-    );
+    console.warn('Database saveRegistration error, bascule sur enregistrement local JSON:', err.message);
+    return withJsonStoreLock(async (store) => {
+      const duplicate = store.registrations.find(
+        (r) =>
+          r.email.toLowerCase() === normalizedEmail ||
+          (normalizedMatricule && r.studentId.toUpperCase() === normalizedMatricule),
+      );
+      if (duplicate) {
+        const conflictErr = new Error(
+          'Une inscription existe déjà avec cette adresse e-mail ou ce numéro matricule.',
+        );
+        (conflictErr as Error & { statusCode?: number }).statusCode = 409;
+        throw conflictErr;
+      }
+      const seq = String(store.registrations.length + 1).padStart(4, '0');
+      const referenceCode = `UCAEP-2026-${seq}`;
+      const gasUrl =
+        store.settings.googleAppsScriptUrl || process.env.GOOGLE_APPS_SCRIPT_URL || '';
+
+      const record: RegistrationRecord = {
+        ...payload,
+        email: normalizedEmail,
+        studentId: normalizedMatricule,
+        id: crypto.randomUUID(),
+        referenceCode,
+        createdAt: new Date().toISOString(),
+        syncedToGoogleSheets: false,
+        syncTarget: gasUrl ? 'google_apps_script' : 'local_archive',
+      };
+      store.registrations.push(record);
+
+      if (gasUrl) {
+        try {
+          await forwardToGoogleAppsScript(gasUrl, record);
+          record.syncedToGoogleSheets = true;
+        } catch {
+          // ignore
+        }
+      }
+      return record;
+    });
   }
 }
 
