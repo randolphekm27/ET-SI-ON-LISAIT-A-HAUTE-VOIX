@@ -8,7 +8,10 @@ declare global {
 }
 
 export function isCloudSqlConfigured(): boolean {
-  const url = process.env.DATABASE_URL;
+  let url = (process.env.DATABASE_URL || '').trim();
+  if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
+    url = url.slice(1, -1).trim();
+  }
   return Boolean(
     url &&
       !url.includes('[VOTRE_MOT_DE_PASSE') &&
@@ -16,12 +19,21 @@ export function isCloudSqlConfigured(): boolean {
   );
 }
 
+export function getCleanDatabaseUrl(): string {
+  let url = (process.env.DATABASE_URL || '').trim();
+  if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
+    url = url.slice(1, -1).trim();
+  }
+  return url;
+}
+
 export const createPool = () => {
   if (!global._postgresPool) {
+    const connectionString = getCleanDatabaseUrl();
     global._postgresPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: { rejectUnauthorized: false },
-      max: 5,
+      max: process.env.VERCEL ? 2 : 5,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 10000,
       allowExitOnIdle: true,
@@ -34,11 +46,17 @@ export const createPool = () => {
   return global._postgresPool;
 };
 
-const pool = createPool();
+export function resetPool() {
+  if (global._postgresPool) {
+    global._postgresPool.end().catch(() => {});
+    global._postgresPool = undefined;
+  }
+}
 
 export async function testDatabaseConnection(): Promise<boolean> {
   if (!isCloudSqlConfigured()) return false;
   try {
+    const pool = createPool();
     const client = await pool.connect();
     try {
       await client.query('SELECT 1');
@@ -48,8 +66,14 @@ export async function testDatabaseConnection(): Promise<boolean> {
     }
   } catch (err) {
     console.warn('Database health check failed:', (err as Error).message);
+    resetPool();
     return false;
   }
 }
 
-export const db = drizzle(pool, { schema });
+export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
+  get(_target, prop) {
+    const instance = drizzle(createPool(), { schema });
+    return (instance as any)[prop];
+  },
+});

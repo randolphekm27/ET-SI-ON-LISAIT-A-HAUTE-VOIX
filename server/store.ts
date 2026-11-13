@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { asc, desc, eq, or, sql } from 'drizzle-orm';
-import { db, isCloudSqlConfigured } from '../src/db/index.ts';
+import { db, isCloudSqlConfigured, resetPool } from '../src/db/index.ts';
 import {
   announcements as announcementsTable,
   appSettings as appSettingsTable,
@@ -333,10 +333,7 @@ async function ensureDbSeeded(): Promise<void> {
         isDbSeeded = true;
       } catch (error) {
         seedPromise = null;
-        console.error('Failed to seed initial competition data:', error);
-        throw new Error('Impossible d’initialiser les données du concours.', {
-          cause: error,
-        });
+        console.warn('Initial seed check non bloquant:', (error as Error).message);
       }
     })();
   }
@@ -497,20 +494,17 @@ export async function readStore(): Promise<StoreData> {
   }
 
   let lastError: unknown = null;
-  const maxAttempts = 2;
+  const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await ensureDbSeeded();
-      const [phaseRows, announcementRows, newsRows, registrationRows, contactRows, settingsRows] =
-        await Promise.all([
-          db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
-          db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt)),
-          db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt)),
-          db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt)),
-          db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt)),
-          db.select().from(appSettingsTable),
-        ]);
+      const phaseRows = await db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder));
+      const announcementRows = await db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt));
+      const newsRows = await db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt));
+      const registrationRows = await db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt));
+      const contactRows = await db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt));
+      const settingsRows = await db.select().from(appSettingsTable);
 
       const settingsMap = new Map(
         settingsRows.map((s) => [
@@ -554,23 +548,24 @@ export async function readStore(): Promise<StoreData> {
     } catch (error) {
       lastError = error;
       console.warn(`Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`, (error as Error).message);
+      resetPool();
       if (attempt < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
   }
 
-  // Si nous avons des données récentes en mémoire cache, on les sert plutôt que de vider l'affichage
+  // Si nous avons des données récentes en mémoire cache, on les sert plutôt que de bloquer l'affichage
   if (cachedStore && cachedStore.registrations.length > 0) {
     console.warn('Utilisation du cache mémoire de secours pour préserver les tables affichées.');
     return cachedStore;
   }
 
+  const detail = lastError instanceof Error ? lastError.message : String(lastError || '');
+
   // Ne jamais écraser silencieusement avec un store JSON vide lorsque PostgreSQL est configuré
   if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-    throw new Error('Connexion à la base de données momentanément indisponible. Les tables sont préservées.', {
-      cause: lastError,
-    });
+    throw new Error(`Connexion à la base de données momentanément indisponible (${detail}). Les tables sont préservées.`);
   }
 
   return readJsonStore();
