@@ -43,7 +43,7 @@ export function ConcoursPage() {
   useEditorialScrollMotion(pageRef);
 
   return (
-    <div ref={pageRef} className="bg-[#FBF9F5]">
+    <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Dossier"
         section="Le concours · UCAEP"
@@ -62,23 +62,23 @@ export function ConcoursPage() {
       />
 
       {/* Documentary Exhibition Opening Image */}
-      <section className="py-14 lg:py-20 border-b border-[#4E2A1E]/14">
+      <section className="py-14 lg:py-20 border-b border-ucaep-brown/14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
           <div className="lg:col-span-9" data-clip-reveal>
-            <div className="aspect-[16/9] overflow-hidden rounded-sm bg-[#4E2A1E]/5">
+            <div className="aspect-[16/9] overflow-hidden rounded-sm bg-ucaep-brown/5">
               <EditorialImage assetKey="audience" data-parallax="-5" />
             </div>
-            <p className="mt-3 text-xs font-serif italic text-[#4E2A1E]/75">
+            <p className="mt-3 text-xs font-serif italic text-ucaep-brown/75">
               Fig. 00 — Un rendez-vous culturel pensé pour tous les étudiants de l&apos;ENSET
             </p>
           </div>
           <div className="lg:col-span-3 space-y-5 pb-2" data-reveal>
-            <p className="font-serif italic text-2xl text-[#4E2A1E] leading-snug">
+            <p className="font-serif italic text-2xl text-ucaep-brown leading-snug">
               « Écrire pour clarifier, lire pour comprendre, parler pour transmettre. »
             </p>
             <Link
               to="/parcours"
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#D19A3A] transition-colors"
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
             >
               <span className="editorial-underline">Voir comment on va avancer</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -92,12 +92,12 @@ export function ConcoursPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           <div className="space-y-3 max-w-2xl" data-reveal>
             <EditorialMark folio="Les trois axes" label="Ce qu'on va partager" tone="brown" />
-            <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-[#1A1A1A] leading-[1.06]">
-              Trois façons de <em className="italic font-medium text-[#4E2A1E]">vous exprimer</em>
+            <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]">
+              Trois façons de <em className="italic font-medium text-ucaep-brown">vous exprimer</em>
             </h2>
           </div>
 
-          <div className="divide-y divide-[#4E2A1E]/14 border-t border-b border-[#4E2A1E]/14">
+          <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
             {PILLARS.map((pillar, idx) => {
               const reversed = idx % 2 === 1;
               return (
@@ -111,10 +111,10 @@ export function ConcoursPage() {
                       reversed ? 'lg:order-2' : 'lg:order-1'
                     }`}
                   >
-                    <div className="aspect-[4/3] overflow-hidden rounded-sm bg-[#4E2A1E]/5" data-clip-reveal>
+                    <div className="aspect-[4/3] overflow-hidden rounded-sm bg-ucaep-brown/5" data-clip-reveal>
                       <EditorialImage assetKey={pillar.imageKey} />
                     </div>
-                    <p className="mt-2.5 text-xs font-serif italic text-[#4E2A1E]/70">
+                    <p className="mt-2.5 text-xs font-serif italic text-ucaep-brown/70">
                       {pillar.caption}
                     </p>
                   </div>
@@ -125,17 +125,17 @@ export function ConcoursPage() {
                     }`}
                   >
                     <div className="flex items-baseline gap-4">
-                      <span className="font-serif text-5xl sm:text-6xl font-semibold text-[#D19A3A] tabular-nums leading-none">
+                      <span className="font-serif text-5xl sm:text-6xl font-semibold text-ucaep-gold tabular-nums leading-none">
                         {pillar.number}
                       </span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4E2A1E]/65">
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-brown/65">
                         Volet {pillar.index}
                       </span>
                     </div>
-                    <h3 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E]">
+                    <h3 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-brown">
                       {pillar.title}
                     </h3>
-                    <p className="text-base sm:text-lg text-[#1A1A1A]/80 leading-relaxed max-w-xl">
+                    <p className="text-base sm:text-lg text-ucaep-ink/80 leading-relaxed max-w-xl">
                       {pillar.text}
                     </p>
                   </div>
@@ -147,48 +147,48 @@ export function ConcoursPage() {
       </section>
 
       {/* Practical Ledger */}
-      <section className="py-20 bg-[#F3EBDD]/75 paper-grain border-y border-[#4E2A1E]/14">
+      <section className="py-20 bg-ucaep-linen/75 paper-grain border-y border-ucaep-brown/14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="space-y-2 max-w-xl" data-reveal>
             <EditorialMark folio="Repères" label="On vous explique" tone="green" />
-            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-[#1A1A1A]">
-              Ce qu&apos;il faut savoir <em className="italic font-medium text-[#4E2A1E]">en pratique</em>
+            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink">
+              Ce qu&apos;il faut savoir <em className="italic font-medium text-ucaep-brown">en pratique</em>
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#4E2A1E]/15 border-t border-b border-[#4E2A1E]/15">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15">
             <div className="py-8 md:py-10 md:pr-8 space-y-3" data-reveal>
-              <span className="text-xs font-semibold uppercase tracking-widest text-[#D19A3A] tabular-nums">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ucaep-gold tabular-nums">
                 01
               </span>
-              <h3 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+              <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
                 Ouvert à tout l&apos;ENSET
               </h3>
-              <p className="text-sm text-[#1A1A1A]/78 leading-relaxed">
+              <p className="text-sm text-ucaep-ink/78 leading-relaxed">
                 Que vous soyez en première année ou en fin de formation, vous pouvez
                 vous inscrire gratuitement jusqu&apos;au 20 novembre 2026.
               </p>
             </div>
             <div className="py-8 md:py-10 md:px-8 space-y-3" data-reveal data-reveal-delay="0.08">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[#D19A3A] tabular-nums">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ucaep-gold tabular-nums">
                 02
               </span>
-              <h3 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+              <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
                 Dévoilé étape par étape
               </h3>
-              <p className="text-sm text-[#1A1A1A]/78 leading-relaxed">
+              <p className="text-sm text-ucaep-ink/78 leading-relaxed">
                 On ne donne pas tous les sujets d&apos;un coup : chaque consigne est
                 publiée sur la page Annonces au moment voulu.
               </p>
             </div>
             <div className="py-8 md:py-10 md:pl-8 space-y-3" data-reveal data-reveal-delay="0.16">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[#D19A3A] tabular-nums">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ucaep-gold tabular-nums">
                 03
               </span>
-              <h3 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+              <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
                 En ligne, puis ensemble
               </h3>
-              <p className="text-sm text-[#1A1A1A]/78 leading-relaxed">
+              <p className="text-sm text-ucaep-ink/78 leading-relaxed">
                 Les deux premières phases se font à distance, puis la finale réunit tout
                 le monde sur le campus à Lokossa.
               </p>
@@ -198,7 +198,7 @@ export function ConcoursPage() {
       </section>
 
       {/* Nature Green Registration Invitation */}
-      <section className="py-20 bg-[#2E4D32] text-[#FBF9F5]">
+      <section className="py-20 bg-ucaep-green text-ucaep-paper">
         <div
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-8"
           data-reveal
@@ -206,16 +206,16 @@ export function ConcoursPage() {
           <div className="space-y-3 max-w-xl">
             <EditorialMark folio="Invitation" label="Édition 2026" tone="ivory" />
             <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-tight">
-              Vous souhaitez <em className="italic font-medium text-[#F7E6C8]">participer ?</em>
+              Vous souhaitez <em className="italic font-medium text-ucaep-ivory">participer ?</em>
             </h2>
-            <p className="text-sm sm:text-base text-[#F7E6C8]/90">
+            <p className="text-sm sm:text-base text-ucaep-ivory/90">
               Prenez deux minutes pour remplir votre fiche d&apos;inscription avant le
               vendredi 20 novembre 2026.
             </p>
           </div>
           <Link
             to="/inscription"
-            className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+            className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
           >
             <span>Je m&apos;inscris</span>
             <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />

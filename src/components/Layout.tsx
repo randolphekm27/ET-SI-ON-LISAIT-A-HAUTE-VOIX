@@ -19,12 +19,12 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-[#1A1A1A]">
+    <div className="min-h-screen flex flex-col bg-ucaep-paper text-ucaep-ink">
       {/* Subtle 2px reading depth line across top of viewport */}
       <motion.div
         aria-hidden="true"
         style={{ scaleX }}
-        className="fixed top-0 left-0 right-0 h-[2px] bg-[#D19A3A] origin-left z-[60] pointer-events-none"
+        className="fixed top-0 left-0 right-0 h-[2px] bg-ucaep-gold origin-left z-[60] pointer-events-none"
       />
       <Header />
       <motion.main

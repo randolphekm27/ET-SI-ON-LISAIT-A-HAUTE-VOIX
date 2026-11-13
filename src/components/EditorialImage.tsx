@@ -23,11 +23,11 @@ export function EditorialImage({
   if (hasError) {
     return (
       <div
-        className={`relative flex flex-col items-center justify-center bg-[#4E2A1E]/10 text-[#4E2A1E] p-6 text-center ${className}`}
+        className={`relative flex flex-col items-center justify-center bg-ucaep-brown/10 text-ucaep-brown p-6 text-center ${className}`}
         role="img"
         aria-label={alt}
       >
-        <span className="font-serif text-xs uppercase tracking-[0.2em] text-[#D19A3A] mb-2">
+        <span className="font-serif text-xs uppercase tracking-[0.2em] text-ucaep-gold mb-2">
           UCAEP · Archives
         </span>
         <span className="font-serif text-base italic max-w-xs">{asset.caption}</span>

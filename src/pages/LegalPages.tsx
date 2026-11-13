@@ -9,18 +9,18 @@ export function MentionsLegalesPage() {
   );
 
   return (
-    <div className="py-16 lg:py-24 bg-[#FBF9F5]">
+    <div className="py-16 lg:py-24 bg-ucaep-paper">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
-        <header className="space-y-4 border-b border-[#4E2A1E]/15 pb-6">
+        <header className="space-y-4 border-b border-ucaep-brown/15 pb-6">
           <EditorialMark folio="Cadre" label="Informations légales" tone="green" />
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E]">
+          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-brown">
             Mentions légales
           </h1>
         </header>
 
-        <div className="space-y-6 text-sm sm:text-base text-[#1A1A1A]/85 leading-relaxed">
+        <div className="space-y-6 text-sm sm:text-base text-ucaep-ink/85 leading-relaxed">
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Éditeur du site
             </h2>
             <p>
@@ -32,7 +32,7 @@ export function MentionsLegalesPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Propriété intellectuelle
             </h2>
             <p>
@@ -44,19 +44,19 @@ export function MentionsLegalesPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Contact
             </h2>
             <p>
               Pour toute question sur le site ou l&apos;organisation du concours, vous
               pouvez passer par la{' '}
-              <Link to="/contact" className="text-[#4E2A1E] font-medium underline">
+              <Link to="/contact" className="text-ucaep-brown font-medium underline">
                 page Contact
               </Link>{' '}
               ou écrire à{' '}
               <a
                 href="mailto:ucaeplokossa@gmail.com"
-                className="text-[#4E2A1E] font-medium underline"
+                className="text-ucaep-brown font-medium underline"
               >
                 ucaeplokossa@gmail.com
               </a>
@@ -76,18 +76,18 @@ export function PolitiqueConfidentialitePage() {
   );
 
   return (
-    <div className="py-16 lg:py-24 bg-[#FBF9F5]">
+    <div className="py-16 lg:py-24 bg-ucaep-paper">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
-        <header className="space-y-4 border-b border-[#4E2A1E]/15 pb-6">
+        <header className="space-y-4 border-b border-ucaep-brown/15 pb-6">
           <EditorialMark folio="Confidentialité" label="Données personnelles" tone="green" />
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E]">
+          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-brown">
             Politique de confidentialité
           </h1>
         </header>
 
-        <div className="space-y-6 text-sm sm:text-base text-[#1A1A1A]/85 leading-relaxed">
+        <div className="space-y-6 text-sm sm:text-base text-ucaep-ink/85 leading-relaxed">
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Utilisation des informations recueillies
             </h2>
             <p>
@@ -99,7 +99,7 @@ export function PolitiqueConfidentialitePage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Enregistrement et confidentialité
             </h2>
             <p>
@@ -111,19 +111,19 @@ export function PolitiqueConfidentialitePage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
               Vos droits
             </h2>
             <p>
               Vous pouvez demander à modifier ou supprimer vos informations
               d&apos;inscription à tout moment via la{' '}
-              <Link to="/contact" className="text-[#4E2A1E] font-medium underline">
+              <Link to="/contact" className="text-ucaep-brown font-medium underline">
                 page Contact
               </Link>{' '}
               ou par e-mail à{' '}
               <a
                 href="mailto:ucaeplokossa@gmail.com"
-                className="text-[#4E2A1E] font-medium underline"
+                className="text-ucaep-brown font-medium underline"
               >
                 ucaeplokossa@gmail.com
               </a>

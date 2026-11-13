@@ -63,7 +63,7 @@ function NewsMagazineView() {
   const archiveArticles = filtered.slice(3);
 
   return (
-    <div ref={pageRef} className="bg-[#FBF9F5]">
+    <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Journal"
         section="Les nouvelles du concours"
@@ -74,7 +74,7 @@ function NewsMagazineView() {
           <div
             role="tablist"
             aria-label="Filtrer les actualités par rubrique"
-            className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F3EBDD] rounded-sm border border-[#4E2A1E]/14"
+            className="flex flex-wrap items-center gap-1.5 p-1 bg-ucaep-linen rounded-sm border border-ucaep-brown/14"
           >
             {CATEGORIES.map((cat) => (
               <button
@@ -85,8 +85,8 @@ function NewsMagazineView() {
                 onClick={() => setFilter(cat)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 ${
                   filter === cat
-                    ? 'bg-[#4E2A1E] text-[#FBF9F5]'
-                    : 'text-[#4E2A1E]/80 hover:text-[#1A1A1A]'
+                    ? 'bg-ucaep-brown text-ucaep-paper'
+                    : 'text-ucaep-brown/80 hover:text-ucaep-ink'
                 }`}
               >
                 {cat}
@@ -99,16 +99,16 @@ function NewsMagazineView() {
       <section className="py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           {loading ? (
-            <div className="h-96 rounded-sm bg-[#F7E6C8]/30 animate-pulse" />
+            <div className="h-96 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
           ) : filtered.length === 0 ? (
-            <div className="p-12 border border-[#4E2A1E]/15 rounded-sm bg-[#F3EBDD]/40 text-center space-y-3">
-              <p className="font-serif text-3xl text-[#4E2A1E]">
+            <div className="p-12 border border-ucaep-brown/15 rounded-sm bg-ucaep-linen/40 text-center space-y-3">
+              <p className="font-serif text-3xl text-ucaep-brown">
                 Il n&apos;y a pas encore d&apos;article dans cette rubrique.
               </p>
               <button
                 type="button"
                 onClick={() => setFilter('Toutes')}
-                className="text-sm font-semibold text-[#4E2A1E] underline"
+                className="text-sm font-semibold text-ucaep-brown underline"
               >
                 Voir toutes les actualités
               </button>
@@ -122,15 +122,15 @@ function NewsMagazineView() {
                   data-reveal
                   className="group grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
                 >
-                  <div className="lg:col-span-7 aspect-[16/10] overflow-hidden rounded-sm bg-[#4E2A1E]/5">
+                  <div className="lg:col-span-7 aspect-[16/10] overflow-hidden rounded-sm bg-ucaep-brown/5">
                     <EditorialImage
                       assetKey={leadArticle.imageKey}
                       className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
                     />
                   </div>
                   <div className="lg:col-span-5 space-y-5">
-                    <div className="text-xs text-[#4E2A1E]/75 tabular-nums">
-                      <span className="font-semibold text-[#2E4D32]">
+                    <div className="text-xs text-ucaep-brown/75 tabular-nums">
+                      <span className="font-semibold text-ucaep-green">
                         À la une · {leadArticle.category}
                       </span>
                       <span aria-hidden="true"> · </span>
@@ -140,13 +140,13 @@ function NewsMagazineView() {
                       <span aria-hidden="true"> · </span>
                       <span>{leadArticle.readTime}</span>
                     </div>
-                    <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-[#1A1A1A] group-hover:text-[#4E2A1E] transition-colors leading-[1.06]">
+                    <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors leading-[1.06]">
                       {leadArticle.title}
                     </h2>
-                    <p className="text-base text-[#1A1A1A]/80 leading-relaxed">
+                    <p className="text-base text-ucaep-ink/80 leading-relaxed">
                       {leadArticle.excerpt}
                     </p>
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E]">
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown">
                       <span className="editorial-underline">Lire l&apos;article</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                     </span>
@@ -156,7 +156,7 @@ function NewsMagazineView() {
 
               {/* Tier 2: Two Editorial Columns separated by vertical hairline */}
               {secondaryArticles.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#4E2A1E]/14 border-t border-b border-[#4E2A1E]/14">
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
                   {secondaryArticles.map((article, idx) => (
                     <Link
                       key={article.id}
@@ -167,15 +167,15 @@ function NewsMagazineView() {
                         idx === 0 ? 'md:pr-10' : 'md:pl-10'
                       }`}
                     >
-                      <div className="aspect-[16/10] overflow-hidden rounded-sm bg-[#4E2A1E]/5">
+                      <div className="aspect-[16/10] overflow-hidden rounded-sm bg-ucaep-brown/5">
                         <EditorialImage
                           assetKey={article.imageKey}
                           className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
                         />
                       </div>
                       <div className="space-y-2.5">
-                        <div className="text-xs text-[#1A1A1A]/60 tabular-nums">
-                          <span className="font-medium text-[#4E2A1E]">
+                        <div className="text-xs text-ucaep-ink/60 tabular-nums">
+                          <span className="font-medium text-ucaep-brown">
                             {article.category}
                           </span>
                           <span aria-hidden="true"> · </span>
@@ -185,10 +185,10 @@ function NewsMagazineView() {
                           <span aria-hidden="true"> · </span>
                           <span>{article.readTime}</span>
                         </div>
-                        <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1A1A1A] group-hover:text-[#4E2A1E] transition-colors leading-snug">
+                        <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors leading-snug">
                           {article.title}
                         </h3>
-                        <p className="text-sm sm:text-base text-[#1A1A1A]/75 leading-relaxed">
+                        <p className="text-sm sm:text-base text-ucaep-ink/75 leading-relaxed">
                           {article.excerpt}
                         </p>
                       </div>
@@ -201,7 +201,7 @@ function NewsMagazineView() {
               {archiveArticles.length > 0 && (
                 <div className="space-y-6" data-reveal>
                   <EditorialMark folio="Archives" label="Plus tôt" tone="brown" />
-                  <div className="divide-y divide-[#4E2A1E]/14 border-t border-b border-[#4E2A1E]/14">
+                  <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
                     {archiveArticles.map((article) => (
                       <Link
                         key={article.id}
@@ -209,7 +209,7 @@ function NewsMagazineView() {
                         className="py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
                       >
                         <div className="space-y-1">
-                          <div className="text-xs text-[#1A1A1A]/60 tabular-nums">
+                          <div className="text-xs text-ucaep-ink/60 tabular-nums">
                             <span>{article.category}</span>
                             <span aria-hidden="true"> · </span>
                             <time dateTime={article.publishedAt}>
@@ -218,11 +218,11 @@ function NewsMagazineView() {
                             <span aria-hidden="true"> · </span>
                             <span>{article.readTime}</span>
                           </div>
-                          <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1A1A1A] group-hover:text-[#4E2A1E] transition-colors">
+                          <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors">
                             {article.title}
                           </h3>
                         </div>
-                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] whitespace-nowrap shrink-0">
+                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown whitespace-nowrap shrink-0">
                           <span className="editorial-underline">Lire</span>
                           <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                         </span>
@@ -273,7 +273,7 @@ function NewsArticleView({ slug }: { slug: string }) {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24">
-        <div className="h-80 rounded-sm bg-[#F7E6C8]/30 animate-pulse" />
+        <div className="h-80 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
       </div>
     );
   }
@@ -281,12 +281,12 @@ function NewsArticleView({ slug }: { slug: string }) {
   if (notFound || !article) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center space-y-5">
-        <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
+        <h1 className="font-serif text-4xl font-semibold text-ucaep-brown">
           Cet article est introuvable
         </h1>
         <Link
           to="/actualites"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:underline"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Revenir aux actualités</span>
@@ -296,43 +296,43 @@ function NewsArticleView({ slug }: { slug: string }) {
   }
 
   return (
-    <article className="py-16 lg:py-24 bg-[#FBF9F5]">
+    <article className="py-16 lg:py-24 bg-ucaep-paper">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <Link
           to="/actualites"
-          className="group inline-flex items-center gap-2 text-sm font-medium text-[#4E2A1E] hover:text-[#D19A3A] transition-colors"
+          className="group inline-flex items-center gap-2 text-sm font-medium text-ucaep-brown hover:text-ucaep-gold transition-colors"
         >
           <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
           <span className="editorial-underline">Toutes les actualités</span>
         </Link>
 
-        <header className="space-y-5 border-b border-[#4E2A1E]/14 pb-8">
+        <header className="space-y-5 border-b border-ucaep-brown/14 pb-8">
           <EditorialMark
             folio={`${formatFrenchDate(article.publishedAt)} · ${article.readTime}`}
             label={article.category}
             tone="green"
           />
-          <h1 className="font-serif text-4xl sm:text-6xl font-semibold text-[#4E2A1E] leading-[1.04]">
+          <h1 className="font-serif text-4xl sm:text-6xl font-semibold text-ucaep-brown leading-[1.04]">
             {article.title}
           </h1>
-          <p className="text-lg sm:text-xl text-[#1A1A1A]/80 leading-relaxed max-w-2xl">
+          <p className="text-lg sm:text-xl text-ucaep-ink/80 leading-relaxed max-w-2xl">
             {article.excerpt}
           </p>
         </header>
 
         <figure>
-          <div className="aspect-[16/9] overflow-hidden rounded-sm bg-[#4E2A1E]/5">
+          <div className="aspect-[16/9] overflow-hidden rounded-sm bg-ucaep-brown/5">
             <EditorialImage assetKey={article.imageKey} />
           </div>
         </figure>
 
-        <div className="max-w-prose space-y-6 text-base sm:text-lg text-[#1A1A1A]/85 leading-relaxed">
+        <div className="max-w-prose space-y-6 text-base sm:text-lg text-ucaep-ink/85 leading-relaxed">
           {article.content.map((para, i) => (
             <p
               key={i}
               className={
                 i === 0
-                  ? 'first-letter:text-5xl first-letter:font-serif first-letter:font-semibold first-letter:text-[#4E2A1E] first-letter:float-left first-letter:mr-3 first-letter:leading-none'
+                  ? 'first-letter:text-5xl first-letter:font-serif first-letter:font-semibold first-letter:text-ucaep-brown first-letter:float-left first-letter:mr-3 first-letter:leading-none'
                   : ''
               }
             >

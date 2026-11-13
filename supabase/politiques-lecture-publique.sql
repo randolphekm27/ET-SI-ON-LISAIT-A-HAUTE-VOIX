@@ -6,7 +6,7 @@
 
 drop policy if exists "Public can read published announcements" on public.announcements;
 drop policy if exists "Public can read published news"          on public.news_articles;
-drop policy if exists "Public can read revealed phases"         on public.phases;
+drop policy if exists "Public can read revealed phases"         on public.competition_phases;
 
 create policy "Public can read published announcements"
 on public.announcements for select to anon, authenticated
@@ -17,5 +17,5 @@ on public.news_articles for select to anon, authenticated
 using (status = 'published' and published_at::timestamptz <= now());
 
 create policy "Public can read revealed phases"
-on public.phases for select to anon, authenticated
+on public.competition_phases for select to anon, authenticated
 using (is_revealed = true);

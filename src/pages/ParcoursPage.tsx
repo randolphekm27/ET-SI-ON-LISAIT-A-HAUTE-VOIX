@@ -11,33 +11,33 @@ import type { CompetitionPhase } from '../types/competition';
 
 const PHASE_ATMOSPHERES = [
   {
-    bg: 'bg-[#FBF9F5]',
-    text: 'text-[#1A1A1A]',
-    heading: 'text-[#4E2A1E]',
-    muted: 'text-[#4E2A1E]/75',
-    border: 'border-[#4E2A1E]/18',
-    sealBg: 'bg-[#F3EBDD]/70',
-    accent: 'text-[#D19A3A]',
+    bg: 'bg-ucaep-paper',
+    text: 'text-ucaep-ink',
+    heading: 'text-ucaep-brown',
+    muted: 'text-ucaep-brown/75',
+    border: 'border-ucaep-brown/18',
+    sealBg: 'bg-ucaep-linen/70',
+    accent: 'text-ucaep-gold',
     markTone: 'brown' as const,
   },
   {
-    bg: 'bg-[#2E4D32]',
-    text: 'text-[#F7E6C8]/90',
-    heading: 'text-[#FBF9F5]',
-    muted: 'text-[#F7E6C8]/75',
-    border: 'border-[#F7E6C8]/22',
+    bg: 'bg-ucaep-green',
+    text: 'text-ucaep-ivory/90',
+    heading: 'text-ucaep-paper',
+    muted: 'text-ucaep-ivory/75',
+    border: 'border-ucaep-ivory/22',
     sealBg: 'bg-[#1f3622]',
-    accent: 'text-[#D19A3A]',
+    accent: 'text-ucaep-gold',
     markTone: 'gold' as const,
   },
   {
-    bg: 'bg-[#4E2A1E]',
-    text: 'text-[#F7E6C8]/90',
-    heading: 'text-[#FBF9F5]',
-    muted: 'text-[#F7E6C8]/75',
-    border: 'border-[#F7E6C8]/22',
+    bg: 'bg-ucaep-brown',
+    text: 'text-ucaep-ivory/90',
+    heading: 'text-ucaep-paper',
+    muted: 'text-ucaep-ivory/75',
+    border: 'border-ucaep-ivory/22',
     sealBg: 'bg-[#381d14]',
-    accent: 'text-[#D19A3A]',
+    accent: 'text-ucaep-gold',
     markTone: 'gold' as const,
   },
 ];
@@ -75,7 +75,7 @@ export function ParcoursPage() {
   const activeStyle = PHASE_ATMOSPHERES[activeIdx % PHASE_ATMOSPHERES.length];
 
   return (
-    <div ref={pageRef} className="bg-[#FBF9F5]">
+    <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Itinéraire"
         section="Le parcours"
@@ -86,19 +86,19 @@ export function ParcoursPage() {
 
       {loading ? (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-          <div className="h-24 rounded-sm bg-[#F7E6C8]/30 animate-pulse" />
-          <div className="h-96 rounded-sm bg-[#F7E6C8]/30 animate-pulse" />
+          <div className="h-24 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
+          <div className="h-96 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
         </div>
       ) : (
         <>
           {/* DESKTOP: Horizontal 3-Chapter Progression Rail + Atmospheric Stage */}
-          <section className="hidden lg:block py-16 lg:py-20 bg-[#FBF9F5]">
+          <section className="hidden lg:block py-16 lg:py-20 bg-ucaep-paper">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
               {/* Horizontal progression selector */}
               <div
                 role="tablist"
                 aria-label="Chapitres du parcours"
-                className="relative grid grid-cols-3 border-b border-[#4E2A1E]/18"
+                className="relative grid grid-cols-3 border-b border-ucaep-brown/18"
               >
                 {phases.map((phase, idx) => {
                   const isActive = idx === activeIdx;
@@ -110,18 +110,18 @@ export function ParcoursPage() {
                       aria-selected={isActive}
                       onClick={() => setActiveIdx(idx)}
                       className={`group relative pb-6 pt-2 pr-6 text-left transition-colors ${
-                        isActive ? 'text-[#1A1A1A]' : 'text-[#1A1A1A]/50 hover:text-[#4E2A1E]'
+                        isActive ? 'text-ucaep-ink' : 'text-ucaep-ink/50 hover:text-ucaep-brown'
                       }`}
                     >
                       <div className="flex items-baseline justify-between gap-4">
                         <span
                           className={`font-serif text-5xl font-semibold tabular-nums leading-none transition-colors ${
-                            isActive ? 'text-[#D19A3A]' : 'text-[#4E2A1E]/35 group-hover:text-[#D19A3A]'
+                            isActive ? 'text-ucaep-gold' : 'text-ucaep-brown/35 group-hover:text-ucaep-gold'
                           }`}
                         >
                           {phase.number}
                         </span>
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#2E4D32]">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ucaep-green">
                           {phase.format} · {phase.statusLabel}
                         </span>
                       </div>
@@ -132,7 +132,7 @@ export function ParcoursPage() {
                         <motion.span
                           layoutId="parcours-chapter-bar"
                           aria-hidden="true"
-                          className="absolute bottom-[-1px] left-0 right-6 h-[2px] bg-[#D19A3A]"
+                          className="absolute -bottom-px left-0 right-6 h-0.5 bg-ucaep-gold"
                           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                         />
                       )}
@@ -154,7 +154,7 @@ export function ParcoursPage() {
                   >
                     <div className="grid grid-cols-12 gap-12 items-center">
                       <div className="col-span-6">
-                        <div className="aspect-[4/3] overflow-hidden rounded-sm bg-black/15">
+                        <div className="aspect-4/3 overflow-hidden rounded-sm bg-black/15">
                           <EditorialImage assetKey={activePhase.imageKey} />
                         </div>
                       </div>
@@ -219,7 +219,7 @@ export function ParcoursPage() {
           </section>
 
           {/* MOBILE / TABLET: Deliberate Vertical Chapter Progression */}
-          <section className="lg:hidden divide-y divide-[#4E2A1E]/15">
+          <section className="lg:hidden divide-y divide-ucaep-brown/15">
             {phases.map((phase, idx) => {
               const style = PHASE_ATMOSPHERES[idx % PHASE_ATMOSPHERES.length];
               return (
@@ -229,7 +229,7 @@ export function ParcoursPage() {
                 >
                   <div className="max-w-2xl mx-auto space-y-6">
                     <div className="flex items-baseline justify-between">
-                      <span className="font-serif text-5xl font-semibold text-[#D19A3A] tabular-nums leading-none">
+                      <span className="font-serif text-5xl font-semibold text-ucaep-gold tabular-nums leading-none">
                         {phase.number}
                       </span>
                       <span className={`text-xs font-semibold uppercase tracking-widest ${style.muted}`}>
@@ -237,7 +237,7 @@ export function ParcoursPage() {
                       </span>
                     </div>
 
-                    <div className="aspect-[4/3] overflow-hidden rounded-sm bg-black/15">
+                    <div className="aspect-4/3 overflow-hidden rounded-sm bg-black/15">
                       <EditorialImage assetKey={phase.imageKey} />
                     </div>
 
@@ -263,26 +263,26 @@ export function ParcoursPage() {
       )}
 
       {/* Closing strip */}
-      <section className="py-16 bg-[#F3EBDD]/75 border-t border-[#4E2A1E]/14">
+      <section className="py-16 bg-ucaep-linen/75 border-t border-ucaep-brown/14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="space-y-1.5">
-            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
               Envie de suivre la suite ?
             </h2>
-            <p className="text-sm text-[#1A1A1A]/75">
+            <p className="text-sm text-ucaep-ink/75">
               Revenez sur les annonces de temps en temps ou inscrivez-vous dès maintenant.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               to="/annonces"
-              className="px-5 py-3 text-sm font-medium rounded-sm border border-[#4E2A1E]/30 text-[#4E2A1E] hover:bg-[#4E2A1E]/5 transition-colors whitespace-nowrap shrink-0"
+              className="px-5 py-3 text-sm font-medium rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors whitespace-nowrap shrink-0"
             >
               Voir les annonces
             </Link>
             <Link
               to="/inscription"
-              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
             >
               <span>Je m&apos;inscris</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -309,8 +309,8 @@ function PhaseDetailsBlock({
 }) {
   if (phase.isRevealed && phase.testDetails) {
     return (
-      <div className={`p-6 ${sealBg} border border-[#D19A3A]/60 rounded-sm space-y-2.5`}>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#D19A3A]">
+      <div className={`p-6 ${sealBg} border border-ucaep-gold/60 rounded-sm space-y-2.5`}>
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ucaep-gold">
           <Unlock className="w-3.5 h-3.5" />
           <span>Consignes disponibles</span>
         </div>
@@ -328,7 +328,7 @@ function PhaseDetailsBlock({
 
   return (
     <div className={`p-5 ${sealBg} border ${border} rounded-sm flex items-start gap-3.5`}>
-      <Lock className="w-4 h-4 text-[#D19A3A] shrink-0 mt-0.5" aria-hidden="true" />
+      <Lock className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
       <div className="space-y-1">
         <p className={`text-sm font-semibold ${headingColor}`}>
           Chapitre scellé · On vous dévoile la suite bientôt

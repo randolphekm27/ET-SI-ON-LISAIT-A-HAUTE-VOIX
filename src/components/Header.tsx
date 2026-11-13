@@ -60,13 +60,13 @@ export function Header() {
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           overDarkHero
-            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#14100E]/92 via-[#14100E]/65 to-transparent text-[#FBF9F5]'
-            : 'h-16 bg-[#FBF9F5]/95 backdrop-blur-md border-b border-[#4E2A1E]/14 text-[#1A1A1A]'
+            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#14100E]/92 via-[#14100E]/65 to-transparent text-ucaep-paper'
+            : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
         <div
           className={`max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-8 ${
-            overDarkHero ? 'border-b border-[#F7E6C8]/14' : ''
+            overDarkHero ? 'border-b border-ucaep-ivory/14' : ''
           }`}
         >
           {/* Zone 1: Brand mark */}
@@ -91,11 +91,11 @@ export function Header() {
                   `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
                     overDarkHero
                       ? isActive
-                        ? 'text-[#F7E6C8] font-semibold'
-                        : 'text-[#FBF9F5]/78 hover:text-[#F7E6C8]'
+                        ? 'text-ucaep-ivory font-semibold'
+                        : 'text-ucaep-paper/78 hover:text-ucaep-ivory'
                       : isActive
-                        ? 'text-[#4E2A1E] font-semibold'
-                        : 'text-[#1A1A1A]/72 hover:text-[#4E2A1E]'
+                        ? 'text-ucaep-brown font-semibold'
+                        : 'text-ucaep-ink/72 hover:text-ucaep-brown'
                   }`
                 }
               >
@@ -106,7 +106,7 @@ export function Header() {
                       <motion.span
                         layoutId="nav-active-rule"
                         aria-hidden="true"
-                        className="absolute inset-x-0 -bottom-0.5 h-[1.5px] bg-[#D19A3A]"
+                        className="absolute inset-x-0 -bottom-0.5 h-[1.5px] bg-ucaep-gold"
                         transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                       />
                     )}
@@ -122,8 +122,8 @@ export function Header() {
               to="/inscription"
               className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
                 overDarkHero
-                  ? 'bg-[#D19A3A] text-[#14100E] hover:bg-[#e1ae52]'
-                  : 'bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]'
+                  ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                  : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
               }`}
             >
               <span>S&apos;inscrire</span>
@@ -137,8 +137,8 @@ export function Header() {
               aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-sm transition-colors ${
                 overDarkHero
-                  ? 'text-[#FBF9F5] hover:bg-white/10'
-                  : 'text-[#4E2A1E] hover:bg-[#4E2A1E]/8'
+                  ? 'text-ucaep-paper hover:bg-white/10'
+                  : 'text-ucaep-brown hover:bg-ucaep-brown/8'
               }`}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -155,10 +155,10 @@ export function Header() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 lg:hidden bg-[#1A1A1A] text-[#FBF9F5] pt-20 pb-8 px-6 flex flex-col justify-between overflow-y-auto"
+            className="fixed inset-0 z-40 lg:hidden bg-ucaep-ink text-ucaep-paper pt-20 pb-8 px-6 flex flex-col justify-between overflow-y-auto"
           >
             <div className="space-y-6 pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D19A3A]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
                 Sommaire · ENSET Lokossa
               </p>
               <nav aria-label="Menu mobile" className="divide-y divide-white/10 border-t border-b border-white/10">
@@ -166,10 +166,10 @@ export function Header() {
                   to="/"
                   className="flex items-baseline justify-between py-4 group"
                 >
-                  <span className="font-serif text-3xl font-medium text-[#FBF9F5] group-hover:text-[#D19A3A] transition-colors">
+                  <span className="font-serif text-3xl font-medium text-ucaep-paper group-hover:text-ucaep-gold transition-colors">
                     Accueil
                   </span>
-                  <span className="text-xs tabular-nums text-[#D19A3A]/75">00</span>
+                  <span className="text-xs tabular-nums text-ucaep-gold/75">00</span>
                 </Link>
                 {NAV_ITEMS.map((item, idx) => (
                   <motion.div
@@ -187,13 +187,13 @@ export function Header() {
                       className={({ isActive }) =>
                         `flex items-baseline justify-between py-4 transition-colors ${
                           isActive
-                            ? 'text-[#D19A3A]'
-                            : 'text-[#FBF9F5] hover:text-[#D19A3A]'
+                            ? 'text-ucaep-gold'
+                            : 'text-ucaep-paper hover:text-ucaep-gold'
                         }`
                       }
                     >
                       <span className="font-serif text-3xl font-medium">{item.label}</span>
-                      <span className="text-xs tabular-nums text-[#F7E6C8]/55">
+                      <span className="text-xs tabular-nums text-ucaep-ivory/55">
                         {item.num}
                       </span>
                     </NavLink>
@@ -205,13 +205,13 @@ export function Header() {
             <div className="pt-8 space-y-4">
               <Link
                 to="/inscription"
-                className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] transition-colors"
+                className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
               >
                 <span>Je m&apos;inscris au concours</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <div className="flex items-center justify-between text-xs text-[#F7E6C8]/65 pt-2">
-                <Link to="/contact" className="hover:text-[#FBF9F5] underline">
+              <div className="flex items-center justify-between text-xs text-ucaep-ivory/65 pt-2">
+                <Link to="/contact" className="hover:text-ucaep-paper underline">
                   Nous écrire
                 </Link>
                 <span className="tabular-nums">+229 01 68 62 46 00</span>
