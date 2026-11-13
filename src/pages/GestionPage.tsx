@@ -593,7 +593,13 @@ export function GestionPage() {
             <p className="text-sm text-[#1A1A1A]/75 leading-relaxed">
               Lorsque cette URL Web App Google Apps Script est renseignée, chaque
               nouvelle inscription est transmise côté serveur vers votre feuille Google
-              Sheets liée avant toute confirmation au candidat.
+              Sheets liée avant toute confirmation au candidat. Sur Vercel, pensez
+              également à enregistrer la variable{' '}
+              <code className="px-1.5 py-0.5 bg-[#F7E6C8]/60 rounded-sm text-xs">
+                GOOGLE_APPS_SCRIPT_URL
+              </code>{' '}
+              dans les paramètres d&apos;environnement du projet pour une persistance
+              permanente.
             </p>
             <form onSubmit={handleSaveSettings} className="space-y-4">
               <div className="space-y-1.5">
