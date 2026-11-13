@@ -60,8 +60,15 @@ function requireAdmin(
   res: express.Response,
   next: express.NextFunction,
 ) {
+  const customHeader = req.headers['x-ucaep-admin-token'];
+  const customToken = Array.isArray(customHeader)
+    ? customHeader[0]
+    : customHeader || '';
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const bearerToken = authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
+  const token = customToken.trim() || bearerToken;
   if (!token || !verifyAdminToken(token)) {
     res.status(401).json({ error: 'Authentification organisateur requise.' });
     return;

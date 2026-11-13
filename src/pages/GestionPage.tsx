@@ -61,7 +61,7 @@ export function GestionPage() {
 
   async function loadOverview(authToken: string) {
     const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { 'X-UCAEP-Admin-Token': authToken },
     });
     setData(json);
     setGasUrl(json.settings.googleAppsScriptUrl || '');
@@ -91,7 +91,7 @@ export function GestionPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-UCAEP-Admin-Token': token,
         },
         body: JSON.stringify({
           title: annTitle,
@@ -118,7 +118,7 @@ export function GestionPage() {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        'X-UCAEP-Admin-Token': token,
       },
       body: JSON.stringify({ status }),
     });
@@ -130,7 +130,7 @@ export function GestionPage() {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        'X-UCAEP-Admin-Token': token,
       },
       body: JSON.stringify({
         isRevealed: !phase.isRevealed,
@@ -148,7 +148,7 @@ export function GestionPage() {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        'X-UCAEP-Admin-Token': token,
       },
       body: JSON.stringify({ statusLabel }),
     });
@@ -165,7 +165,7 @@ export function GestionPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'X-UCAEP-Admin-Token': token,
         },
         body: JSON.stringify({ googleAppsScriptUrl: gasUrl }),
       });
@@ -186,7 +186,7 @@ export function GestionPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+            'X-UCAEP-Admin-Token': token,
           },
           body: JSON.stringify({ url: gasUrl }),
         },

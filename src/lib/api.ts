@@ -12,7 +12,7 @@ export async function fetchApiJson<T>(
     text.trimStart().toLowerCase().startsWith('<html')
   ) {
     throw new Error(
-      "Le serveur API a renvoyé une page HTML au lieu d'une réponse JSON. Veuillez recharger la page et réessayer.",
+      `Le serveur API a renvoyé une page HTML (HTTP ${response.status}). Veuillez recharger la page et réessayer.`,
     );
   }
 
@@ -22,7 +22,7 @@ export async function fetchApiJson<T>(
       parsed = JSON.parse(text) as T & { error?: string };
     } catch {
       throw new Error(
-        'Réponse invalide reçue du serveur. Veuillez réessayer dans un instant.',
+        `Réponse non valide du serveur (HTTP ${response.status}). Veuillez réessayer dans un instant.`,
       );
     }
   }
