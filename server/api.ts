@@ -37,27 +37,39 @@ const ORGANIZER_ALLOWLIST = new Set(
     .filter(Boolean),
 );
 
-function getOrganizerCode(): string | null {
-  const code = process.env.ORGANIZER_ACCESS_CODE;
-  return code && code.trim() ? code.trim() : null;
+function getOrganizerCodes(): string[] {
+  const envVal = process.env.ORGANIZER_ACCESS_CODE;
+  if (!envVal || !envVal.trim()) return [];
+  return envVal
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 function isOrganizerCodeValid(inputCode: string): boolean {
-  const configured = getOrganizerCode();
-  if (!configured) return false;
-  const inputBuffer = Buffer.from(inputCode.trim());
-  const configuredBuffer = Buffer.from(configured);
-  if (inputBuffer.length !== configuredBuffer.length) {
-    return false;
+  const codes = getOrganizerCodes();
+  if (codes.length === 0) return false;
+  const inputUpper = inputCode.trim().toUpperCase();
+  const inputBuffer = Buffer.from(inputUpper);
+  for (const expected of codes) {
+    const expectedUpper = expected.toUpperCase();
+    const expectedBuffer = Buffer.from(expectedUpper);
+    if (
+      inputBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(inputBuffer, expectedBuffer)
+    ) {
+      return true;
+    }
   }
-  return crypto.timingSafeEqual(inputBuffer, configuredBuffer);
+  return false;
 }
 
 function getTokenSecret(): string {
-  const code = getOrganizerCode() || 'ucaep-static-auth-secret';
+  const codes = getOrganizerCodes();
+  const seed = codes[0] || 'ucaep-static-auth-secret';
   return crypto
     .createHash('sha256')
-    .update(`ucaep-session:${code}`)
+    .update(`ucaep-session:${seed}`)
     .digest('hex');
 }
 
@@ -173,8 +185,8 @@ export function registerApiRoutes(app: express.Express) {
     requireAuth,
     async (req: AuthRequest, res) => {
       try {
-        const configured = getOrganizerCode();
-        if (!configured) {
+        const configuredCodes = getOrganizerCodes();
+        if (configuredCodes.length === 0) {
           res.status(503).json({
             error:
               "Le code d'accès organisateur n'est pas configuré sur le serveur (ORGANIZER_ACCESS_CODE manquant).",
@@ -456,8 +468,8 @@ export function registerApiRoutes(app: express.Express) {
 
   // Organizer CMS Auth (access code)
   app.post('/api/admin/auth', (req, res) => {
-    const configured = getOrganizerCode();
-    if (!configured) {
+    const configuredCodes = getOrganizerCodes();
+    if (configuredCodes.length === 0) {
       res.status(503).json({
         error:
           "Le code d'accès organisateur n'est pas configuré sur le serveur (ORGANIZER_ACCESS_CODE manquant).",

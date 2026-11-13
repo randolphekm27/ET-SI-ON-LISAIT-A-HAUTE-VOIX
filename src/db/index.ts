@@ -7,7 +7,12 @@ declare global {
 }
 
 export function isCloudSqlConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL);
+  const url = process.env.DATABASE_URL;
+  return Boolean(
+    url &&
+      !url.includes('[VOTRE_MOT_DE_PASSE') &&
+      !url.includes('[YOUR-PASSWORD]'),
+  );
 }
 
 export const createPool = () => {
