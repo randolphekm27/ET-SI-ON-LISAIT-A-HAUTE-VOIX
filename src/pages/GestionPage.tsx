@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Download, Lock, Plus, Unlock } from 'lucide-react';
+import { Download, Lock, LogOut, Plus, Unlock } from 'lucide-react';
+import { signInWithPopup, signOut } from 'firebase/auth';
+import { auth, googleAuthProvider } from '../lib/firebase';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import type {
@@ -33,10 +35,14 @@ const STATUS_LABELS: Record<PublicationStatus, string> = {
 export function GestionPage() {
   usePageSeo(
     'Espace organisateurs',
-    'Gestion éditoriale des annonces, révélations de phases et inscriptions UCAEP.',
+    'Gestion des annonces, des phases et des inscriptions au concours UCAEP.',
   );
 
   const [token, setToken] = useState<string>('');
+  const [firebaseToken, setFirebaseToken] = useState<string>('');
+  const [googleEmail, setGoogleEmail] = useState<string>('');
+  const [needsOrganizerLink, setNeedsOrganizerLink] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [accessCode, setAccessCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [data, setData] = useState<AdminOverview | null>(null);
@@ -59,27 +65,111 @@ export function GestionPage() {
   const [gasTestMsg, setGasTestMsg] = useState('');
   const [gasTestError, setGasTestError] = useState('');
 
-  async function loadOverview(authToken: string) {
+  function buildAuthHeaders(
+    extraHeaders?: Record<string, string>,
+    overrideAdminToken?: string,
+    overrideFirebaseToken?: string,
+  ): Record<string, string> {
+    const headers: Record<string, string> = { ...(extraHeaders || {}) };
+    const effectiveAdmin = overrideAdminToken ?? token;
+    const effectiveFirebase = overrideFirebaseToken ?? firebaseToken;
+    if (effectiveAdmin) {
+      headers['X-UCAEP-Admin-Token'] = effectiveAdmin;
+    } else if (effectiveFirebase) {
+      headers.Authorization = `Bearer ${effectiveFirebase}`;
+    }
+    return headers;
+  }
+
+  async function loadOverview(
+    overrideAdminToken?: string,
+    overrideFirebaseToken?: string,
+  ) {
     const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
-      headers: { 'X-UCAEP-Admin-Token': authToken },
+      headers: buildAuthHeaders(undefined, overrideAdminToken, overrideFirebaseToken),
     });
     setData(json);
     setGasUrl(json.settings.googleAppsScriptUrl || '');
+  }
+
+  async function handleGoogleLogin() {
+    setAuthError('');
+    setGoogleLoading(true);
+    try {
+      const credential = await signInWithPopup(auth, googleAuthProvider);
+      const idToken = await credential.user.getIdToken();
+      setFirebaseToken(idToken);
+      setGoogleEmail(credential.user.email || '');
+
+      const session = await fetchApiJson<{
+        user: { uid: string; email: string; name: string | null };
+        isOrganizer: boolean;
+      }>('/api/auth/session', {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      if (session.isOrganizer) {
+        setNeedsOrganizerLink(false);
+        await loadOverview('', idToken);
+      } else {
+        setNeedsOrganizerLink(true);
+      }
+    } catch (err) {
+      setAuthError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de finaliser la connexion Google.',
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     setAuthError('');
     try {
+      if (needsOrganizerLink && firebaseToken) {
+        const linked = await fetchApiJson<{ ok: boolean; token: string }>(
+          '/api/admin/auth/link',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${firebaseToken}`,
+            },
+            body: JSON.stringify({ code: accessCode }),
+          },
+        );
+        setToken(linked.token);
+        setNeedsOrganizerLink(false);
+        await loadOverview(linked.token, firebaseToken);
+        return;
+      }
+
       const json = await fetchApiJson<{ token: string }>('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: accessCode }),
       });
       setToken(json.token);
-      await loadOverview(json.token);
+      await loadOverview(json.token, '');
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Erreur de connexion.');
+    }
+  }
+
+  async function handleLogout() {
+    setToken('');
+    setFirebaseToken('');
+    setGoogleEmail('');
+    setNeedsOrganizerLink(false);
+    setData(null);
+    setAccessCode('');
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore if user only signed in with access code
     }
   }
 
@@ -89,10 +179,7 @@ export function GestionPage() {
     try {
       await fetchApiJson('/api/admin/announcements', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-UCAEP-Admin-Token': token,
-        },
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           title: annTitle,
           category: annCategory,
@@ -107,37 +194,33 @@ export function GestionPage() {
       setAnnExcerpt('');
       setAnnContent('');
       setNotice('Annonce enregistrée.');
-      await loadOverview(token);
+      await loadOverview();
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Erreur lors de la création.');
+      setNotice(
+        err instanceof Error ? err.message : "Impossible d'enregistrer cette annonce.",
+      );
     }
   }
 
   async function handleAnnouncementStatus(id: string, status: PublicationStatus) {
     await fetchApiJson(`/api/admin/announcements/${id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-UCAEP-Admin-Token': token,
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ status }),
     });
-    await loadOverview(token);
+    await loadOverview();
   }
 
   async function handleTogglePhaseReveal(phase: CompetitionPhase) {
     await fetchApiJson(`/api/admin/phases/${phase.id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-UCAEP-Admin-Token': token,
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         isRevealed: !phase.isRevealed,
         statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
       }),
     });
-    await loadOverview(token);
+    await loadOverview();
   }
 
   async function handlePhaseStatusLabel(
@@ -146,13 +229,10 @@ export function GestionPage() {
   ) {
     await fetchApiJson(`/api/admin/phases/${phaseId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-UCAEP-Admin-Token': token,
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ statusLabel }),
     });
-    await loadOverview(token);
+    await loadOverview();
   }
 
   async function handleSaveSettings(e: FormEvent) {
@@ -163,16 +243,13 @@ export function GestionPage() {
     try {
       await fetchApiJson('/api/admin/settings', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-UCAEP-Admin-Token': token,
-        },
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ googleAppsScriptUrl: gasUrl }),
       });
-      setNotice('Configuration Google Apps Script enregistrée.');
-      await loadOverview(token);
+      setNotice('Lien Google Sheets enregistré.');
+      await loadOverview();
     } catch (err) {
-      setGasTestError(err instanceof Error ? err.message : 'Erreur de sauvegarde.');
+      setGasTestError(err instanceof Error ? err.message : "Impossible d'enregistrer.");
     }
   }
 
@@ -184,17 +261,16 @@ export function GestionPage() {
         '/api/admin/test-gas',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-UCAEP-Admin-Token': token,
-          },
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ url: gasUrl }),
         },
       );
       setGasTestMsg(`Connexion réussie (${res.service}).`);
     } catch (err) {
       setGasTestError(
-        err instanceof Error ? err.message : 'Échec de connexion à Google Apps Script.',
+        err instanceof Error
+          ? err.message
+          : 'Impossible de joindre le script Google Sheets.',
       );
     }
   }
@@ -206,7 +282,7 @@ export function GestionPage() {
       'Date',
       'Prénom',
       'Nom',
-      'Email',
+      'E-mail',
       'Téléphone',
       'Établissement',
       'Filière',
@@ -239,22 +315,22 @@ export function GestionPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (!token || !data) {
+  if ((!token && !firebaseToken) || !data) {
     return (
       <div className="py-20 bg-[#FBF9F5]">
         <div className="max-w-md mx-auto px-4">
           <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-6">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
-                Comité UCAEP
+                Équipe UCAEP
               </p>
               <h1 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
                 Espace organisateurs
               </h1>
               <p className="text-sm text-[#1A1A1A]/75">
-                Gérez les publications (brouillon, programmé, publié, archivé) et le
-                dévoilement progressif des phases sans exposer d&apos;informations
-                confidentielles.
+                {needsOrganizerLink
+                  ? `Compte connecté (${googleEmail}). Saisissez le code de l'équipe une fois pour activer votre accès.`
+                  : 'Modifier les annonces, ouvrir ou fermer les phases du concours et suivre les inscriptions reçues.'}
               </p>
             </div>
 
@@ -264,20 +340,43 @@ export function GestionPage() {
               </p>
             )}
 
+            {!needsOrganizerLink && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={googleLoading}
+                  className="w-full py-3 px-4 text-sm font-semibold rounded-sm border border-[#4E2A1E]/25 bg-[#FBF9F5] text-[#4E2A1E] hover:bg-[#F7E6C8]/50 transition-colors disabled:opacity-50"
+                >
+                  {googleLoading
+                    ? 'Connexion avec Google...'
+                    : 'Continuer avec Google'}
+                </button>
+
+                <div className="relative flex items-center py-1">
+                  <div className="flex-grow border-t border-[#4E2A1E]/12" />
+                  <span className="mx-3 text-[11px] uppercase tracking-widest text-[#4E2A1E]/55">
+                    ou
+                  </span>
+                  <div className="flex-grow border-t border-[#4E2A1E]/12" />
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="org-code"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
                 >
-                  Code d&apos;accès organisateur
+                  Code d&apos;accès
                 </label>
                 <input
                   id="org-code"
                   type="password"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Saisir le code comité"
+                  placeholder="Entrez le code de l'équipe"
                   required
                   className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
                 />
@@ -286,7 +385,7 @@ export function GestionPage() {
                 type="submit"
                 className="w-full py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
               >
-                Accéder à la gestion
+                {needsOrganizerLink ? 'Activer mon accès' : 'Se connecter'}
               </button>
             </form>
           </div>
@@ -299,13 +398,23 @@ export function GestionPage() {
     <div className="py-14 bg-[#FBF9F5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#4E2A1E]/15 pb-6">
-          <div>
+          <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
-              Comité UCAEP · Gestion éditoriale
+              Équipe UCAEP · Organisation
             </p>
-            <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
-              Tableau de publication
-            </h1>
+            <div className="flex flex-wrap items-center gap-4">
+              <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
+                Gestion du concours
+              </h1>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm border border-[#4E2A1E]/20 text-[#4E2A1E] hover:bg-[#4E2A1E]/5 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Déconnexion</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F7E6C8]/45 rounded-sm border border-[#4E2A1E]/12">
@@ -313,7 +422,7 @@ export function GestionPage() {
               [
                 ['annonces', 'Annonces'],
                 ['parcours', 'Phases'],
-                ['candidats', `Candidats (${data.registrations.length})`],
+                ['candidats', `Inscrits (${data.registrations.length})`],
                 ['config', 'Google Sheets'],
               ] as const
             ).map(([id, label]) => (
@@ -349,7 +458,7 @@ export function GestionPage() {
               <form onSubmit={handleCreateAnnouncement} className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Titre court"
+                  placeholder="Titre de l'annonce"
                   value={annTitle}
                   onChange={(e) => setAnnTitle(e.target.value)}
                   required
@@ -368,16 +477,16 @@ export function GestionPage() {
                     onChange={(e) => setAnnImage(e.target.value as MediaAssetKey)}
                     className="w-full px-3 py-2 text-sm border border-[#4E2A1E]/25 rounded-sm bg-white"
                   >
-                    <option value="campus">Visuel Campus</option>
-                    <option value="hero">Visuel Lecture</option>
-                    <option value="plume">Visuel La Plume</option>
-                    <option value="connaissance">Visuel Connaissance</option>
-                    <option value="eloquence">Visuel Éloquence</option>
+                    <option value="campus">Photo Campus</option>
+                    <option value="hero">Photo Lecture</option>
+                    <option value="plume">Photo La Plume</option>
+                    <option value="connaissance">Photo Connaissance</option>
+                    <option value="eloquence">Photo Éloquence</option>
                   </select>
                 </div>
                 <input
                   type="text"
-                  placeholder="Extrait court (1 phrase)"
+                  placeholder="Résumé en une phrase"
                   value={annExcerpt}
                   onChange={(e) => setAnnExcerpt(e.target.value)}
                   required
@@ -385,7 +494,7 @@ export function GestionPage() {
                 />
                 <textarea
                   rows={4}
-                  placeholder="Contenu complet de l'annonce"
+                  placeholder="Texte complet de l'annonce"
                   value={annContent}
                   onChange={(e) => setAnnContent(e.target.value)}
                   required
@@ -421,42 +530,48 @@ export function GestionPage() {
             </div>
 
             <div className="lg:col-span-7 space-y-4">
-              {data.announcements.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-5 bg-white border border-[#4E2A1E]/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="text-xs text-[#4E2A1E]/75 tabular-nums">
-                      <span>{STATUS_LABELS[item.status]}</span>
-                      <span aria-hidden="true"> · </span>
-                      <span>{item.category}</span>
-                      <span aria-hidden="true"> · </span>
-                      <span>{formatFrenchDate(item.publishedAt)}</span>
-                    </div>
-                    <h3 className="font-serif text-xl font-semibold text-[#1A1A1A]">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-[#1A1A1A]/70">{item.excerpt}</p>
-                  </div>
-                  <select
-                    aria-label={`Changer le statut de ${item.title}`}
-                    value={item.status}
-                    onChange={(e) =>
-                      handleAnnouncementStatus(
-                        item.id,
-                        e.target.value as PublicationStatus,
-                      )
-                    }
-                    className="px-3 py-2 text-xs font-medium border border-[#4E2A1E]/25 rounded-sm bg-[#FBF9F5] shrink-0"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="scheduled">Programmé</option>
-                    <option value="published">Publié</option>
-                    <option value="archived">Archivé</option>
-                  </select>
+              {data.announcements.length === 0 ? (
+                <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm text-sm text-[#1A1A1A]/70">
+                  Il n&apos;y a encore aucune publication ici.
                 </div>
-              ))}
+              ) : (
+                data.announcements.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-5 bg-white border border-[#4E2A1E]/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-xs text-[#4E2A1E]/75 tabular-nums">
+                        <span>{STATUS_LABELS[item.status]}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{item.category}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{formatFrenchDate(item.publishedAt)}</span>
+                      </div>
+                      <h3 className="font-serif text-xl font-semibold text-[#1A1A1A]">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-[#1A1A1A]/70">{item.excerpt}</p>
+                    </div>
+                    <select
+                      aria-label={`Changer le statut de ${item.title}`}
+                      value={item.status}
+                      onChange={(e) =>
+                        handleAnnouncementStatus(
+                          item.id,
+                          e.target.value as PublicationStatus,
+                        )
+                      }
+                      className="px-3 py-2 text-xs font-medium border border-[#4E2A1E]/25 rounded-sm bg-[#FBF9F5] shrink-0"
+                    >
+                      <option value="draft">Brouillon</option>
+                      <option value="scheduled">Programmé</option>
+                      <option value="published">Publié</option>
+                      <option value="archived">Archivé</option>
+                    </select>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -482,7 +597,7 @@ export function GestionPage() {
                 <div className="pt-2 space-y-3 border-t border-[#4E2A1E]/10">
                   <div className="space-y-1">
                     <label className="block text-xs font-medium text-[#4E2A1E]">
-                      Statut affiché
+                      Statut affiché aux étudiants
                     </label>
                     <select
                       value={phase.statusLabel}
@@ -514,12 +629,12 @@ export function GestionPage() {
                     {phase.isRevealed ? (
                       <>
                         <Unlock className="w-3.5 h-3.5" />
-                        <span>Consignes visibles publiquement</span>
+                        <span>Consignes visibles par tous</span>
                       </>
                     ) : (
                       <>
                         <Lock className="w-3.5 h-3.5" />
-                        <span>Dévoiler les consignes</span>
+                        <span>Rendre les consignes visibles</span>
                       </>
                     )}
                   </button>
@@ -533,7 +648,7 @@ export function GestionPage() {
           <div className="space-y-5">
             <div className="flex items-center justify-between">
               <p className="text-sm text-[#1A1A1A]/75 tabular-nums">
-                {data.registrations.length} candidature(s) enregistrée(s).
+                {data.registrations.length} inscription(s) reçue(s).
               </p>
               <button
                 type="button"
@@ -542,13 +657,13 @@ export function GestionPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] disabled:opacity-40"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exporter CSV</span>
+                <span>Télécharger en CSV</span>
               </button>
             </div>
 
             {data.registrations.length === 0 ? (
               <div className="p-8 bg-white border border-[#4E2A1E]/15 rounded-sm text-sm text-[#1A1A1A]/70">
-                Aucune inscription enregistrée pour le moment.
+                Personne ne s&apos;est encore inscrit pour le moment.
               </div>
             ) : (
               <div className="overflow-x-auto bg-white border border-[#4E2A1E]/15 rounded-sm">
@@ -556,7 +671,7 @@ export function GestionPage() {
                   <thead className="border-b border-[#4E2A1E]/15 text-xs uppercase tracking-wider text-[#4E2A1E]">
                     <tr>
                       <th className="py-3 px-4">Référence</th>
-                      <th className="py-3 px-4">Candidat</th>
+                      <th className="py-3 px-4">Participant</th>
                       <th className="py-3 px-4">Filière &amp; Niveau</th>
                       <th className="py-3 px-4">Matricule</th>
                       <th className="py-3 px-4">Contact</th>
@@ -588,18 +703,16 @@ export function GestionPage() {
         {tab === 'config' && (
           <div className="max-w-2xl p-6 sm:p-8 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-5">
             <h2 className="font-serif text-2xl font-semibold text-[#4E2A1E]">
-              Liaison Google Apps Script / Google Sheets
+              Lien Google Apps Script / Google Sheets
             </h2>
             <p className="text-sm text-[#1A1A1A]/75 leading-relaxed">
-              Lorsque cette URL Web App Google Apps Script est renseignée, chaque
-              nouvelle inscription est transmise côté serveur vers votre feuille Google
-              Sheets liée avant toute confirmation au candidat. Sur Vercel, pensez
-              également à enregistrer la variable{' '}
+              Quand cette adresse Web App est renseignée, chaque inscription envoyée sur
+              le site est automatiquement ajoutée dans votre feuille Google Sheets avant
+              de confirmer au participant. Sur Vercel, ajoutez aussi la variable{' '}
               <code className="px-1.5 py-0.5 bg-[#F7E6C8]/60 rounded-sm text-xs">
                 GOOGLE_APPS_SCRIPT_URL
               </code>{' '}
-              dans les paramètres d&apos;environnement du projet pour une persistance
-              permanente.
+              dans les paramètres du projet pour la garder en permanence.
             </p>
             <form onSubmit={handleSaveSettings} className="space-y-4">
               <div className="space-y-1.5">
@@ -607,7 +720,7 @@ export function GestionPage() {
                   htmlFor="gas-url"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
                 >
-                  URL Web App Google Apps Script
+                  Adresse Web App Google Apps Script
                 </label>
                 <input
                   id="gas-url"
@@ -633,7 +746,7 @@ export function GestionPage() {
                   type="submit"
                   className="px-5 py-2.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d]"
                 >
-                  Enregistrer la configuration
+                  Enregistrer le lien
                 </button>
                 <button
                   type="button"

@@ -2,38 +2,38 @@
   "settings": {
     "googleAppsScriptUrl": "",
     "googleFormActionUrl": "",
-    "officialEmail": ""
+    "officialEmail": "ucaeplokossa@gmail.com"
   },
   "phases": [
     {
       "id": "phase-1",
       "number": "01",
       "title": "La Plume",
-      "shortDescription": "Une première étape dédiée à l'écriture personnelle, à la justesse du style et à la clarté de la pensée.",
+      "shortDescription": "Nous allons commencer par l'écriture et l'expression personnelle, tranquillement depuis chez vous.",
       "format": "En ligne",
       "statusLabel": "À venir",
       "isRevealed": false,
       "imageKey": "plume",
       "testDetails": {
-        "instructionsTitle": "Consigne officielle — Phase 01 (Confidentiel)",
-        "theme": "Sujet communiqué uniquement lors de la révélation officielle.",
-        "instructions": "Les modalités exactes de rédaction, la longueur attendue et le lien de dépôt seront publiés sur la page Annonces au lancement de la phase.",
-        "submissionNote": "Dépôt numérique réservé aux candidats inscrits."
+        "instructionsTitle": "Consigne — Phase 01 (Confidentiel)",
+        "theme": "Sujet communiqué uniquement lors du lancement officiel.",
+        "instructions": "Les consignes exactes et le lien de dépôt seront publiés sur la page Annonces au démarrage de la phase.",
+        "submissionNote": "Dépôt en ligne réservé aux étudiants inscrits."
       }
     },
     {
       "id": "phase-2",
       "number": "02",
       "title": "La Connaissance",
-      "shortDescription": "Une étape consacrée à la culture générale, à la compréhension de textes et à la curiosité intellectuelle.",
+      "shortDescription": "Ensuite, nous passerons aux idées, à la lecture et au partage des savoirs.",
       "format": "En ligne",
       "statusLabel": "Verrouillée",
       "isRevealed": false,
       "imageKey": "connaissance",
       "testDetails": {
-        "instructionsTitle": "Consigne officielle — Phase 02 (Confidentiel)",
-        "theme": "Thématiques communiquées après la clôture de la Phase 01.",
-        "instructions": "Le format précis de l'évaluation en ligne sera dévoilé aux candidats retenus selon le calendrier de l'UCAEP.",
+        "instructionsTitle": "Consigne — Phase 02 (Confidentiel)",
+        "theme": "Thématiques communiquées après la Phase 01.",
+        "instructions": "Le fonctionnement précis de cette étape sera partagé avec les candidats retenus au moment voulu.",
         "submissionNote": "Accès réservé aux candidats qualifiés."
       }
     },
@@ -41,16 +41,16 @@
       "id": "phase-3",
       "number": "03",
       "title": "L'Éloquence",
-      "shortDescription": "La prise de parole en public face au jury et aux étudiants réunis à l'ENSET de Lokossa.",
+      "shortDescription": "Pour terminer, place à la prise de parole et à la rencontre avec le public sur le campus.",
       "format": "En présentiel",
       "statusLabel": "Verrouillée",
       "isRevealed": false,
       "imageKey": "eloquence",
       "testDetails": {
-        "instructionsTitle": "Consigne officielle — Finale (Confidentiel)",
-        "theme": "Sujets dévoilés à l’approche de la finale.",
-        "instructions": "Les règles de passage sur scène, le temps de parole et les critères du jury seront publiés à l'issue des qualifications.",
-        "submissionNote": "Grande finale sur le campus de l'ENSET de Lokossa."
+        "instructionsTitle": "Consigne — Finale (Confidentiel)",
+        "theme": "Sujets annoncés à l'approche de la finale.",
+        "instructions": "Les consignes de passage sur scène seront communiquées après les qualifications.",
+        "submissionNote": "Finale en personne à l'ENSET de Lokossa."
       }
     }
   ],
@@ -58,9 +58,9 @@
     {
       "id": "ann-1",
       "slug": "ouverture-des-inscriptions-edition-2026",
-      "title": "Ouverture des inscriptions pour les étudiants de l’ENSET",
-      "excerpt": "Le concours « Et si on lisait à haute voix ? » ouvre sa plateforme de candidature en ligne.",
-      "content": "L'UCAEP lance officiellement la campagne d'inscription pour l'édition 2026 du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.\n\nOuvert gratuitement à tous les étudiants régulièrement inscrits à l'ENSET, ce parcours se déploie en trois temps : l'écriture, la connaissance et l'expression orale sur scène.\n\nLes candidats sont invités à remplir le formulaire d'inscription en ligne afin de recevoir les informations officielles dès l'ouverture de la première phase.",
+      "title": "Les inscriptions sont ouvertes à l'ENSET",
+      "excerpt": "Vous pouvez dès maintenant remplir votre fiche d'inscription en ligne pour participer.",
+      "content": "Nous ouvrons les inscriptions pour l'édition 2026 du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.\n\nLa participation est gratuite et ouverte à tous les étudiants de l'école, quelle que soit votre filière ou votre année d'étude.\n\nSi vous avez envie d'essayer, remplissez simplement le formulaire en ligne avant le vendredi 20 novembre 2026. Nous publierons ici toutes les informations pour la suite.",
       "publishedAt": "2026-11-10T09:00:00.000Z",
       "status": "published",
       "category": "Inscription",
@@ -69,9 +69,9 @@
     {
       "id": "ann-2",
       "slug": "calendrier-progressif-des-revelations",
-      "title": "Fonctionnement des annonces et révélation progressive des épreuves",
-      "excerpt": "Chaque phase et ses consignes seront publiées étape par étape sur cette page officielle.",
-      "content": "Afin de garantir l'équité entre tous les participants, les intitulés précis, thèmes et consignes des trois épreuves ne sont pas communiqués à l'avance.\n\nChaque étape du parcours sera dévoilée ici même au moment fixé par le comité d'organisation de l'UCAEP. Consultez régulièrement la rubrique Annonces pour suivre le calendrier officiel.",
+      "title": "Comment nous allons annoncer les épreuves",
+      "excerpt": "Chaque étape sera dévoilée ici au fur et à mesure, pour que tout le monde parte sur un pied d'égalité.",
+      "content": "Pour que personne n'ait d'avance sur les autres, nous ne publions pas les sujets et consignes des trois phases dès aujourd'hui.\n\nNous dévoilerons chaque étape ici même, une annonce après l'autre. Pensez à repasser sur cette page de temps en temps pour suivre le fil du concours.",
       "publishedAt": "2026-11-12T10:00:00.000Z",
       "status": "published",
       "category": "Organisation",
@@ -80,9 +80,9 @@
     {
       "id": "ann-3",
       "slug": "revelation-phase-1-la-plume",
-      "title": "Révélation de la Phase 01 : La Plume",
-      "excerpt": "Annonce programmée pour le lancement de la première épreuve écrite.",
-      "content": "Cette publication programmée présentera les instructions officielles de la Phase 01 dès sa mise en ligne par le comité organisateur.",
+      "title": "Lancement de la Phase 01 : La Plume",
+      "excerpt": "Publication programmée pour démarrer la première étape.",
+      "content": "Cette annonce présentera les consignes de la Phase 01 dès sa mise en ligne par l'équipe.",
       "publishedAt": "2026-12-01T08:00:00.000Z",
       "scheduledAt": "2026-12-01T08:00:00.000Z",
       "status": "scheduled",
@@ -92,9 +92,9 @@
     {
       "id": "ann-4",
       "slug": "note-interne-jury-preparation",
-      "title": "Note de travail interne — Préparation de la finale",
-      "excerpt": "Brouillon interne réservé au bureau UCAEP.",
-      "content": "Document de préparation interne non destiné à la diffusion publique avant validation définitive.",
+      "title": "Brouillon — Organisation de la finale",
+      "excerpt": "Note interne de l'équipe UCAEP.",
+      "content": "Document de travail interne en attente de validation par l'équipe.",
       "publishedAt": "2026-11-12T12:00:00.000Z",
       "status": "draft",
       "category": "Interne",
@@ -105,15 +105,15 @@
     {
       "id": "news-1",
       "slug": "lancement-culturel-enset-lokossa",
-      "title": "À l’ENSET de Lokossa, la lecture reprend la parole",
+      "title": "Pourquoi on lance ce concours à l'ENSET de Lokossa",
       "category": "Vie du concours",
       "publishedAt": "2026-11-08T14:00:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Pourquoi un concours littéraire et oratoire au cœur d’une école normale supérieure technique.",
+      "excerpt": "Entre les cours et les ateliers, on avait envie de créer un moment pour écrire, lire et parler ensemble.",
       "content": [
-        "À l'ENSET de Lokossa, la maîtrise des savoirs techniques dialogue chaque jour avec l'exigence de transmission. Former de futurs enseignants et cadres suppose aussi de savoir formuler une idée claire, structurer un texte et porter sa voix devant un auditoire.",
-        "Avec « Et si on lisait à haute voix ? », l'UCAEP propose un rendez-vous culturel accessible à toutes les filières du campus, sans distinction d'année d'étude.",
-        "Le parcours privilégie la sincérité du propos, la précision de la langue et l'aisance de la lecture partagée."
+        "À l'ENSET de Lokossa, nos journées tournent beaucoup autour des matières techniques et scientifiques. Mais savoir expliquer une idée, écrire clairement et parler devant un groupe sert dans toutes les filières.",
+        "Avec « Et si on lisait à haute voix ? », notre équipe UCAEP veut simplement ouvrir un espace ouvert à tout le monde, sans pression ni jargon.",
+        "Que vous écriviez déjà dans vos cahiers ou que ce soit votre toute première fois, vous avez votre place."
       ],
       "imageKey": "campus",
       "featured": true,
@@ -122,14 +122,14 @@
     {
       "id": "news-2",
       "slug": "trois-etapes-pour-reveler-les-voix",
-      "title": "Trois étapes pour passer de la page à la scène",
+      "title": "De votre cahier jusqu'à la scène : comment tout s'enchaîne",
       "category": "Coulisses",
       "publishedAt": "2026-11-05T11:30:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Écrire d’abord, approfondir ensuite, puis convaincre à voix haute devant le public.",
+      "excerpt": "Écrire d'abord au calme, partager ensuite ce qu'on sait, puis prendre la parole devant le campus.",
       "content": [
-        "Le concours a été conçu comme une progression naturelle. Tout commence dans le calme de l'écriture avec La Plume, avant d'éprouver sa culture et sa réactivité lors de La Connaissance.",
-        "La troisième phase, L'Éloquence, invite les finalistes à quitter l'écran pour rencontrer la scène et le regard direct du public."
+        "On a voulu un parcours progressif. On commence calmement par l'écrit avec La Plume, avant de passer à la lecture et à la culture générale dans La Connaissance.",
+        "Pour la dernière phase, L'Éloquence, on se retrouve en personne devant le public pour écouter les finalistes à voix haute."
       ],
       "imageKey": "plume",
       "featured": false,
@@ -138,14 +138,14 @@
     {
       "id": "news-3",
       "slug": "preparer-sa-candidature-etudiant",
-      "title": "Préparer sa candidature en quelques minutes",
+      "title": "Avant de vous inscrire, prenez une minute",
       "category": "Candidats",
       "publishedAt": "2026-11-03T09:15:00.000Z",
       "readTime": "1 min",
-      "excerpt": "Ce qu’il faut réunir avant de remplir le formulaire officiel d’inscription.",
+      "excerpt": "Ce qu'il vous faut sous la main pour remplir votre formulaire sans stress.",
       "content": [
-        "L'inscription est entièrement gratuite et ouverte aux étudiants de l'ENSET de Lokossa.",
-        "Munissez-vous simplement de votre numéro matricule étudiant, de votre adresse électronique active et de quelques lignes sur ce qui vous motive à participer."
+        "L'inscription est gratuite et ouverte aux étudiants de l'ENSET de Lokossa.",
+        "Ayez simplement votre numéro matricule, une adresse e-mail que vous consultez régulièrement et deux ou trois phrases pour expliquer ce qui vous donne envie de participer."
       ],
       "imageKey": "connaissance",
       "featured": false,
@@ -154,14 +154,14 @@
     {
       "id": "news-4",
       "slug": "atelier-preparation-prise-de-parole",
-      "title": "La voix comme instrument de clarté",
+      "title": "Lire à haute voix, ça change quoi ?",
       "category": "Coulisses",
       "publishedAt": "2026-10-29T16:00:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Lire à haute voix demande autant d’écoute et de souffle que d’assurance.",
+      "excerpt": "Quand on passe de la lecture silencieuse à la voix haute, le texte prend un autre rythme.",
       "content": [
-        "Avant même de monter sur scène, lire à haute voix transforme le rapport au texte : le rythme apparaît, les silences prennent sens et la ponctuation devient respiration.",
-        "Les rencontres organisées autour du concours mettent l'accent sur cette écoute collective, fidèle à l'esprit universitaire de Lokossa."
+        "Lire un texte à voix haute oblige à ralentir, à respirer aux bons endroits et à faire attention à ce qu'on veut vraiment transmettre.",
+        "C'est ce goût du partage et de l'écoute qu'on veut faire vivre sur le campus cette année."
       ],
       "imageKey": "eloquence",
       "featured": false,

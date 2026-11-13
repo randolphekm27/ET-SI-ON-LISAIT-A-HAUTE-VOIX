@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { EditorialMark } from '../components/EditorialMark';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 
 interface ReceiptState {
@@ -13,8 +14,8 @@ interface ReceiptState {
 
 export function ConfirmationInscriptionPage() {
   usePageSeo(
-    'Confirmation d’inscription',
-    "Votre candidature au concours UCAEP à l'ENSET de Lokossa a bien été enregistrée.",
+    'Inscription reçue',
+    "Votre inscription au concours UCAEP à l'ENSET de Lokossa a bien été enregistrée.",
   );
 
   const location = useLocation();
@@ -23,20 +24,21 @@ export function ConfirmationInscriptionPage() {
   if (!state || !state.referenceCode) {
     return (
       <div className="py-24 bg-[#FBF9F5]">
-        <div className="max-w-xl mx-auto px-4 text-center space-y-5">
-          <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
-            Aucune inscription récente détectée
+        <div className="max-w-xl mx-auto px-4 text-center space-y-6">
+          <EditorialMark folio="Reçu" label="Inscription" tone="brown" />
+          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E]">
+            Aucune inscription trouvée ici
           </h1>
-          <p className="text-sm text-[#1A1A1A]/75 leading-relaxed">
-            Cette page affiche votre reçu uniquement après validation effective du
-            formulaire de candidature.
+          <p className="text-sm sm:text-base text-[#1A1A1A]/75 leading-relaxed">
+            Cette page s&apos;affiche juste après avoir envoyé votre inscription depuis
+            le formulaire.
           </p>
           <Link
             to="/inscription"
-            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] transition-colors"
+            className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] transition-colors"
           >
-            <span>Accéder au formulaire d&apos;inscription</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Aller à l&apos;inscription</span>
+            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Link>
         </div>
       </div>
@@ -44,59 +46,59 @@ export function ConfirmationInscriptionPage() {
   }
 
   return (
-    <div className="py-20 lg:py-24 bg-[#FBF9F5]">
+    <div className="py-20 lg:py-28 bg-[#FBF9F5]">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 space-y-8">
-        <div className="p-8 sm:p-10 border border-[#2E4D32]/25 bg-white rounded-sm space-y-6">
-          <div className="flex items-center gap-3 text-[#2E4D32]">
-            <CheckCircle2 className="w-6 h-6 shrink-0" />
-            <span className="text-xs font-semibold uppercase tracking-widest">
-              Candidature enregistrée
-            </span>
+        <div className="p-8 sm:p-12 border border-[#2E4D32]/25 bg-white rounded-sm space-y-7">
+          <div className="flex items-center justify-between gap-4">
+            <EditorialMark folio="Confirmé" label="ENSET de Lokossa" tone="green" />
+            <CheckCircle2 className="w-6 h-6 text-[#2E4D32] shrink-0" />
           </div>
 
-          <h1 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
-            Merci, {state.candidateName}.
+          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E] leading-tight">
+            C&apos;est bon,{' '}
+            <em className="italic font-medium text-[#1A1A1A]">{state.candidateName}.</em>
           </h1>
 
           <p className="text-sm sm:text-base text-[#1A1A1A]/80 leading-relaxed">
-            Votre inscription au concours « Et si on lisait à haute voix ? » a été
-            sauvegardée avec succès. Conservez votre numéro de référence ci-dessous.
+            C&apos;est envoyé ! Nous avons bien reçu votre inscription pour « Et si on
+            lisait à haute voix ? ». Gardez votre numéro de référence ci-dessous, il
+            pourra vous servir pour la suite.
           </p>
 
           <dl className="divide-y divide-[#4E2A1E]/12 border-t border-b border-[#4E2A1E]/12 text-sm">
-            <div className="py-3 flex justify-between gap-4">
+            <div className="py-3.5 flex justify-between gap-4">
               <dt className="text-[#4E2A1E]/75">Référence</dt>
               <dd className="font-semibold text-[#1A1A1A] tabular-nums">
                 {state.referenceCode}
               </dd>
             </div>
-            <div className="py-3 flex justify-between gap-4">
+            <div className="py-3.5 flex justify-between gap-4">
               <dt className="text-[#4E2A1E]/75">Filière et niveau</dt>
               <dd className="text-[#1A1A1A]">
                 {state.department} · {state.studyLevel}
               </dd>
             </div>
-            <div className="py-3 flex justify-between gap-4">
-              <dt className="text-[#4E2A1E]/75">Date d&apos;enregistrement</dt>
+            <div className="py-3.5 flex justify-between gap-4">
+              <dt className="text-[#4E2A1E]/75">Enregistrée le</dt>
               <dd className="text-[#1A1A1A] tabular-nums">
                 {formatFrenchDate(state.createdAt)}
               </dd>
             </div>
           </dl>
 
-          <div className="pt-2 flex flex-wrap items-center gap-4">
+          <div className="pt-2 flex flex-wrap items-center gap-5">
             <Link
               to="/annonces"
-              className="inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
+              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
             >
-              <span>Suivre les annonces</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Voir les annonces</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
               to="/parcours"
-              className="text-sm font-medium text-[#4E2A1E] hover:underline"
+              className="editorial-underline text-sm font-medium text-[#4E2A1E]"
             >
-              Voir le parcours
+              Découvrir le parcours
             </Link>
           </div>
         </div>

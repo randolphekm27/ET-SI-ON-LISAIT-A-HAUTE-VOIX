@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Mail, MapPin, Phone, Send } from 'lucide-react';
+import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
 
 export function ContactPage() {
   usePageSeo(
     'Contact',
-    "Contacter le comité d'organisation UCAEP du concours à l'ENSET de Lokossa.",
+    "Écrire à l'équipe de l'UCAEP pour toute question sur le concours à l'ENSET de Lokossa.",
   );
 
   const [name, setName] = useState('');
@@ -28,7 +29,7 @@ export function ContactPage() {
         body: JSON.stringify({ name, email, subject, message }),
       });
       if (!data.saved) {
-        throw new Error("Impossible d'envoyer votre message.");
+        throw new Error("Votre message n'a pas pu être envoyé pour le moment.");
       }
       setStatus('sent');
       setName('');
@@ -38,78 +39,74 @@ export function ContactPage() {
     } catch (err) {
       setStatus('error');
       setErrorMsg(
-        err instanceof Error ? err.message : "Impossible d'envoyer votre message.",
+        err instanceof Error
+          ? err.message
+          : "Votre message n'a pas pu être envoyé pour le moment.",
       );
     }
   }
 
   return (
     <div className="bg-[#FBF9F5]">
-      <section className="py-16 lg:py-24 border-b border-[#4E2A1E]/12 paper-grain">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
-            Organisation · UCAEP
-          </p>
-          <h1 className="font-serif text-4xl sm:text-6xl font-semibold text-[#4E2A1E]">
-            Contacter l&apos;équipe
-          </h1>
-          <p className="text-base sm:text-lg text-[#1A1A1A]/80 max-w-xl">
-            Une question sur votre candidature ou le déroulement du concours à l&apos;ENSET
-            de Lokossa ?
-          </p>
-        </div>
-      </section>
+      <PageFolioHeader
+        folio="Correspondance"
+        section="Équipe UCAEP"
+        title="Une question ?"
+        italicWord="On peut en discuter."
+        subtitle="Vous souhaitez obtenir une précision sur le concours ? Écrivez-nous, nous vous répondrons dès que possible."
+      />
 
       <section className="py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5 space-y-8">
             <div className="space-y-3">
-              <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                Repères officiels
+              <EditorialMark folio="Repères" label="Sur le campus" tone="brown" />
+              <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                Nos coordonnées
               </h2>
-              <p className="text-sm text-[#1A1A1A]/75 leading-relaxed">
-                Le comité d&apos;organisation reçoit vos messages via le formulaire
-                officiel et assure le suivi auprès des étudiants sur le campus.
+              <p className="text-sm sm:text-base text-[#1A1A1A]/75 leading-relaxed">
+                Vous pouvez passer par le formulaire ci-contre ou joindre directement
+                l&apos;équipe organisatrice par téléphone ou par e-mail.
               </p>
             </div>
 
-            <dl className="space-y-6 border-t border-[#4E2A1E]/15 pt-6 text-sm">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]/75">
-                  Organisateur
+            <dl className="divide-y divide-[#4E2A1E]/14 border-t border-b border-[#4E2A1E]/14 text-sm">
+              <div className="py-5">
+                <dt className="text-xs font-semibold uppercase tracking-widest text-[#4E2A1E]/70">
+                  Qui organise ?
                 </dt>
-                <dd className="mt-1 font-medium text-[#1A1A1A]">
+                <dd className="mt-1.5 font-serif text-xl font-semibold text-[#1A1A1A]">
                   UCAEP — Union Culturelle et Artistique des Élèves-Professeurs
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]/75">
-                  Téléphone &amp; Courriel officiels
+              <div className="py-5">
+                <dt className="text-xs font-semibold uppercase tracking-widest text-[#4E2A1E]/70">
+                  Téléphone et e-mail
                 </dt>
-                <dd className="mt-2 space-y-2 text-[#1A1A1A]">
+                <dd className="mt-2.5 space-y-2.5 text-[#1A1A1A]">
                   <a
                     href="tel:+2290168624600"
-                    className="flex items-center gap-2 hover:text-[#4E2A1E] tabular-nums"
+                    className="flex items-center gap-2.5 hover:text-[#4E2A1E] tabular-nums"
                   >
                     <Phone className="w-4 h-4 text-[#D19A3A] shrink-0" />
-                    <span>+229 01 68 62 46 00</span>
+                    <span className="editorial-underline">+229 01 68 62 46 00</span>
                   </a>
                   <a
                     href="mailto:ucaeplokossa@gmail.com"
-                    className="flex items-center gap-2 hover:text-[#4E2A1E]"
+                    className="flex items-center gap-2.5 hover:text-[#4E2A1E]"
                   >
                     <Mail className="w-4 h-4 text-[#D19A3A] shrink-0" />
-                    <span>ucaeplokossa@gmail.com</span>
+                    <span className="editorial-underline">ucaeplokossa@gmail.com</span>
                   </a>
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]/75">
-                  Localisation
+              <div className="py-5">
+                <dt className="text-xs font-semibold uppercase tracking-widest text-[#4E2A1E]/70">
+                  Où nous trouver ?
                 </dt>
-                <dd className="mt-1 flex items-start gap-2 text-[#1A1A1A]">
+                <dd className="mt-2 flex items-start gap-2.5 text-[#1A1A1A]">
                   <MapPin className="w-4 h-4 text-[#D19A3A] shrink-0 mt-0.5" />
                   <span>
                     Campus de l&apos;ENSET de Lokossa
@@ -124,44 +121,45 @@ export function ContactPage() {
           <div className="lg:col-span-7">
             <div className="p-8 sm:p-10 bg-white border border-[#4E2A1E]/15 rounded-sm">
               {status === 'sent' ? (
-                <div className="py-10 text-center space-y-4">
+                <div className="py-12 text-center space-y-4">
                   <CheckCircle2 className="w-8 h-8 text-[#2E4D32] mx-auto" />
-                  <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                    Message transmis
+                  <h2 className="font-serif text-4xl font-semibold text-[#4E2A1E]">
+                    C&apos;est envoyé !
                   </h2>
-                  <p className="text-sm text-[#1A1A1A]/75 max-w-md mx-auto">
-                    Votre message a bien été enregistré pour le comité UCAEP.
+                  <p className="text-sm sm:text-base text-[#1A1A1A]/75 max-w-md mx-auto">
+                    Nous avons bien reçu votre message. L&apos;équipe de l&apos;UCAEP vous
+                    répondra dès que possible.
                   </p>
                   <button
                     type="button"
                     onClick={() => setStatus('idle')}
-                    className="text-sm font-semibold text-[#4E2A1E] underline"
+                    className="editorial-underline text-sm font-semibold text-[#4E2A1E]"
                   >
                     Envoyer un autre message
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                    Écrire un message
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                    Nous laisser un message
                   </h2>
 
                   {status === 'error' && (
                     <p
                       role="alert"
-                      className="p-3 text-sm rounded-sm bg-red-50 text-red-900 border border-red-800/20"
+                      className="p-3.5 text-sm rounded-sm bg-red-50 text-red-900 border border-red-800/20"
                     >
                       {errorMsg}
                     </p>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label
                         htmlFor="contact-name"
                         className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
                       >
-                        Nom complet
+                        Nom et prénom
                       </label>
                       <input
                         id="contact-name"
@@ -169,7 +167,7 @@ export function ContactPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+                        className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -185,7 +183,7 @@ export function ContactPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+                        className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -195,7 +193,7 @@ export function ContactPage() {
                       htmlFor="contact-subject"
                       className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
                     >
-                      Objet
+                      Sujet
                     </label>
                     <input
                       id="contact-subject"
@@ -203,7 +201,7 @@ export function ContactPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -212,7 +210,7 @@ export function ContactPage() {
                       htmlFor="contact-message"
                       className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
                     >
-                      Message
+                      Votre message
                     </label>
                     <textarea
                       id="contact-message"
@@ -220,19 +218,17 @@ export function ContactPage() {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={status === 'submitting'}
-                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
+                    className="group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>
-                      {status === 'submitting' ? 'Envoi…' : 'Envoyer le message'}
-                    </span>
+                    <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    <span>{status === 'submitting' ? 'Envoi…' : 'Envoyer'}</span>
                   </button>
                 </form>
               )}

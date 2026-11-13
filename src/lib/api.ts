@@ -12,7 +12,7 @@ export async function fetchApiJson<T>(
     text.trimStart().toLowerCase().startsWith('<html')
   ) {
     throw new Error(
-      `Le serveur API a renvoyé une page HTML (HTTP ${response.status}). Veuillez recharger la page et réessayer.`,
+      `Le serveur a renvoyé une page HTML au lieu des données attendues (code ${response.status}). Rechargez la page et réessayez.`,
     );
   }
 
@@ -22,19 +22,19 @@ export async function fetchApiJson<T>(
       parsed = JSON.parse(text) as T & { error?: string };
     } catch {
       throw new Error(
-        `Réponse non valide du serveur (HTTP ${response.status}). Veuillez réessayer dans un instant.`,
+        `Réponse inattendue du serveur (code ${response.status}). Réessayez dans un instant.`,
       );
     }
   }
 
   if (!response.ok) {
     throw new Error(
-      parsed?.error || `Erreur serveur (code ${response.status}).`,
+      parsed?.error || `Un souci est survenu côté serveur (code ${response.status}).`,
     );
   }
 
   if (!parsed) {
-    throw new Error('Réponse vide reçue du serveur.');
+    throw new Error('Le serveur a renvoyé une réponse vide.');
   }
 
   return parsed;

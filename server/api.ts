@@ -1,6 +1,16 @@
 import type express from 'express';
 import crypto from 'node:crypto';
+import { adminAuth } from '../src/lib/firebase-admin.ts';
+import { isCloudSqlConfigured } from '../src/db/index.ts';
 import {
+  getOrCreateUser,
+  getUserByUid,
+  promoteUserToOrganizer,
+} from '../src/db/users.ts';
+import { requireAuth, type AuthRequest } from '../src/middleware/auth.ts';
+import {
+  createAnnouncementRecord,
+  createNewsRecord,
   isAnnouncementPublic,
   readStore,
   sanitizeAnnouncementForPublic,
@@ -8,16 +18,23 @@ import {
   sanitizePhaseForPublic,
   saveContactMessage,
   saveRegistration,
-  slugify,
-  withStoreLock,
+  updateAnnouncementRecord,
+  updatePhaseRecord,
+  updateSettingsRecord,
 } from './store';
 import type {
-  Announcement,
   MediaAssetKey,
   NewsArticle,
   PublicationStatus,
   RegistrationPayload,
 } from '../src/types/competition';
+
+const ORGANIZER_ALLOWLIST = new Set(
+  (process.env.ORGANIZER_EMAILS || 'ucaeplokossa@gmail.com')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 function getOrganizerCode(): string {
   return (process.env.ORGANIZER_ACCESS_CODE || 'UCAEP-LOKOSSA-2026').trim();
@@ -53,8 +70,17 @@ function verifyAdminToken(token: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
-function requireAdmin(
-  req: express.Request,
+async function isFirebaseOrganizer(uid: string, email?: string): Promise<boolean> {
+  if (email && ORGANIZER_ALLOWLIST.has(email.trim().toLowerCase())) {
+    return true;
+  }
+  if (!isCloudSqlConfigured()) return false;
+  const dbUser = await getUserByUid(uid);
+  return dbUser?.role === 'organizer';
+}
+
+async function requireAdmin(
+  req: AuthRequest,
   res: express.Response,
   next: express.NextFunction,
 ) {
@@ -62,16 +88,42 @@ function requireAdmin(
   const customToken = Array.isArray(customHeader)
     ? customHeader[0]
     : customHeader || '';
+  if (customToken.trim() && verifyAdminToken(customToken.trim())) {
+    next();
+    return;
+  }
+
   const authHeader = req.headers.authorization || '';
   const bearerToken = authHeader.startsWith('Bearer ')
     ? authHeader.slice(7).trim()
     : '';
-  const token = customToken.trim() || bearerToken;
-  if (!token || !verifyAdminToken(token)) {
-    res.status(401).json({ error: 'Authentification organisateur requise.' });
-    return;
+  if (bearerToken) {
+    if (verifyAdminToken(bearerToken)) {
+      next();
+      return;
+    }
+    try {
+      const decoded = await adminAuth.verifyIdToken(bearerToken);
+      req.user = decoded;
+      if (isCloudSqlConfigured()) {
+        await getOrCreateUser(decoded.uid, decoded.email || '', decoded.name || null);
+      }
+      const allowed = await isFirebaseOrganizer(decoded.uid, decoded.email);
+      if (allowed) {
+        next();
+        return;
+      }
+      res.status(403).json({
+        error: "Ce compte Google n'est pas encore habilité comme organisateur.",
+      });
+      return;
+    } catch {
+      res.status(401).json({ error: 'Session expirée ou invalide.' });
+      return;
+    }
   }
-  next();
+
+  res.status(401).json({ error: 'Connexion organisateur requise.' });
 }
 
 function isValidEmail(email: string): boolean {
@@ -79,6 +131,52 @@ function isValidEmail(email: string): boolean {
 }
 
 export function registerApiRoutes(app: express.Express) {
+  // Firebase authenticated session check & user PostgreSQL sync
+  app.get('/api/auth/session', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const uid = req.user!.uid;
+      const email = req.user!.email || '';
+      const organizer = await isFirebaseOrganizer(uid, email);
+      res.json({
+        user: {
+          uid,
+          email,
+          name: req.user!.name || null,
+        },
+        isOrganizer: organizer,
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        error: err.message || 'Impossible de vérifier la session.',
+      });
+    }
+  });
+
+  // Link an authenticated Firebase user to organizer role via access code
+  app.post(
+    '/api/admin/auth/link',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        const { code } = (req.body || {}) as { code?: string };
+        if (!code || code.trim() !== getOrganizerCode()) {
+          res.status(401).json({ error: "Ce code d'accès ne correspond pas." });
+          return;
+        }
+        if (isCloudSqlConfigured()) {
+          await promoteUserToOrganizer(req.user!.uid);
+        }
+        res.json({ ok: true, token: createAdminToken() });
+      } catch (error) {
+        const err = error as Error;
+        res.status(500).json({
+          error: err.message || "Impossible de valider l'accès organisateur.",
+        });
+      }
+    },
+  );
+
   // Public API: Announcements (strictly published only)
   app.get('/api/announcements', async (_req, res) => {
     try {
@@ -157,16 +255,16 @@ export function registerApiRoutes(app: express.Express) {
       const body = req.body as Partial<RegistrationPayload>;
 
       const requiredStrings: Array<[keyof RegistrationPayload, string]> = [
-        ['firstName', 'Le prénom est obligatoire.'],
-        ['lastName', 'Le nom est obligatoire.'],
-        ['email', "L'adresse e-mail est obligatoire."],
-        ['phone', 'Le numéro de téléphone est obligatoire.'],
-        ['birthDate', 'La date de naissance est obligatoire.'],
-        ['institution', "L'établissement est obligatoire."],
-        ['department', 'La filière ou le département est obligatoire.'],
-        ['studyLevel', "Le niveau d'études est obligatoire."],
-        ['studentId', 'Le numéro matricule est obligatoire.'],
-        ['motivation', 'La présentation de votre motivation est obligatoire.'],
+        ['firstName', 'Indiquez votre prénom pour continuer.'],
+        ['lastName', 'Indiquez votre nom pour continuer.'],
+        ['email', 'Indiquez votre adresse e-mail pour continuer.'],
+        ['phone', 'Indiquez votre numéro de téléphone pour continuer.'],
+        ['birthDate', 'Indiquez votre date de naissance pour continuer.'],
+        ['institution', 'Précisez votre établissement pour continuer.'],
+        ['department', 'Précisez votre filière ou département pour continuer.'],
+        ['studyLevel', "Précisez votre niveau d'études pour continuer."],
+        ['studentId', 'Indiquez votre numéro matricule pour continuer.'],
+        ['motivation', 'Dites-nous en quelques mots ce qui vous donne envie de participer.'],
       ];
 
       for (const [key, message] of requiredStrings) {
@@ -178,21 +276,20 @@ export function registerApiRoutes(app: express.Express) {
       }
 
       if (!isValidEmail(body.email || '')) {
-        res.status(400).json({ error: "L'adresse e-mail saisie est invalide." });
+        res.status(400).json({ error: 'Cette adresse e-mail ne semble pas correcte.' });
         return;
       }
 
       if ((body.motivation || '').trim().length < 25) {
         res.status(400).json({
-          error: 'Veuillez préciser votre motivation en au moins 25 caractères.',
+          error: 'Dites-nous en au moins 25 caractères ce qui vous donne envie de participer.',
         });
         return;
       }
 
       if (body.acceptRules !== true) {
         res.status(400).json({
-          error:
-            'Vous devez accepter le règlement du concours pour valider votre inscription.',
+          error: "Cochez la case d'accord pour valider votre inscription.",
         });
         return;
       }
@@ -236,7 +333,7 @@ export function registerApiRoutes(app: express.Express) {
       res.status(502).json({
         error:
           err.message ||
-          "L'enregistrement de votre candidature a échoué. Aucune confirmation n'a été validée ; veuillez réessayer.",
+          "L'envoi de votre inscription n'a pas abouti. Rien n'a été enregistré, merci de réessayer.",
       });
     }
   });
@@ -246,11 +343,11 @@ export function registerApiRoutes(app: express.Express) {
     try {
       const { name, email, subject, message } = req.body as Record<string, string>;
       if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
-        res.status(400).json({ error: 'Veuillez renseigner tous les champs.' });
+        res.status(400).json({ error: 'Merci de remplir tous les champs.' });
         return;
       }
       if (!isValidEmail(email)) {
-        res.status(400).json({ error: 'Adresse e-mail invalide.' });
+        res.status(400).json({ error: 'Cette adresse e-mail ne semble pas correcte.' });
         return;
       }
       const saved = await saveContactMessage({
@@ -262,16 +359,16 @@ export function registerApiRoutes(app: express.Express) {
       res.status(201).json({ saved: true, id: saved.id });
     } catch {
       res.status(500).json({
-        error: "Impossible d'envoyer le message pour le moment. Veuillez réessayer.",
+        error: "Votre message n'a pas pu être envoyé pour le moment. Réessayez dans un instant.",
       });
     }
   });
 
-  // Organizer CMS Auth
+  // Organizer CMS Auth (access code)
   app.post('/api/admin/auth', (req, res) => {
     const { code } = (req.body || {}) as { code?: string };
     if (!code || code.trim() !== getOrganizerCode()) {
-      res.status(401).json({ error: "Code d'accès organisateur incorrect." });
+      res.status(401).json({ error: "Ce code d'accès ne correspond pas." });
       return;
     }
     res.json({ token: createAdminToken() });
@@ -279,184 +376,141 @@ export function registerApiRoutes(app: express.Express) {
 
   // Organizer CMS State
   app.get('/api/admin/overview', requireAdmin, async (_req, res) => {
-    const store = await readStore();
-    res.json({
-      announcements: store.announcements,
-      phases: store.phases,
-      news: store.news,
-      registrations: store.registrations,
-      contacts: store.contacts,
-      settings: {
-        googleAppsScriptUrl: store.settings.googleAppsScriptUrl,
-      },
-    });
+    try {
+      const store = await readStore();
+      res.json({
+        announcements: store.announcements,
+        phases: store.phases,
+        news: store.news,
+        registrations: store.registrations,
+        contacts: store.contacts,
+        settings: {
+          googleAppsScriptUrl: store.settings.googleAppsScriptUrl,
+        },
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || 'Impossible de charger les données.' });
+    }
   });
 
   // Organizer CMS: Create Announcement
   app.post('/api/admin/announcements', requireAdmin, async (req, res) => {
-    const { title, excerpt, content, category, status, scheduledAt, imageKey } =
-      req.body as {
-        title?: string;
-        excerpt?: string;
-        content?: string;
-        category?: string;
-        status?: PublicationStatus;
-        scheduledAt?: string;
-        imageKey?: MediaAssetKey;
-      };
+    try {
+      const { title, excerpt, content, category, status, scheduledAt, imageKey } =
+        req.body as {
+          title?: string;
+          excerpt?: string;
+          content?: string;
+          category?: string;
+          status?: PublicationStatus;
+          scheduledAt?: string;
+          imageKey?: MediaAssetKey;
+        };
 
-    if (!title?.trim() || !excerpt?.trim() || !content?.trim()) {
-      res.status(400).json({ error: 'Titre, extrait et contenu sont obligatoires.' });
-      return;
+      if (!title?.trim() || !excerpt?.trim() || !content?.trim()) {
+        res.status(400).json({ error: 'Titre, extrait et contenu sont obligatoires.' });
+        return;
+      }
+
+      const created = await createAnnouncementRecord({
+        title,
+        excerpt,
+        content,
+        category,
+        status,
+        scheduledAt,
+        imageKey,
+      });
+
+      res.status(201).json({ announcement: created });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || "Impossible d'enregistrer l'annonce." });
     }
-
-    const created = await withStoreLock((store) => {
-      const baseSlug = slugify(title) || `annonce-${Date.now()}`;
-      const uniqueSlug = store.announcements.some((a) => a.slug === baseSlug)
-        ? `${baseSlug}-${Date.now().toString().slice(-4)}`
-        : baseSlug;
-
-      const item: Announcement = {
-        id: crypto.randomUUID(),
-        slug: uniqueSlug,
-        title: title.trim(),
-        excerpt: excerpt.trim(),
-        content: content.trim(),
-        category: (category || 'Officiel').trim(),
-        status: status || 'draft',
-        scheduledAt: status === 'scheduled' && scheduledAt ? scheduledAt : undefined,
-        publishedAt: new Date().toISOString(),
-        imageKey: imageKey || 'campus',
-      };
-      store.announcements.unshift(item);
-      return item;
-    });
-
-    res.status(201).json({ announcement: created });
   });
 
   // Organizer CMS: Update Announcement Status or Content
   app.patch('/api/admin/announcements/:id', requireAdmin, async (req, res) => {
-    const updated = await withStoreLock((store) => {
-      const idx = store.announcements.findIndex((a) => a.id === req.params.id);
-      if (idx === -1) return null;
-      const current = store.announcements[idx];
-      const nextStatus = (req.body.status as PublicationStatus) || current.status;
-      store.announcements[idx] = {
-        ...current,
-        title: req.body.title?.trim() || current.title,
-        excerpt: req.body.excerpt?.trim() || current.excerpt,
-        content: req.body.content?.trim() || current.content,
-        category: req.body.category?.trim() || current.category,
-        status: nextStatus,
-        scheduledAt:
-          nextStatus === 'scheduled'
-            ? req.body.scheduledAt || current.scheduledAt
-            : undefined,
-        publishedAt:
-          nextStatus === 'published' && current.status !== 'published'
-            ? new Date().toISOString()
-            : current.publishedAt,
-      };
-      return store.announcements[idx];
-    });
-    if (!updated) {
-      res.status(404).json({ error: 'Annonce introuvable.' });
-      return;
+    try {
+      const updated = await updateAnnouncementRecord(String(req.params.id), {
+        title: req.body.title,
+        excerpt: req.body.excerpt,
+        content: req.body.content,
+        category: req.body.category,
+        status: req.body.status,
+        scheduledAt: req.body.scheduledAt,
+      });
+      if (!updated) {
+        res.status(404).json({ error: 'Annonce introuvable.' });
+        return;
+      }
+      res.json({ announcement: updated });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || 'Mise à jour impossible.' });
     }
-    res.json({ announcement: updated });
   });
 
   // Organizer CMS: Update Phase Reveal & Status
   app.patch('/api/admin/phases/:id', requireAdmin, async (req, res) => {
-    const updated = await withStoreLock((store) => {
-      const idx = store.phases.findIndex((p) => p.id === req.params.id);
-      if (idx === -1) return null;
-      const current = store.phases[idx];
-      store.phases[idx] = {
-        ...current,
-        statusLabel: req.body.statusLabel || current.statusLabel,
-        isRevealed:
-          typeof req.body.isRevealed === 'boolean'
-            ? req.body.isRevealed
-            : current.isRevealed,
-        testDetails: req.body.testDetails
-          ? {
-              instructionsTitle:
-                req.body.testDetails.instructionsTitle ||
-                current.testDetails?.instructionsTitle ||
-                '',
-              theme: req.body.testDetails.theme || current.testDetails?.theme || '',
-              instructions:
-                req.body.testDetails.instructions ||
-                current.testDetails?.instructions ||
-                '',
-              submissionNote:
-                req.body.testDetails.submissionNote ||
-                current.testDetails?.submissionNote ||
-                '',
-            }
-          : current.testDetails,
-      };
-      return store.phases[idx];
-    });
-    if (!updated) {
-      res.status(404).json({ error: 'Phase introuvable.' });
-      return;
+    try {
+      const updated = await updatePhaseRecord(String(req.params.id), {
+        statusLabel: req.body.statusLabel,
+        isRevealed: req.body.isRevealed,
+        testDetails: req.body.testDetails,
+      });
+      if (!updated) {
+        res.status(404).json({ error: 'Phase introuvable.' });
+        return;
+      }
+      res.json({ phase: updated });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || 'Mise à jour impossible.' });
     }
-    res.json({ phase: updated });
   });
 
   // Organizer CMS: Create News Article
   app.post('/api/admin/news', requireAdmin, async (req, res) => {
-    const { title, category, excerpt, content, imageKey, status } = req.body as {
-      title?: string;
-      category?: NewsArticle['category'];
-      excerpt?: string;
-      content?: string;
-      imageKey?: MediaAssetKey;
-      status?: PublicationStatus;
-    };
-    if (!title?.trim() || !excerpt?.trim() || !content?.trim()) {
-      res.status(400).json({ error: 'Titre, extrait et texte sont requis.' });
-      return;
-    }
-    const created = await withStoreLock((store) => {
-      const baseSlug = slugify(title) || `actualite-${Date.now()}`;
-      const uniqueSlug = store.news.some((n) => n.slug === baseSlug)
-        ? `${baseSlug}-${Date.now().toString().slice(-4)}`
-        : baseSlug;
-      const paragraphs = content
-        .split(/\n+/)
-        .map((p) => p.trim())
-        .filter(Boolean);
-      const item: NewsArticle = {
-        id: crypto.randomUUID(),
-        slug: uniqueSlug,
-        title: title.trim(),
-        category: category || 'Vie du concours',
-        publishedAt: new Date().toISOString(),
-        readTime: `${Math.max(1, Math.ceil(content.split(/\s+/).length / 180))} min`,
-        excerpt: excerpt.trim(),
-        content: paragraphs,
-        imageKey: imageKey || 'campus',
-        featured: false,
-        status: status || 'published',
+    try {
+      const { title, category, excerpt, content, imageKey, status } = req.body as {
+        title?: string;
+        category?: NewsArticle['category'];
+        excerpt?: string;
+        content?: string;
+        imageKey?: MediaAssetKey;
+        status?: PublicationStatus;
       };
-      store.news.unshift(item);
-      return item;
-    });
-    res.status(201).json({ article: created });
+      if (!title?.trim() || !excerpt?.trim() || !content?.trim()) {
+        res.status(400).json({ error: 'Titre, extrait et texte sont requis.' });
+        return;
+      }
+      const created = await createNewsRecord({
+        title,
+        category,
+        excerpt,
+        content,
+        imageKey,
+        status,
+      });
+      res.status(201).json({ article: created });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || "Impossible d'enregistrer l'article." });
+    }
   });
 
   // Organizer CMS: Update Google Apps Script webhook URL
   app.patch('/api/admin/settings', requireAdmin, async (req, res) => {
-    const { googleAppsScriptUrl } = req.body as { googleAppsScriptUrl?: string };
-    const updated = await withStoreLock((store) => {
-      store.settings.googleAppsScriptUrl = (googleAppsScriptUrl || '').trim();
-      return store.settings;
-    });
-    res.json({ settings: updated });
+    try {
+      const { googleAppsScriptUrl } = req.body as { googleAppsScriptUrl?: string };
+      const updated = await updateSettingsRecord(googleAppsScriptUrl || '');
+      res.json({ settings: updated });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({ error: err.message || "Impossible d'enregistrer les paramètres." });
+    }
   });
 
   // Organizer CMS: Test Google Apps Script GET endpoint

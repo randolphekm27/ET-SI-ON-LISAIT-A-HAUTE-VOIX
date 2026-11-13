@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { BookOpen } from 'lucide-react';
-import { getMediaAsset } from '../lib/images';
-import type { MediaAssetKey } from '../types/competition';
+import { getMediaAsset, type ExtendedMediaKey } from '../lib/images';
 
 interface EditorialImageProps {
-  assetKey: MediaAssetKey | string;
+  assetKey: ExtendedMediaKey | string;
   altOverride?: string;
   className?: string;
   imgClassName?: string;
@@ -29,7 +27,9 @@ export function EditorialImage({
         role="img"
         aria-label={alt}
       >
-        <BookOpen className="w-8 h-8 mb-3 opacity-60" strokeWidth={1.5} />
+        <span className="font-serif text-xs uppercase tracking-[0.2em] text-[#D19A3A] mb-2">
+          UCAEP · Archives
+        </span>
         <span className="font-serif text-base italic max-w-xs">{asset.caption}</span>
       </div>
     );

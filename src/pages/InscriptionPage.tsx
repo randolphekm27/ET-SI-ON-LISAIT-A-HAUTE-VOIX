@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
 import type { RegistrationPayload } from '../types/competition';
 
 const STEPS = [
-  { num: 1, label: 'Informations personnelles' },
-  { num: 2, label: 'Parcours académique' },
-  { num: 3, label: 'Motivation' },
-  { num: 4, label: 'Confirmation' },
+  { num: 1, label: 'Faire connaissance' },
+  { num: 2, label: 'Vos études' },
+  { num: 3, label: 'Votre motivation' },
+  { num: 4, label: 'Vérification' },
 ];
 
 const INITIAL_DATA: RegistrationPayload = {
@@ -30,8 +32,8 @@ const INITIAL_DATA: RegistrationPayload = {
 
 export function InscriptionPage() {
   usePageSeo(
-    'Inscription',
-    "Formulaire officiel d'inscription au concours UCAEP « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.",
+    "S'inscrire",
+    "Inscrivez-vous gratuitement au concours UCAEP « Et si on lisait à haute voix ? » à l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026.",
   );
 
   const navigate = useNavigate();
@@ -51,32 +53,32 @@ export function InscriptionPage() {
   function validateStep(currentStep: number): string | null {
     if (currentStep === 1) {
       if (!form.firstName.trim() || !form.lastName.trim()) {
-        return 'Veuillez indiquer votre nom et votre prénom.';
+        return 'Ce champ est nécessaire pour continuer : indiquez votre prénom et votre nom.';
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-        return 'Veuillez saisir une adresse e-mail valide.';
+        return 'Cette adresse e-mail ne semble pas correcte.';
       }
       if (form.phone.trim().length < 6) {
-        return 'Veuillez saisir un numéro de téléphone valide.';
+        return 'Indiquez un numéro de téléphone joignable.';
       }
       if (!form.birthDate) {
-        return 'Veuillez indiquer votre date de naissance.';
+        return 'Indiquez votre date de naissance pour continuer.';
       }
     }
     if (currentStep === 2) {
       if (!form.institution.trim() || !form.department.trim()) {
-        return 'Veuillez préciser votre établissement et votre filière.';
+        return 'Précisez votre établissement et votre filière pour continuer.';
       }
       if (!form.studyLevel.trim() || !form.studentId.trim()) {
-        return "Veuillez indiquer votre niveau d'études et votre matricule étudiant.";
+        return "Indiquez votre niveau d'études et votre numéro matricule.";
       }
     }
     if (currentStep === 3) {
       if (form.motivation.trim().length < 25) {
-        return 'Présentez votre motivation en au moins 25 caractères.';
+        return 'Dites-nous en au moins 25 caractères ce qui vous donne envie de participer.';
       }
       if (!form.acceptRules) {
-        return 'Veuillez accepter le règlement officiel du concours pour continuer.';
+        return "Cochez la case d'accord ci-dessous pour valider votre inscription.";
       }
     }
     return null;
@@ -123,7 +125,7 @@ export function InscriptionPage() {
 
       if (!data.saved) {
         throw new Error(
-          "L'enregistrement n'a pas pu être confirmé par le serveur. Veuillez réessayer.",
+          "L'enregistrement n'a pas pu être confirmé. Merci de réessayer dans un instant.",
         );
       }
 
@@ -142,7 +144,7 @@ export function InscriptionPage() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Une erreur technique est survenue. Votre inscription n’a pas été enregistrée.',
+          : "Un souci technique a empêché l'envoi. Votre inscription n'a pas encore été enregistrée.",
       );
     } finally {
       setSubmitting(false);
@@ -151,318 +153,367 @@ export function InscriptionPage() {
 
   return (
     <div className="bg-[#FBF9F5] min-h-[82vh]">
-      <section className="py-12 lg:py-16 border-b border-[#4E2A1E]/12 paper-grain">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#2E4D32]">
-            Candidature · Édition 2026
-          </p>
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E]">
-            Inscription au concours
-          </h1>
-          <p className="text-sm sm:text-base text-[#1A1A1A]/75">
-            Participation gratuite ouverte aux étudiants de l&apos;ENSET de Lokossa
-            jusqu&apos;au vendredi 20 novembre 2026.
-          </p>
-        </div>
-      </section>
+      <PageFolioHeader
+        folio="Inscription"
+        section="Édition 2026 · ENSET de Lokossa"
+        title="S'inscrire"
+        italicWord="au concours"
+        subtitle="C'est gratuit et ouvert à tous les étudiants jusqu'au vendredi 20 novembre 2026. Cela vous prendra deux minutes."
+      />
 
-      <section className="py-12 lg:py-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-10">
-          {/* Step Progress */}
-          <nav aria-label="Étapes du formulaire" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {STEPS.map((item) => {
-              const isCurrent = step === item.num;
-              const isDone = step > item.num;
-              return (
+      <section className="py-12 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          {/* Left Focused Progression Rail */}
+          <aside className="lg:col-span-4 space-y-8 lg:sticky lg:top-24">
+            <EditorialMark folio={`Étape 0${step} / 04`} label="Progression" tone="brown" />
+
+            <nav aria-label="Étapes de l'inscription" className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-0 lg:divide-y lg:divide-[#4E2A1E]/14 lg:border-t lg:border-b lg:border-[#4E2A1E]/14">
+              {STEPS.map((item) => {
+                const isCurrent = step === item.num;
+                const isDone = step > item.num;
+                return (
+                  <div
+                    key={item.num}
+                    className={`py-3 lg:py-4 flex items-center justify-between gap-3 transition-colors ${
+                      isCurrent
+                        ? 'text-[#1A1A1A] font-semibold'
+                        : isDone
+                          ? 'text-[#2E4D32]'
+                          : 'text-[#1A1A1A]/42'
+                    }`}
+                  >
+                    <div className="flex items-baseline gap-3 min-w-0">
+                      <span
+                        className={`font-serif text-2xl tabular-nums ${
+                          isCurrent
+                            ? 'text-[#D19A3A]'
+                            : isDone
+                              ? 'text-[#2E4D32]'
+                              : 'text-[#4E2A1E]/35'
+                        }`}
+                      >
+                        0{item.num}
+                      </span>
+                      <span className="text-sm truncate">{item.label}</span>
+                    </div>
+                    {isDone && <Check className="w-4 h-4 text-[#2E4D32] shrink-0" />}
+                  </div>
+                );
+              })}
+            </nav>
+
+            <div className="hidden lg:block text-xs text-[#4E2A1E]/75 space-y-1.5 leading-relaxed">
+              <p className="font-semibold text-[#4E2A1E]">Participation gratuite</p>
+              <p>Ouvert à toutes les filières de l&apos;ENSET de Lokossa.</p>
+            </div>
+          </aside>
+
+          {/* Right Form Desk */}
+          <div className="lg:col-span-8">
+            <div className="p-6 sm:p-10 bg-white border border-[#4E2A1E]/15 rounded-sm space-y-8">
+              {error && (
                 <div
-                  key={item.num}
-                  className={`pb-3 border-b-2 transition-colors ${
-                    isCurrent
-                      ? 'border-[#D19A3A] text-[#1A1A1A]'
-                      : isDone
-                        ? 'border-[#2E4D32] text-[#2E4D32]'
-                        : 'border-[#4E2A1E]/15 text-[#1A1A1A]/45'
-                  }`}
+                  role="alert"
+                  className="p-4 rounded-sm border border-red-800/30 bg-red-50 text-red-900 text-sm flex items-start gap-3"
                 >
-                  <div className="text-xs font-medium tabular-nums flex items-center gap-1.5">
-                    <span>0{item.num}</span>
-                    {isDone && <Check className="w-3.5 h-3.5" />}
-                  </div>
-                  <div className="text-xs sm:text-sm font-medium mt-0.5 truncate">
-                    {item.label}
-                  </div>
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
                 </div>
-              );
-            })}
-          </nav>
-
-          {error && (
-            <div
-              role="alert"
-              className="p-4 rounded-sm border border-red-800/30 bg-red-50 text-red-900 text-sm flex items-start gap-3"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {step === 1 && (
-              <div className="space-y-6">
-                <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                  1. Informations personnelles
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field
-                    label="Prénom"
-                    id="firstName"
-                    value={form.firstName}
-                    onChange={(v) => updateField('firstName', v)}
-                    placeholder="Ex. Adjovi"
-                    required
-                  />
-                  <Field
-                    label="Nom"
-                    id="lastName"
-                    value={form.lastName}
-                    onChange={(v) => updateField('lastName', v)}
-                    placeholder="Ex. Houngbédji"
-                    required
-                  />
-                  <Field
-                    label="Adresse e-mail"
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(v) => updateField('email', v)}
-                    placeholder="etudiant@exemple.bj"
-                    required
-                  />
-                  <Field
-                    label="Téléphone (WhatsApp)"
-                    id="phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={(v) => updateField('phone', v)}
-                    placeholder="Numéro joignable"
-                    required
-                  />
-                  <Field
-                    label="Date de naissance"
-                    id="birthDate"
-                    type="date"
-                    value={form.birthDate}
-                    onChange={(v) => updateField('birthDate', v)}
-                    required
-                  />
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="gender"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
-                    >
-                      Genre
-                    </label>
-                    <select
-                      id="gender"
-                      value={form.gender}
-                      onChange={(e) =>
-                        updateField(
-                          'gender',
-                          e.target.value as RegistrationPayload['gender'],
-                        )
-                      }
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
-                    >
-                      <option value="Féminin">Féminin</option>
-                      <option value="Masculin">Masculin</option>
-                      <option value="Préfère ne pas préciser">
-                        Préfère ne pas préciser
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="space-y-6">
-                <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                  2. Parcours académique
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field
-                    label="Établissement"
-                    id="institution"
-                    value={form.institution}
-                    onChange={(v) => updateField('institution', v)}
-                    required
-                  />
-                  <Field
-                    label="Filière / Département"
-                    id="department"
-                    value={form.department}
-                    onChange={(v) => updateField('department', v)}
-                    placeholder="Ex. Génie Électrique, Informatique…"
-                    required
-                  />
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="studyLevel"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
-                    >
-                      Niveau d&apos;études
-                    </label>
-                    <select
-                      id="studyLevel"
-                      value={form.studyLevel}
-                      onChange={(e) => updateField('studyLevel', e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
-                    >
-                      <option value="Licence 1">Licence 1</option>
-                      <option value="Licence 2">Licence 2</option>
-                      <option value="Licence 3">Licence 3</option>
-                      <option value="Master 1">Master 1</option>
-                      <option value="Master 2">Master 2</option>
-                    </select>
-                  </div>
-                  <Field
-                    label="Numéro matricule étudiant"
-                    id="studentId"
-                    value={form.studentId}
-                    onChange={(v) => updateField('studentId', v)}
-                    placeholder="Votre matricule universitaire"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-6">
-                <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                  3. Motivation
-                </h2>
-                <div className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="motivation"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
-                    >
-                      Pourquoi souhaitez-vous participer ?
-                    </label>
-                    <textarea
-                      id="motivation"
-                      rows={4}
-                      value={form.motivation}
-                      onChange={(e) => updateField('motivation', e.target.value)}
-                      placeholder="Expliquez en quelques lignes votre intérêt pour l'écriture, la lecture ou l'éloquence."
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="readingExperience"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
-                    >
-                      Un livre ou un texte qui vous a marqué (optionnel)
-                    </label>
-                    <input
-                      id="readingExperience"
-                      type="text"
-                      value={form.readingExperience}
-                      onChange={(e) => updateField('readingExperience', e.target.value)}
-                      placeholder="Titre et auteur, si vous le souhaitez"
-                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
-                    />
-                  </div>
-
-                  <label className="flex items-start gap-3 p-4 rounded-sm border border-[#4E2A1E]/15 bg-[#F7E6C8]/25 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.acceptRules}
-                      onChange={(e) => updateField('acceptRules', e.target.checked)}
-                      className="mt-1 h-4 w-4 accent-[#4E2A1E]"
-                    />
-                    <span className="text-sm text-[#1A1A1A]/85 leading-relaxed">
-                      Je certifie être étudiant(e) inscrit(e) et j&apos;accepte le
-                      traitement de mes données par l&apos;UCAEP pour l&apos;organisation
-                      du concours.
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
-              <div className="space-y-6">
-                <h2 className="font-serif text-3xl font-semibold text-[#4E2A1E]">
-                  4. Vérification et confirmation
-                </h2>
-                <p className="text-sm text-[#1A1A1A]/75">
-                  Vérifiez vos informations avant l&apos;enregistrement définitif de votre
-                  candidature.
-                </p>
-
-                <dl className="divide-y divide-[#4E2A1E]/12 border border-[#4E2A1E]/15 rounded-sm bg-white">
-                  <SummaryRow
-                    label="Candidat"
-                    value={`${form.firstName} ${form.lastName}`}
-                  />
-                  <SummaryRow label="Adresse e-mail" value={form.email} />
-                  <SummaryRow label="Téléphone" value={form.phone} />
-                  <SummaryRow
-                    label="Parcours"
-                    value={`${form.institution} · ${form.department} (${form.studyLevel})`}
-                  />
-                  <SummaryRow label="Matricule" value={form.studentId} />
-                  <SummaryRow label="Motivation" value={form.motivation} />
-                </dl>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-[#4E2A1E]/12 flex items-center justify-between gap-4">
-              {step > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setStep((s) => s - 1);
-                  }}
-                  disabled={submitting}
-                  className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-sm border border-[#4E2A1E]/25 text-[#4E2A1E] hover:bg-[#4E2A1E]/5 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Précédent</span>
-                </button>
-              ) : (
-                <span />
               )}
 
-              {step < 4 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
-                >
-                  <span>Continuer</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
-                >
-                  <span>
-                    {submitting ? 'Enregistrement en cours…' : "Valider mon inscription"}
-                  </span>
-                  <Check className="w-4 h-4" />
-                </button>
-              )}
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <AnimatePresence mode="wait">
+                  {step === 1 && (
+                    <motion.div
+                      key="step-1"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      className="space-y-6"
+                    >
+                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                        Commençons par faire connaissance.
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <Field
+                          label="Prénom"
+                          id="firstName"
+                          value={form.firstName}
+                          onChange={(v) => updateField('firstName', v)}
+                          placeholder="Votre prénom"
+                          required
+                        />
+                        <Field
+                          label="Nom"
+                          id="lastName"
+                          value={form.lastName}
+                          onChange={(v) => updateField('lastName', v)}
+                          placeholder="Votre nom de famille"
+                          required
+                        />
+                        <Field
+                          label="Adresse e-mail"
+                          id="email"
+                          type="email"
+                          value={form.email}
+                          onChange={(v) => updateField('email', v)}
+                          placeholder="exemple@email.com"
+                          required
+                        />
+                        <Field
+                          label="Téléphone (WhatsApp)"
+                          id="phone"
+                          type="tel"
+                          value={form.phone}
+                          onChange={(v) => updateField('phone', v)}
+                          placeholder="Ex. +229 01 …"
+                          required
+                        />
+                        <Field
+                          label="Date de naissance"
+                          id="birthDate"
+                          type="date"
+                          value={form.birthDate}
+                          onChange={(v) => updateField('birthDate', v)}
+                          required
+                        />
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="gender"
+                            className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                          >
+                            Genre
+                          </label>
+                          <select
+                            id="gender"
+                            value={form.gender}
+                            onChange={(e) =>
+                              updateField(
+                                'gender',
+                                e.target.value as RegistrationPayload['gender'],
+                              )
+                            }
+                            className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
+                          >
+                            <option value="Féminin">Féminin</option>
+                            <option value="Masculin">Masculin</option>
+                            <option value="Préfère ne pas préciser">
+                              Préfère ne pas préciser
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {step === 2 && (
+                    <motion.div
+                      key="step-2"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      className="space-y-6"
+                    >
+                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                        Parlons un peu de vos études.
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <Field
+                          label="Établissement"
+                          id="institution"
+                          value={form.institution}
+                          onChange={(v) => updateField('institution', v)}
+                          required
+                        />
+                        <Field
+                          label="Filière ou département"
+                          id="department"
+                          value={form.department}
+                          onChange={(v) => updateField('department', v)}
+                          placeholder="Ex. Génie Électrique, Informatique…"
+                          required
+                        />
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="studyLevel"
+                            className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                          >
+                            Niveau d&apos;études
+                          </label>
+                          <select
+                            id="studyLevel"
+                            value={form.studyLevel}
+                            onChange={(e) => updateField('studyLevel', e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
+                          >
+                            <option value="Licence 1">Licence 1</option>
+                            <option value="Licence 2">Licence 2</option>
+                            <option value="Licence 3">Licence 3</option>
+                            <option value="Master 1">Master 1</option>
+                            <option value="Master 2">Master 2</option>
+                          </select>
+                        </div>
+                        <Field
+                          label="Numéro matricule"
+                          id="studentId"
+                          value={form.studentId}
+                          onChange={(v) => updateField('studentId', v)}
+                          placeholder="Votre matricule étudiant"
+                          required
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {step === 3 && (
+                    <motion.div
+                      key="step-3"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      className="space-y-6"
+                    >
+                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                        Qu&apos;est-ce qui vous donne envie de participer ?
+                      </h2>
+                      <div className="space-y-5">
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="motivation"
+                            className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                          >
+                            Quelques mots sur votre motivation
+                          </label>
+                          <textarea
+                            id="motivation"
+                            rows={4}
+                            value={form.motivation}
+                            onChange={(e) => updateField('motivation', e.target.value)}
+                            placeholder="Racontez-nous simplement ce qui vous attire dans l'écriture, la lecture ou la prise de parole."
+                            className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="readingExperience"
+                            className="block text-xs font-semibold uppercase tracking-wider text-[#4E2A1E]"
+                          >
+                            Un livre ou un texte que vous aimez (facultatif)
+                          </label>
+                          <input
+                            id="readingExperience"
+                            type="text"
+                            value={form.readingExperience}
+                            onChange={(e) =>
+                              updateField('readingExperience', e.target.value)
+                            }
+                            placeholder="Si un titre vous vient à l'esprit"
+                            className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
+                          />
+                        </div>
+
+                        <label className="flex items-start gap-3 p-4 rounded-sm border border-[#4E2A1E]/15 bg-[#F3EBDD]/50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.acceptRules}
+                            onChange={(e) =>
+                              updateField('acceptRules', e.target.checked)
+                            }
+                            className="mt-1 h-4 w-4 accent-[#4E2A1E]"
+                          />
+                          <span className="text-sm text-[#1A1A1A]/85 leading-relaxed">
+                            Je confirme être inscrit(e) comme étudiant(e) et j&apos;accepte
+                            que l&apos;équipe de l&apos;UCAEP utilise ces informations
+                            pour organiser le concours.
+                          </span>
+                        </label>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {step === 4 && (
+                    <motion.div
+                      key="step-4"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      className="space-y-6"
+                    >
+                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#4E2A1E]">
+                        On vérifie une dernière fois avant d&apos;envoyer.
+                      </h2>
+                      <p className="text-sm text-[#1A1A1A]/75">
+                        Relisez rapidement vos informations. Si tout est bon, vous pouvez
+                        envoyer votre inscription.
+                      </p>
+
+                      <dl className="divide-y divide-[#4E2A1E]/12 border-t border-b border-[#4E2A1E]/15">
+                        <SummaryRow
+                          label="Nom et prénom"
+                          value={`${form.firstName} ${form.lastName}`}
+                        />
+                        <SummaryRow label="Adresse e-mail" value={form.email} />
+                        <SummaryRow label="Téléphone" value={form.phone} />
+                        <SummaryRow
+                          label="Études"
+                          value={`${form.institution} · ${form.department} (${form.studyLevel})`}
+                        />
+                        <SummaryRow label="Matricule" value={form.studentId} />
+                        <SummaryRow label="Motivation" value={form.motivation} />
+                      </dl>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="pt-5 border-t border-[#4E2A1E]/12 flex items-center justify-between gap-4">
+                  {step > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setStep((s) => s - 1);
+                      }}
+                      disabled={submitting}
+                      className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-sm border border-[#4E2A1E]/25 text-[#4E2A1E] hover:bg-[#4E2A1E]/5 transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Retour</span>
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
+                  {step < 4 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16] transition-colors"
+                    >
+                      <span>Continuer</span>
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-[#D19A3A] text-[#1A1A1A] hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
+                    >
+                      <span>
+                        {submitting ? 'Envoi en cours…' : 'Envoyer mon inscription'}
+                      </span>
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         </div>
       </section>
     </div>
@@ -501,7 +552,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full px-3.5 py-2.5 text-sm bg-white border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:outline-none"
+        className="w-full px-3.5 py-2.5 text-sm bg-[#FBF9F5]/50 border border-[#4E2A1E]/25 rounded-sm focus:border-[#D19A3A] focus:bg-white focus:outline-none transition-colors"
       />
     </div>
   );
@@ -509,7 +560,7 @@ function Field({
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-5 py-3.5 grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 text-sm">
+    <div className="py-3.5 grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 text-sm">
       <dt className="font-medium text-[#4E2A1E]/75">{label}</dt>
       <dd className="sm:col-span-2 text-[#1A1A1A] break-words">{value}</dd>
     </div>
