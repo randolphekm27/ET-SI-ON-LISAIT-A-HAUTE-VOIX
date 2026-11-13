@@ -449,7 +449,7 @@ export function GestionPage() {
     };
   }, [data?.registrations]);
 
-  if (!token || !data) {
+  if (!token) {
     return (
       <div className="py-20 bg-ucaep-paper">
         <div className="max-w-md mx-auto px-4">
@@ -497,6 +497,51 @@ export function GestionPage() {
                 Se connecter
               </button>
             </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="py-24 bg-ucaep-paper">
+        <div className="max-w-lg mx-auto px-4 text-center space-y-6">
+          <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+            <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+              Chargement des données du concours
+            </h2>
+            {authError ? (
+              <div className="space-y-4 text-left">
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 wrap-break-word leading-relaxed font-mono">
+                  {authError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadOverview(token)}
+                  disabled={isRefreshing}
+                  className="w-full py-2.5 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-50"
+                >
+                  {isRefreshing ? 'Connexion en cours...' : 'Réessayer la connexion'}
+                </button>
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-xs text-ucaep-ink/60 hover:text-ucaep-brown underline"
+                  >
+                    Se déconnecter / Changer de code
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 gap-3">
+                <RefreshCw className="w-8 h-8 text-ucaep-brown animate-spin" />
+                <p className="text-sm text-ucaep-ink/75">
+                  Synchronisation avec la base de données PostgreSQL...
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

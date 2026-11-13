@@ -33,7 +33,7 @@ export const createPool = () => {
     global._postgresPool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
-      max: process.env.VERCEL ? 2 : 5,
+      max: process.env.VERCEL ? 1 : 5,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 10000,
       allowExitOnIdle: true,
@@ -46,34 +46,5 @@ export const createPool = () => {
   return global._postgresPool;
 };
 
-export function resetPool() {
-  if (global._postgresPool) {
-    global._postgresPool.end().catch(() => {});
-    global._postgresPool = undefined;
-  }
-}
-
-export async function testDatabaseConnection(): Promise<boolean> {
-  if (!isCloudSqlConfigured()) return false;
-  try {
-    const pool = createPool();
-    const client = await pool.connect();
-    try {
-      await client.query('SELECT 1');
-      return true;
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.warn('Database health check failed:', (err as Error).message);
-    resetPool();
-    return false;
-  }
-}
-
-export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
-  get(_target, prop) {
-    const instance = drizzle(createPool(), { schema });
-    return (instance as any)[prop];
-  },
-});
+export const pool = createPool();
+export const db = drizzle(pool, { schema });

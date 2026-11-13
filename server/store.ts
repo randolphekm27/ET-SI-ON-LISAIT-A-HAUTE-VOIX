@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { asc, desc, eq, or, sql } from 'drizzle-orm';
-import { db, isCloudSqlConfigured, resetPool } from '../src/db/index.ts';
+import { db, isCloudSqlConfigured } from '../src/db/index.ts';
 import {
   announcements as announcementsTable,
   appSettings as appSettingsTable,
@@ -488,6 +488,27 @@ function mapRegistrationRow(
   };
 }
 
+function extractErrorDetail(err: unknown): string {
+  if (!err) return 'Erreur inconnue';
+  const e = err as any;
+  const cause = e.cause || {};
+  const causeMsg = cause.message || (typeof cause === 'string' ? cause : '');
+  const mainMsg = e.message || String(err);
+  const code = cause.code || e.code;
+  const detail = cause.detail || e.detail;
+
+  const parts: string[] = [];
+  if (causeMsg && causeMsg !== mainMsg) {
+    parts.push(causeMsg);
+  } else {
+    parts.push(mainMsg);
+  }
+  if (code) parts.push(`Code: ${code}`);
+  if (detail) parts.push(`Détail: ${detail}`);
+
+  return parts.join(' — ');
+}
+
 export async function readStore(): Promise<StoreData> {
   if (!isCloudSqlConfigured()) {
     return readJsonStore();
@@ -498,13 +519,16 @@ export async function readStore(): Promise<StoreData> {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      await ensureDbSeeded();
       const phaseRows = await db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder));
       const announcementRows = await db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt));
       const newsRows = await db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt));
       const registrationRows = await db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt));
       const contactRows = await db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt));
       const settingsRows = await db.select().from(appSettingsTable);
+
+      if (phaseRows.length === 0) {
+        ensureDbSeeded().catch(() => {});
+      }
 
       const settingsMap = new Map(
         settingsRows.map((s) => [
@@ -548,7 +572,6 @@ export async function readStore(): Promise<StoreData> {
     } catch (error) {
       lastError = error;
       console.warn(`Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`, (error as Error).message);
-      resetPool();
       if (attempt < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
@@ -561,7 +584,7 @@ export async function readStore(): Promise<StoreData> {
     return cachedStore;
   }
 
-  const detail = lastError instanceof Error ? lastError.message : String(lastError || '');
+  const detail = extractErrorDetail(lastError);
 
   // Ne jamais écraser silencieusement avec un store JSON vide lorsque PostgreSQL est configuré
   if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
