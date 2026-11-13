@@ -1,13 +1,5 @@
 import type express from 'express';
 import crypto from 'node:crypto';
-import { adminAuth } from '../src/lib/firebase-admin.ts';
-import { isCloudSqlConfigured } from '../src/db/index.ts';
-import {
-  getOrCreateUser,
-  getUserByUid,
-  promoteUserToOrganizer,
-} from '../src/db/users.ts';
-import { requireAuth, type AuthRequest } from '../src/middleware/auth.ts';
 import {
   createAnnouncementRecord,
   createNewsRecord,
@@ -29,13 +21,6 @@ import type {
   PublicationStatus,
   RegistrationPayload,
 } from '../src/types/competition';
-
-const ORGANIZER_ALLOWLIST = new Set(
-  (process.env.ORGANIZER_EMAILS || 'ucaeplokossa@gmail.com')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean),
-);
 
 function normalizeCode(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -104,17 +89,8 @@ function verifyAdminToken(token: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
-async function isFirebaseOrganizer(uid: string, email?: string): Promise<boolean> {
-  if (email && ORGANIZER_ALLOWLIST.has(email.trim().toLowerCase())) {
-    return true;
-  }
-  if (!isCloudSqlConfigured()) return false;
-  const dbUser = await getUserByUid(uid);
-  return dbUser?.role === 'organizer';
-}
-
-async function requireAdmin(
-  req: AuthRequest,
+function requireAdmin(
+  req: express.Request,
   res: express.Response,
   next: express.NextFunction,
 ) {
@@ -131,30 +107,9 @@ async function requireAdmin(
   const bearerToken = authHeader.startsWith('Bearer ')
     ? authHeader.slice(7).trim()
     : '';
-  if (bearerToken) {
-    if (verifyAdminToken(bearerToken)) {
-      next();
-      return;
-    }
-    try {
-      const decoded = await adminAuth.verifyIdToken(bearerToken);
-      req.user = decoded;
-      if (isCloudSqlConfigured()) {
-        await getOrCreateUser(decoded.uid, decoded.email || '', decoded.name || null);
-      }
-      const allowed = await isFirebaseOrganizer(decoded.uid, decoded.email);
-      if (allowed) {
-        next();
-        return;
-      }
-      res.status(403).json({
-        error: "Ce compte Google n'est pas encore habilité comme organisateur.",
-      });
-      return;
-    } catch {
-      res.status(401).json({ error: 'Session expirée ou invalide.' });
-      return;
-    }
+  if (bearerToken && verifyAdminToken(bearerToken)) {
+    next();
+    return;
   }
 
   res.status(401).json({ error: 'Connexion organisateur requise.' });
@@ -179,60 +134,6 @@ export function registerApiRoutes(app: express.Express) {
     }
     next();
   });
-  // Firebase authenticated session check & user PostgreSQL sync
-  app.get('/api/auth/session', requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const uid = req.user!.uid;
-      const email = req.user!.email || '';
-      const organizer = await isFirebaseOrganizer(uid, email);
-      res.json({
-        user: {
-          uid,
-          email,
-          name: req.user!.name || null,
-        },
-        isOrganizer: organizer,
-      });
-    } catch (error) {
-      const err = error as Error;
-      res.status(500).json({
-        error: err.message || 'Impossible de vérifier la session.',
-      });
-    }
-  });
-
-  // Link an authenticated Firebase user to organizer role via access code
-  app.post(
-    '/api/admin/auth/link',
-    requireAuth,
-    async (req: AuthRequest, res) => {
-      try {
-        const configuredCodes = getOrganizerCodes();
-        if (configuredCodes.length === 0) {
-          res.status(503).json({
-            error:
-              "Le code d'accès organisateur n'est pas configuré sur le serveur (ORGANIZER_ACCESS_CODE manquant).",
-          });
-          return;
-        }
-        const { code } = (req.body || {}) as { code?: string };
-        if (!code || !isOrganizerCodeValid(code)) {
-          res.status(401).json({ error: "Ce code d'accès ne correspond pas." });
-          return;
-        }
-        if (isCloudSqlConfigured()) {
-          await promoteUserToOrganizer(req.user!.uid);
-        }
-        res.json({ ok: true, token: createAdminToken() });
-      } catch (error) {
-        const err = error as Error;
-        res.status(500).json({
-          error: err.message || "Impossible de valider l'accès organisateur.",
-        });
-      }
-    },
-  );
-
   // Public API: Announcements (strictly published only)
   app.get('/api/announcements', async (_req, res) => {
     try {

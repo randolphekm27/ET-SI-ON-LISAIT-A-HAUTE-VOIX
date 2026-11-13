@@ -1,7 +1,5 @@
 import { useState, type FormEvent, useMemo } from 'react';
 import { Download, Lock, LogOut, Plus, Search, Unlock } from 'lucide-react';
-import { signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleAuthProvider } from '../lib/firebase';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import type {
@@ -41,10 +39,6 @@ export function GestionPage() {
   );
 
   const [token, setToken] = useState<string>('');
-  const [firebaseToken, setFirebaseToken] = useState<string>('');
-  const [googleEmail, setGoogleEmail] = useState<string>('');
-  const [needsOrganizerLink, setNeedsOrganizerLink] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [accessCode, setAccessCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [data, setData] = useState<AdminOverview | null>(null);
@@ -82,26 +76,20 @@ export function GestionPage() {
   function buildAuthHeaders(
     extraHeaders?: Record<string, string>,
     overrideAdminToken?: string,
-    overrideFirebaseToken?: string,
   ): Record<string, string> {
     const headers: Record<string, string> = { ...(extraHeaders || {}) };
     const effectiveAdmin = overrideAdminToken ?? token;
-    const effectiveFirebase = overrideFirebaseToken ?? firebaseToken;
     if (effectiveAdmin) {
       headers['X-UCAEP-Admin-Token'] = effectiveAdmin;
-    } else if (effectiveFirebase) {
-      headers.Authorization = `Bearer ${effectiveFirebase}`;
+      headers.Authorization = `Bearer ${effectiveAdmin}`;
     }
     return headers;
   }
 
-  async function loadOverview(
-    overrideAdminToken?: string,
-    overrideFirebaseToken?: string,
-  ) {
+  async function loadOverview(overrideAdminToken?: string) {
     try {
       const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
-        headers: buildAuthHeaders(undefined, overrideAdminToken, overrideFirebaseToken),
+        headers: buildAuthHeaders(undefined, overrideAdminToken),
       });
       setData(json);
       setGasUrl(json.settings.googleAppsScriptUrl || '');
@@ -110,42 +98,8 @@ export function GestionPage() {
       setAuthError(msg);
       if (msg.includes('401') || msg.includes('requise') || msg.includes('expirée')) {
         setToken('');
-        setFirebaseToken('');
         setData(null);
       }
-    }
-  }
-
-  async function handleGoogleLogin() {
-    setAuthError('');
-    setGoogleLoading(true);
-    try {
-      const credential = await signInWithPopup(auth, googleAuthProvider);
-      const idToken = await credential.user.getIdToken();
-      setFirebaseToken(idToken);
-      setGoogleEmail(credential.user.email || '');
-
-      const session = await fetchApiJson<{
-        user: { uid: string; email: string; name: string | null };
-        isOrganizer: boolean;
-      }>('/api/auth/session', {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
-
-      if (session.isOrganizer) {
-        setNeedsOrganizerLink(false);
-        await loadOverview('', idToken);
-      } else {
-        setNeedsOrganizerLink(true);
-      }
-    } catch (err) {
-      setAuthError(
-        err instanceof Error
-          ? err.message
-          : 'Impossible de finaliser la connexion Google.',
-      );
-    } finally {
-      setGoogleLoading(false);
     }
   }
 
@@ -153,48 +107,22 @@ export function GestionPage() {
     e.preventDefault();
     setAuthError('');
     try {
-      if (needsOrganizerLink && firebaseToken) {
-        const linked = await fetchApiJson<{ ok: boolean; token: string }>(
-          '/api/admin/auth/link',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${firebaseToken}`,
-            },
-            body: JSON.stringify({ code: accessCode }),
-          },
-        );
-        setToken(linked.token);
-        setNeedsOrganizerLink(false);
-        await loadOverview(linked.token, firebaseToken);
-        return;
-      }
-
       const json = await fetchApiJson<{ token: string }>('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: accessCode }),
       });
       setToken(json.token);
-      await loadOverview(json.token, '');
+      await loadOverview(json.token);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Erreur de connexion.');
     }
   }
 
-  async function handleLogout() {
+  function handleLogout() {
     setToken('');
-    setFirebaseToken('');
-    setGoogleEmail('');
-    setNeedsOrganizerLink(false);
     setData(null);
     setAccessCode('');
-    try {
-      await signOut(auth);
-    } catch {
-      // ignore
-    }
   }
 
   async function handleCreateAnnouncement(e: FormEvent) {
@@ -446,7 +374,7 @@ export function GestionPage() {
     };
   }, [data?.registrations]);
 
-  if ((!token && !firebaseToken) || !data) {
+  if (!token || !data) {
     return (
       <div className="py-20 bg-ucaep-paper">
         <div className="max-w-md mx-auto px-4">
@@ -459,9 +387,7 @@ export function GestionPage() {
                 Espace organisateurs
               </h1>
               <p className="text-sm text-ucaep-ink/75">
-                {needsOrganizerLink
-                  ? `Compte connecté (${googleEmail}). Saisissez le code de l'équipe une fois pour activer votre accès.`
-                  : 'Modifier les annonces, ouvrir ou fermer les phases du concours et suivre les inscriptions reçues.'}
+                Modifier les annonces, ouvrir ou fermer les phases du concours et suivre les inscriptions reçues.
               </p>
             </div>
 
@@ -469,29 +395,6 @@ export function GestionPage() {
               <p className="p-3 text-sm bg-red-50 text-red-900 border border-red-800/20 rounded-sm">
                 {authError}
               </p>
-            )}
-
-            {!needsOrganizerLink && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={googleLoading}
-                  className="w-full py-3 px-4 text-sm font-semibold rounded-sm border border-ucaep-brown/25 bg-ucaep-paper text-ucaep-brown hover:bg-ucaep-ivory/50 transition-colors disabled:opacity-50"
-                >
-                  {googleLoading
-                    ? 'Connexion avec Google...'
-                    : 'Continuer avec Google'}
-                </button>
-
-                <div className="relative flex items-center py-1">
-                  <div className="grow border-t border-ucaep-brown/12" />
-                  <span className="mx-3 text-[11px] uppercase tracking-widest text-ucaep-brown/55">
-                    ou
-                  </span>
-                  <div className="grow border-t border-ucaep-brown/12" />
-                </div>
-              </>
             )}
 
             <form onSubmit={handleLogin} className="space-y-4">
@@ -516,7 +419,7 @@ export function GestionPage() {
                 type="submit"
                 className="w-full py-3 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors"
               >
-                {needsOrganizerLink ? 'Activer mon accès' : 'Se connecter'}
+                Se connecter
               </button>
             </form>
           </div>
