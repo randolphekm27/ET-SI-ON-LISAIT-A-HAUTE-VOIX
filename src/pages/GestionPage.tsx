@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useMemo } from 'react';
+import { useState, useEffect, type FormEvent, useMemo } from 'react';
 import { Download, Lock, LogOut, Plus, Search, Unlock } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
@@ -38,14 +38,48 @@ export function GestionPage() {
     'Gestion des annonces, des phases et des inscriptions au concours UCAEP.',
   );
 
-  const [token, setToken] = useState<string>('');
+  const [token, setToken] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('ucaep_admin_token') || '';
+    } catch {
+      return '';
+    }
+  });
   const [accessCode, setAccessCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [data, setData] = useState<AdminOverview | null>(null);
   const [tab, setTab] = useState<
     'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config'
-  >('annonces');
+  >(() => {
+    try {
+      const savedTab = sessionStorage.getItem('ucaep_admin_tab');
+      if (
+        savedTab &&
+        ['annonces', 'actualites', 'parcours', 'candidats', 'config'].includes(savedTab)
+      ) {
+        return savedTab as 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config';
+      }
+    } catch {
+      // ignore
+    }
+    return 'annonces';
+  });
   const [notice, setNotice] = useState('');
+
+  function selectTab(newTab: 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config') {
+    setTab(newTab);
+    try {
+      sessionStorage.setItem('ucaep_admin_tab', newTab);
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (token && !data) {
+      loadOverview(token);
+    }
+  }, [token]);
 
   // Announcement creation form
   const [annTitle, setAnnTitle] = useState('');
@@ -99,6 +133,11 @@ export function GestionPage() {
       if (msg.includes('401') || msg.includes('requise') || msg.includes('expirée')) {
         setToken('');
         setData(null);
+        try {
+          sessionStorage.removeItem('ucaep_admin_token');
+        } catch {
+          // ignore
+        }
       }
     }
   }
@@ -113,6 +152,11 @@ export function GestionPage() {
         body: JSON.stringify({ code: accessCode }),
       });
       setToken(json.token);
+      try {
+        sessionStorage.setItem('ucaep_admin_token', json.token);
+      } catch {
+        // ignore
+      }
       await loadOverview(json.token);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Erreur de connexion.');
@@ -123,6 +167,11 @@ export function GestionPage() {
     setToken('');
     setData(null);
     setAccessCode('');
+    try {
+      sessionStorage.removeItem('ucaep_admin_token');
+    } catch {
+      // ignore
+    }
   }
 
   async function handleCreateAnnouncement(e: FormEvent) {
@@ -466,7 +515,7 @@ export function GestionPage() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => selectTab(id)}
                 className={`px-3.5 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 ${
                   tab === id
                     ? 'bg-ucaep-brown text-ucaep-paper'

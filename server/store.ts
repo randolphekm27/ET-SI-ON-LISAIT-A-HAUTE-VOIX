@@ -497,7 +497,7 @@ export async function readStore(): Promise<StoreData> {
       ]),
     );
 
-    return {
+    const storeData: StoreData = {
       phases: phaseRows.map(mapPhaseRow),
       announcements: announcementRows.map(mapAnnouncementRow),
       news: newsRows.map(mapNewsRow),
@@ -522,6 +522,11 @@ export async function readStore(): Promise<StoreData> {
         officialEmail: 'ucaeplokossa@gmail.com',
       },
     };
+
+    // Synchronisation miroir locale pour garantir la persistance permanente
+    writeJsonStore(storeData).catch(() => {});
+
+    return storeData;
   } catch (error) {
     console.warn('Database readStore indisponible, bascule sur le store local JSON:', error);
     return readJsonStore();
@@ -796,7 +801,16 @@ export async function updatePhaseRecord(
       .where(eq(phasesTable.id, id))
       .returning();
 
-    return updated[0] ? mapPhaseRow(updated[0]) : null;
+    const result = updated[0] ? mapPhaseRow(updated[0]) : null;
+    if (result) {
+      withJsonStoreLock((store) => {
+        const idx = store.phases.findIndex((p) => p.id === id);
+        if (idx !== -1) {
+          store.phases[idx] = result;
+        }
+      }).catch(() => {});
+    }
+    return result;
   } catch (error) {
     console.warn('Database updatePhaseRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
@@ -1322,6 +1336,16 @@ export async function saveRegistration(
       }
     }
 
+    // 3. Sauvegarde miroir dans le magasin local pour garantir la persistance locale
+    withJsonStoreLock(async (store) => {
+      const idx = store.registrations.findIndex((r) => r.id === record.id);
+      if (idx === -1) {
+        store.registrations.unshift(record);
+      } else {
+        store.registrations[idx] = record;
+      }
+    }).catch(() => {});
+
     return record;
   } catch (error) {
     const err = error as Error & { statusCode?: number; code?: string; constraint?: string };
@@ -1415,6 +1439,10 @@ export async function saveContactMessage(
       status: 'non_lu',
       createdAt: new Date(),
     });
+    withJsonStoreLock((store) => {
+      store.contacts.push(record);
+    }).catch(() => {});
+
     return record;
   } catch (error) {
     console.error('Database saveContactMessage error:', (error as Error).message);

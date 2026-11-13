@@ -11,14 +11,14 @@
       "title": "La Plume",
       "shortDescription": "Nous allons commencer par l'écriture et l'expression personnelle, tranquillement depuis chez vous.",
       "format": "En ligne",
-      "statusLabel": "À venir",
+      "statusLabel": "Ouverte",
       "isRevealed": false,
       "imageKey": "plume",
       "testDetails": {
-        "instructionsTitle": "Consigne — Phase 01 (Confidentiel)",
         "theme": "Sujet communiqué uniquement lors du lancement officiel.",
         "instructions": "Les consignes exactes et le lien de dépôt seront publiés sur la page Annonces au démarrage de la phase.",
-        "submissionNote": "Dépôt en ligne réservé aux étudiants inscrits."
+        "submissionNote": "Dépôt en ligne réservé aux étudiants inscrits.",
+        "instructionsTitle": "Consigne — Phase 01 (Confidentiel)"
       }
     },
     {
@@ -31,10 +31,10 @@
       "isRevealed": false,
       "imageKey": "connaissance",
       "testDetails": {
-        "instructionsTitle": "Consigne — Phase 02 (Confidentiel)",
         "theme": "Thématiques communiquées après la Phase 01.",
         "instructions": "Le fonctionnement précis de cette étape sera partagé avec les candidats retenus au moment voulu.",
-        "submissionNote": "Accès réservé aux candidats qualifiés."
+        "submissionNote": "Accès réservé aux candidats qualifiés.",
+        "instructionsTitle": "Consigne — Phase 02 (Confidentiel)"
       }
     },
     {
@@ -47,38 +47,16 @@
       "isRevealed": false,
       "imageKey": "eloquence",
       "testDetails": {
-        "instructionsTitle": "Consigne — Finale (Confidentiel)",
         "theme": "Sujets annoncés à l'approche de la finale.",
         "instructions": "Les consignes de passage sur scène seront communiquées après les qualifications.",
-        "submissionNote": "Finale en personne à l'ENSET de Lokossa."
+        "submissionNote": "Finale en personne à l'ENSET de Lokossa.",
+        "instructionsTitle": "Consigne — Finale (Confidentiel)"
       }
     }
   ],
   "announcements": [
     {
-      "id": "ann-1",
-      "slug": "ouverture-des-inscriptions-edition-2026",
-      "title": "Les inscriptions sont ouvertes à l'ENSET",
-      "excerpt": "Vous pouvez dès maintenant remplir votre fiche d'inscription en ligne pour participer.",
-      "content": "Nous ouvrons les inscriptions pour l'édition 2026 du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.\n\nLa participation est gratuite et ouverte à tous les étudiants de l'école, quelle que soit votre filière ou votre année d'étude.\n\nSi vous avez envie d'essayer, remplissez simplement le formulaire en ligne avant le vendredi 20 novembre 2026. Nous publierons ici toutes les informations pour la suite.",
-      "publishedAt": "2026-11-10T09:00:00.000Z",
-      "status": "published",
-      "category": "Inscription",
-      "imageKey": "hero"
-    },
-    {
-      "id": "ann-2",
-      "slug": "calendrier-progressif-des-revelations",
-      "title": "Comment nous allons annoncer les épreuves",
-      "excerpt": "Chaque étape sera dévoilée ici au fur et à mesure, pour que tout le monde parte sur un pied d'égalité.",
-      "content": "Pour que personne n'ait d'avance sur les autres, nous ne publions pas les sujets et consignes des trois phases dès aujourd'hui.\n\nNous dévoilerons chaque étape ici même, une annonce après l'autre. Pensez à repasser sur cette page de temps en temps pour suivre le fil du concours.",
-      "publishedAt": "2026-11-12T10:00:00.000Z",
-      "status": "published",
-      "category": "Organisation",
-      "imageKey": "campus"
-    },
-    {
-      "id": "ann-3",
+      "id": "ea080182-7c66-450e-b5d6-99717646aef1",
       "slug": "revelation-phase-1-la-plume",
       "title": "Lancement de la Phase 01 : La Plume",
       "excerpt": "Publication programmée pour démarrer la première étape.",
@@ -90,7 +68,7 @@
       "imageKey": "plume"
     },
     {
-      "id": "ann-4",
+      "id": "2e016288-5d5f-40fc-83a8-12c3357b1f7f",
       "slug": "note-interne-jury-preparation",
       "title": "Brouillon — Organisation de la finale",
       "excerpt": "Note interne de l'équipe UCAEP.",
@@ -99,11 +77,33 @@
       "status": "draft",
       "category": "Interne",
       "imageKey": "eloquence"
+    },
+    {
+      "id": "4913e731-a51c-442e-b53f-1031991801aa",
+      "slug": "calendrier-progressif-des-revelations",
+      "title": "Comment nous allons annoncer les épreuves",
+      "excerpt": "Chaque étape sera dévoilée ici au fur et à mesure, pour que tout le monde parte sur un pied d'égalité.",
+      "content": "Pour que personne n'ait d'avance sur les autres, nous ne publions pas les sujets et consignes des trois phases dès aujourd'hui.\n\nNous dévoilerons chaque étape ici même, une annonce après l'autre. Pensez à repasser sur cette page de temps en temps pour suivre le fil du concours.",
+      "publishedAt": "2026-11-12T10:00:00.000Z",
+      "status": "published",
+      "category": "Organisation",
+      "imageKey": "campus"
+    },
+    {
+      "id": "634eb1ee-8ae8-4d1a-a1ba-42760315542d",
+      "slug": "ouverture-des-inscriptions-edition-2026",
+      "title": "Les inscriptions sont ouvertes à l'ENSET",
+      "excerpt": "Vous pouvez dès maintenant remplir votre fiche d'inscription en ligne pour participer.",
+      "content": "Nous ouvrons les inscriptions pour l'édition 2026 du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.\n\nLa participation est gratuite et ouverte à tous les étudiants de l'école, quelle que soit votre filière ou votre année d'étude.\n\nSi vous avez envie d'essayer, remplissez simplement le formulaire en ligne avant le vendredi 20 novembre 2026. Nous publierons ici toutes les informations pour la suite.",
+      "publishedAt": "2026-11-10T09:00:00.000Z",
+      "status": "published",
+      "category": "Inscription",
+      "imageKey": "hero"
     }
   ],
   "news": [
     {
-      "id": "news-1",
+      "id": "57e0cd60-369c-4fd1-8249-f50f37d5196c",
       "slug": "lancement-culturel-enset-lokossa",
       "title": "Pourquoi on lance ce concours à l'ENSET de Lokossa",
       "category": "Vie du concours",
@@ -120,7 +120,7 @@
       "status": "published"
     },
     {
-      "id": "news-2",
+      "id": "5e484b25-07c3-48db-8105-71b59f79c1ca",
       "slug": "trois-etapes-pour-reveler-les-voix",
       "title": "De votre cahier jusqu'à la scène : comment tout s'enchaîne",
       "category": "Coulisses",
@@ -136,7 +136,7 @@
       "status": "published"
     },
     {
-      "id": "news-3",
+      "id": "d40ad7d6-b3b8-453b-b493-d1605c201b75",
       "slug": "preparer-sa-candidature-etudiant",
       "title": "Avant de vous inscrire, prenez une minute",
       "category": "Candidats",
@@ -152,7 +152,7 @@
       "status": "published"
     },
     {
-      "id": "news-4",
+      "id": "b934b049-75dd-4798-a6f1-48e0045ee7f1",
       "slug": "atelier-preparation-prise-de-parole",
       "title": "Lire à haute voix, ça change quoi ?",
       "category": "Coulisses",
@@ -168,6 +168,67 @@
       "status": "published"
     }
   ],
-  "registrations": [],
+  "registrations": [
+    {
+      "firstName": "Amina",
+      "lastName": "Koudoro",
+      "email": "amina.koudoro.1794578217688@enset.bj",
+      "phone": "+22996112233",
+      "birthDate": "2004-09-18",
+      "gender": "Préfère ne pas préciser",
+      "institution": "ENSET de Lokossa",
+      "department": "G�nie M�canique",
+      "studyLevel": "1�re ann�e",
+      "studentId": "GM-1794578217717",
+      "motivation": "Je veux surmonter ma timidite et porter la voix de mon departement.",
+      "readingExperience": "Lectrice assidue",
+      "acceptRules": true,
+      "id": "964c108f-c743-45ed-a562-dc5aea8691d9",
+      "referenceCode": "UCAEP-2026-0006",
+      "createdAt": "2026-11-13T13:57:04.268Z",
+      "syncedToGoogleSheets": false,
+      "syncTarget": "local_archive"
+    },
+    {
+      "id": "67230cec-6738-4faf-a85c-2e51345755ff",
+      "referenceCode": "UCAEP-2026-0005",
+      "firstName": "Jean",
+      "lastName": "Tossou",
+      "email": "jean.tossou.1794576925312@enset.bj",
+      "phone": "+22997123456",
+      "birthDate": "2003-04-12",
+      "gender": "Masculin",
+      "institution": "ENSET de Lokossa",
+      "department": "G�nie �lectrique",
+      "studyLevel": "2�me ann�e",
+      "studentId": "EL-1794576925329",
+      "motivation": "Je souhaite perfectionner mon �loquence et ma diction en public.",
+      "readingExperience": "Passionn� de po�sie et d'essais",
+      "acceptRules": true,
+      "syncedToGoogleSheets": false,
+      "syncTarget": "local_archive",
+      "createdAt": "2026-11-13T13:35:29.567Z"
+    },
+    {
+      "id": "01be783b-8cb7-4b4f-acb3-0cccbcb7f0e1",
+      "referenceCode": "UCAEP-2026-0004",
+      "firstName": "Test",
+      "lastName": "Candidat",
+      "email": "test.1794576500696@ucaep.test",
+      "phone": "+22990000000",
+      "birthDate": "2002-05-15",
+      "gender": "Féminin",
+      "institution": "ENSET de Lokossa",
+      "department": "Génie Informatique",
+      "studyLevel": "1ere annee",
+      "studentId": "MAT-0696",
+      "motivation": "Je souhaite vivement participer au concours de lecture.",
+      "readingExperience": "Lecteur régulier",
+      "acceptRules": true,
+      "syncedToGoogleSheets": false,
+      "syncTarget": "local_archive",
+      "createdAt": "2026-11-13T13:28:24.399Z"
+    }
+  ],
   "contacts": []
 }
