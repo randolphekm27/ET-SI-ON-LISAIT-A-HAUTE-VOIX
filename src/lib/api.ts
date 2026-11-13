@@ -21,6 +21,11 @@ export async function fetchApiJson<T>(
     try {
       parsed = JSON.parse(text) as T & { error?: string };
     } catch {
+      if (response.status === 404) {
+        throw new Error(
+          "L'API est inaccessible (erreur 404). Vérifiez que le serveur ou les fonctions Vercel sont bien déployées.",
+        );
+      }
       throw new Error(
         `Réponse inattendue du serveur (code ${response.status}). Réessayez dans un instant.`,
       );

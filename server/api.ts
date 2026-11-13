@@ -165,6 +165,20 @@ function isValidEmail(email: string): boolean {
 }
 
 export function registerApiRoutes(app: express.Express) {
+  // Garantit la prise en compte des requêtes API avec ou sans préfixe /api
+  app.use((req, _res, next) => {
+    if (
+      !req.url.startsWith('/api') &&
+      !req.url.startsWith('/assets') &&
+      !req.url.startsWith('/@') &&
+      !req.url.startsWith('/src') &&
+      !req.url.startsWith('/node_modules') &&
+      !req.url.startsWith('/favicon')
+    ) {
+      req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`;
+    }
+    next();
+  });
   // Firebase authenticated session check & user PostgreSQL sync
   app.get('/api/auth/session', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -691,6 +705,10 @@ export function registerApiRoutes(app: express.Express) {
   // Explicit API 404 & JSON error guard so /api/* never returns HTML
   app.all('/api/*', (_req, res) => {
     res.status(404).json({ error: 'Point de terminaison API introuvable.' });
+  });
+
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Endpoint API introuvable.' });
   });
 
   app.use(
