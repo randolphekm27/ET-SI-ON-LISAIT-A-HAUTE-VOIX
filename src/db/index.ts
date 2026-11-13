@@ -21,18 +21,35 @@ export const createPool = () => {
     global._postgresPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 10,
+      max: 5,
       connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 30000,
+      idleTimeoutMillis: 10000,
+      allowExitOnIdle: true,
     });
 
     global._postgresPool.on('error', (err) => {
-      console.error('Unexpected error on idle SQL pool client:', err.message);
+      console.warn('PostgreSQL pool client idle notification:', err.message);
     });
   }
   return global._postgresPool;
 };
 
 const pool = createPool();
+
+export async function testDatabaseConnection(): Promise<boolean> {
+  if (!isCloudSqlConfigured()) return false;
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('SELECT 1');
+      return true;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.warn('Database health check failed:', (err as Error).message);
+    return false;
+  }
+}
 
 export const db = drizzle(pool, { schema });

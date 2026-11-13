@@ -1,5 +1,6 @@
 import type express from 'express';
 import crypto from 'node:crypto';
+import { isCloudSqlConfigured } from '../src/db/index.ts';
 import {
   createAnnouncementRecord,
   createNewsRecord,
@@ -396,8 +397,10 @@ export function registerApiRoutes(app: express.Express) {
   // Organizer CMS State
   app.get('/api/admin/overview', requireAdmin, async (_req, res) => {
     try {
+      const dbConfigured = isCloudSqlConfigured();
       const store = await readStore();
       res.json({
+        databaseConnected: dbConfigured,
         announcements: store.announcements,
         phases: store.phases,
         news: store.news,

@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, useMemo } from 'react';
+import { useState, useEffect, useRef, type FormEvent, useMemo } from 'react';
 import { Download, Lock, LogOut, Plus, RefreshCw, Search, Unlock } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
@@ -13,6 +13,7 @@ import type {
 } from '../types/competition';
 
 interface AdminOverview {
+  databaseConnected?: boolean;
   announcements: Announcement[];
   phases: CompetitionPhase[];
   news: NewsArticle[];
@@ -40,7 +41,11 @@ export function GestionPage() {
 
   const [token, setToken] = useState<string>(() => {
     try {
-      return sessionStorage.getItem('ucaep_admin_token') || '';
+      return (
+        localStorage.getItem('ucaep_admin_token') ||
+        sessionStorage.getItem('ucaep_admin_token') ||
+        ''
+      );
     } catch {
       return '';
     }
@@ -67,6 +72,7 @@ export function GestionPage() {
   const [notice, setNotice] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const isFetchingRef = useRef(false);
 
   function selectTab(newTab: 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config') {
     setTab(newTab);
@@ -129,27 +135,32 @@ export function GestionPage() {
   }
 
   async function loadOverview(overrideAdminToken?: string, silent = false) {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsRefreshing(true);
     try {
       const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
         headers: buildAuthHeaders(undefined, overrideAdminToken),
       });
       setData(json);
-      setGasUrl(json.settings.googleAppsScriptUrl || '');
+      setGasUrl(json.settings?.googleAppsScriptUrl || '');
       setLastSyncedAt(new Date());
+      setAuthError('');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur de chargement.';
       if (!silent) setAuthError(msg);
-      if (msg.includes('401') || msg.includes('requise') || msg.includes('expirée')) {
+      if (msg.includes('401') || msg.includes('Connexion organisateur requise')) {
         setToken('');
         setData(null);
         try {
+          localStorage.removeItem('ucaep_admin_token');
           sessionStorage.removeItem('ucaep_admin_token');
         } catch {
           // ignore
         }
       }
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsRefreshing(false);
     }
   }
@@ -163,13 +174,13 @@ export function GestionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: accessCode }),
       });
-      setToken(json.token);
       try {
+        localStorage.setItem('ucaep_admin_token', json.token);
         sessionStorage.setItem('ucaep_admin_token', json.token);
       } catch {
         // ignore
       }
-      await loadOverview(json.token);
+      setToken(json.token);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Erreur de connexion.');
     }
@@ -180,6 +191,7 @@ export function GestionPage() {
     setData(null);
     setAccessCode('');
     try {
+      localStorage.removeItem('ucaep_admin_token');
       sessionStorage.removeItem('ucaep_admin_token');
     } catch {
       // ignore
@@ -503,10 +515,17 @@ export function GestionPage() {
               <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
                 Gestion du concours
               </h1>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Base connectée (Temps réel)</span>
-              </div>
+              {data?.databaseConnected ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Base PostgreSQL connectée (Supabase)</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-50 text-amber-800 border border-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Mode dégradé local (DATABASE_URL non configuré)</span>
+                </div>
+              )}
               {lastSyncedAt && (
                 <span className="text-[11px] text-ucaep-ink/60 hidden md:inline">
                   Synchro : {lastSyncedAt.toLocaleTimeString('fr-FR')}
@@ -558,6 +577,18 @@ export function GestionPage() {
             ))}
           </div>
         </div>
+
+        {data && data.databaseConnected === false && (
+          <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-sm text-sm space-y-1.5 shadow-xs">
+            <p className="font-semibold flex items-center gap-2 text-amber-900">
+              <span>⚠️ Base de données PostgreSQL non connectée sur cet environnement</span>
+            </p>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              La variable <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold">DATABASE_URL</code> n&apos;est pas détectée (si vous êtes sur Vercel : configurez-la dans <em>Project Settings &gt; Environment Variables</em>).
+              Sans cette connexion, les données sont stockées temporairement et seront remises à zéro à chaque redémarrage ou reconnexion.
+            </p>
+          </div>
+        )}
 
         {notice && (
           <div className="p-3.5 text-sm bg-ucaep-green/10 text-ucaep-green border border-ucaep-green/25 rounded-sm">

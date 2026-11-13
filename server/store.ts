@@ -234,10 +234,13 @@ const DEFAULT_STORE: StoreData = {
 };
 
 let seedPromise: Promise<void> | null = null;
+let isDbSeeded = false;
 let writeQueue = Promise.resolve();
+let cachedStore: StoreData | null = null;
+let inMemoryJsonStore: StoreData | null = null;
 
 async function ensureDbSeeded(): Promise<void> {
-  if (!isCloudSqlConfigured()) return;
+  if (!isCloudSqlConfigured() || isDbSeeded) return;
   if (!seedPromise) {
     seedPromise = (async () => {
       try {
@@ -326,6 +329,8 @@ async function ensureDbSeeded(): Promise<void> {
             })
             .onConflictDoNothing();
         }
+
+        isDbSeeded = true;
       } catch (error) {
         seedPromise = null;
         console.error('Failed to seed initial competition data:', error);
@@ -352,7 +357,7 @@ async function readJsonStore(): Promise<StoreData> {
     await ensureStoreFile();
     const raw = await fs.readFile(STORE_PATH, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<StoreData>;
-    return {
+    const loaded: StoreData = {
       settings: {
         ...DEFAULT_STORE.settings,
         ...(parsed.settings || {}),
@@ -373,16 +378,33 @@ async function readJsonStore(): Promise<StoreData> {
       registrations: parsed.registrations || [],
       contacts: parsed.contacts || [],
     };
+    inMemoryJsonStore = loaded;
+    return loaded;
   } catch {
+    if (inMemoryJsonStore) {
+      return inMemoryJsonStore;
+    }
     return structuredClone(DEFAULT_STORE);
   }
 }
 
 async function writeJsonStore(data: StoreData): Promise<void> {
+  inMemoryJsonStore = data;
   await ensureStoreFile();
   const tmpPath = `${STORE_PATH}.${crypto.randomUUID()}.tmp`;
   await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-  await fs.rename(tmpPath, STORE_PATH);
+  try {
+    await fs.rename(tmpPath, STORE_PATH);
+  } catch {
+    // Sur Windows, si le fichier cible est temporairement verrouillé par un indexeur ou antivirus,
+    // on écrit directement pour éviter de perdre des modifications.
+    try {
+      await fs.writeFile(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      await fs.unlink(tmpPath).catch(() => {});
+    } catch {
+      // Ignorer si l'écriture directe est également retenue brièvement
+    }
+  }
 }
 
 function withJsonStoreLock<T>(fn: (store: StoreData) => Promise<T> | T): Promise<T> {
@@ -474,63 +496,84 @@ export async function readStore(): Promise<StoreData> {
     return readJsonStore();
   }
 
-  try {
-    await ensureDbSeeded();
-    const [phaseRows, announcementRows, newsRows, registrationRows, contactRows, settingsRows] =
-      await Promise.all([
-        db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
-        db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt)),
-        db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt)),
-        db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt)),
-        db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt)),
-        db.select().from(appSettingsTable),
-      ]);
+  let lastError: unknown = null;
+  const maxAttempts = 2;
 
-    const settingsMap = new Map(
-      settingsRows.map((s) => [
-        s.key,
-        typeof s.value === 'string'
-          ? s.value
-          : typeof s.value === 'object' && s.value !== null
-            ? (s.value as { url?: string; value?: string }).url || (s.value as { url?: string; value?: string }).value || JSON.stringify(s.value)
-            : String(s.value || ''),
-      ]),
-    );
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await ensureDbSeeded();
+      const [phaseRows, announcementRows, newsRows, registrationRows, contactRows, settingsRows] =
+        await Promise.all([
+          db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
+          db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt)),
+          db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt)),
+          db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt)),
+          db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt)),
+          db.select().from(appSettingsTable),
+        ]);
 
-    const storeData: StoreData = {
-      phases: phaseRows.map(mapPhaseRow),
-      announcements: announcementRows.map(mapAnnouncementRow),
-      news: newsRows.map(mapNewsRow),
-      registrations: registrationRows.map(mapRegistrationRow),
-      contacts: contactRows.map((c) => ({
-        id: c.id,
-        name: c.name,
-        email: c.email,
-        subject: c.subject,
-        message: c.message,
-        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
-      })),
-      settings: {
-        googleAppsScriptUrl:
-          settingsMap.get('googleAppsScriptUrl') ||
-          process.env.GOOGLE_APPS_SCRIPT_URL ||
-          '',
-        googleFormActionUrl:
-          settingsMap.get('googleFormActionUrl') ||
-          process.env.GOOGLE_FORM_ACTION_URL ||
-          '',
-        officialEmail: 'ucaeplokossa@gmail.com',
-      },
-    };
+      const settingsMap = new Map(
+        settingsRows.map((s) => [
+          s.key,
+          typeof s.value === 'string'
+            ? s.value
+            : typeof s.value === 'object' && s.value !== null
+              ? (s.value as { url?: string; value?: string }).url || (s.value as { url?: string; value?: string }).value || JSON.stringify(s.value)
+              : String(s.value || ''),
+        ]),
+      );
 
-    // Synchronisation miroir locale pour garantir la persistance permanente
-    writeJsonStore(storeData).catch(() => {});
+      const storeData: StoreData = {
+        phases: phaseRows.map(mapPhaseRow),
+        announcements: announcementRows.map(mapAnnouncementRow),
+        news: newsRows.map(mapNewsRow),
+        registrations: registrationRows.map(mapRegistrationRow),
+        contacts: contactRows.map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          subject: c.subject,
+          message: c.message,
+          createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+        })),
+        settings: {
+          googleAppsScriptUrl:
+            settingsMap.get('googleAppsScriptUrl') ||
+            process.env.GOOGLE_APPS_SCRIPT_URL ||
+            '',
+          googleFormActionUrl:
+            settingsMap.get('googleFormActionUrl') ||
+            process.env.GOOGLE_FORM_ACTION_URL ||
+            '',
+          officialEmail: 'ucaeplokossa@gmail.com',
+        },
+      };
 
-    return storeData;
-  } catch (error) {
-    console.warn('Database readStore indisponible, bascule sur le store local JSON:', error);
-    return readJsonStore();
+      cachedStore = storeData;
+      return storeData;
+    } catch (error) {
+      lastError = error;
+      console.warn(`Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`, (error as Error).message);
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+    }
   }
+
+  // Si nous avons des données récentes en mémoire cache, on les sert plutôt que de vider l'affichage
+  if (cachedStore && cachedStore.registrations.length > 0) {
+    console.warn('Utilisation du cache mémoire de secours pour préserver les tables affichées.');
+    return cachedStore;
+  }
+
+  // Ne jamais écraser silencieusement avec un store JSON vide lorsque PostgreSQL est configuré
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    throw new Error('Connexion à la base de données momentanément indisponible. Les tables sont préservées.', {
+      cause: lastError,
+    });
+  }
+
+  return readJsonStore();
 }
 
 export async function createAnnouncementRecord(input: {
@@ -1336,7 +1379,14 @@ export async function saveRegistration(
       }
     }
 
-    // 3. Sauvegarde miroir dans le magasin local pour garantir la persistance locale
+    // 3. Sauvegarde miroir dans le cache mémoire et le magasin local
+    if (cachedStore) {
+      const existsInCache = cachedStore.registrations.some((r) => r.id === record.id);
+      if (!existsInCache) {
+        cachedStore.registrations.unshift(record);
+      }
+    }
+
     withJsonStoreLock(async (store) => {
       const idx = store.registrations.findIndex((r) => r.id === record.id);
       if (idx === -1) {
@@ -1357,7 +1407,16 @@ export async function saveRegistration(
       (conflictErr as Error & { statusCode?: number }).statusCode = 409;
       throw conflictErr;
     }
-    console.warn('Database saveRegistration error, bascule sur enregistrement local JSON:', err.message);
+    console.warn('Database saveRegistration error:', err.message);
+
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      const dbErr = new Error(
+        "L'enregistrement dans la base de données n'a pas pu aboutir pour le moment. Veuillez réessayer.",
+      );
+      (dbErr as Error & { statusCode?: number }).statusCode = 500;
+      throw dbErr;
+    }
+
     return withJsonStoreLock(async (store) => {
       const duplicate = store.registrations.find(
         (r) =>
