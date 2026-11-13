@@ -1,9 +1,4 @@
 {
-  "settings": {
-    "googleAppsScriptUrl": "",
-    "googleFormActionUrl": "",
-    "officialEmail": "ucaeplokossa@gmail.com"
-  },
   "phases": [
     {
       "id": "phase-1",
@@ -170,6 +165,8 @@
   ],
   "registrations": [
     {
+      "id": "964c108f-c743-45ed-a562-dc5aea8691d9",
+      "referenceCode": "UCAEP-2026-0006",
       "firstName": "Amina",
       "lastName": "Koudoro",
       "email": "amina.koudoro.1794578217688@enset.bj",
@@ -183,11 +180,9 @@
       "motivation": "Je veux surmonter ma timidite et porter la voix de mon departement.",
       "readingExperience": "Lectrice assidue",
       "acceptRules": true,
-      "id": "964c108f-c743-45ed-a562-dc5aea8691d9",
-      "referenceCode": "UCAEP-2026-0006",
-      "createdAt": "2026-11-13T13:57:04.268Z",
       "syncedToGoogleSheets": false,
-      "syncTarget": "local_archive"
+      "syncTarget": "local_archive",
+      "createdAt": "2026-11-13T13:57:04.274Z"
     },
     {
       "id": "67230cec-6738-4faf-a85c-2e51345755ff",
@@ -230,5 +225,10 @@
       "createdAt": "2026-11-13T13:28:24.399Z"
     }
   ],
-  "contacts": []
+  "contacts": [],
+  "settings": {
+    "googleAppsScriptUrl": "",
+    "googleFormActionUrl": "",
+    "officialEmail": "ucaeplokossa@gmail.com"
+  }
 }

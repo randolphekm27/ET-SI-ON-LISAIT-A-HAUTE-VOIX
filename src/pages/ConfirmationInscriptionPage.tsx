@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 import { EditorialMark } from '../components/EditorialMark';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 
@@ -85,6 +85,27 @@ export function ConfirmationInscriptionPage() {
               </dd>
             </div>
           </dl>
+
+          {/* Bouton d'adhésion au canal WhatsApp officiel */}
+          <div className="p-6 sm:p-7 rounded-sm bg-[#25D366]/10 border border-[#25D366]/30 space-y-3.5">
+            <div className="flex items-center gap-2.5 text-[#128C7E] font-semibold text-sm">
+              <MessageCircle className="w-5 h-5 shrink-0" />
+              <span>Étape suivante : Canal WhatsApp officiel</span>
+            </div>
+            <p className="text-xs sm:text-sm text-[#1A1A1A]/85 leading-relaxed">
+              Rejoignez dès maintenant le canal officiel du concours pour ne manquer aucune consigne,
+              suivre le calendrier des révélations et recevoir les annonces de l&apos;équipe organisatrice.
+            </p>
+            <a
+              href="https://chat.whatsapp.com/D2RVspXf4Sp1OfllUCskoE?s=cl&p=a&iam=2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2.5 w-full py-3.5 px-6 rounded-sm bg-[#25D366] text-white font-semibold text-sm hover:bg-[#20ba59] transition-all shadow-sm hover:shadow"
+            >
+              <MessageCircle className="w-4 h-4 shrink-0" />
+              <span>Rejoindre le canal WhatsApp</span>
+            </a>
+          </div>
 
           <div className="pt-2 flex flex-wrap items-center gap-5">
             <Link

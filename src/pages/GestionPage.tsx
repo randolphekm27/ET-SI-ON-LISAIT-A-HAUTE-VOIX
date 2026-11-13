@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent, useMemo } from 'react';
-import { Download, Lock, LogOut, Plus, Search, Unlock } from 'lucide-react';
+import { Download, Lock, LogOut, Plus, RefreshCw, Search, Unlock } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import type {
@@ -65,6 +65,8 @@ export function GestionPage() {
     return 'annonces';
   });
   const [notice, setNotice] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   function selectTab(newTab: 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config') {
     setTab(newTab);
@@ -76,9 +78,15 @@ export function GestionPage() {
   }
 
   useEffect(() => {
-    if (token && !data) {
-      loadOverview(token);
-    }
+    if (!token) return;
+    loadOverview(token);
+
+    // Actualisation automatique en temps réel toutes les 6 secondes
+    const interval = setInterval(() => {
+      loadOverview(token, true);
+    }, 6000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   // Announcement creation form
@@ -120,16 +128,18 @@ export function GestionPage() {
     return headers;
   }
 
-  async function loadOverview(overrideAdminToken?: string) {
+  async function loadOverview(overrideAdminToken?: string, silent = false) {
+    if (!silent) setIsRefreshing(true);
     try {
       const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
         headers: buildAuthHeaders(undefined, overrideAdminToken),
       });
       setData(json);
       setGasUrl(json.settings.googleAppsScriptUrl || '');
+      setLastSyncedAt(new Date());
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur de chargement.';
-      setAuthError(msg);
+      if (!silent) setAuthError(msg);
       if (msg.includes('401') || msg.includes('requise') || msg.includes('expirée')) {
         setToken('');
         setData(null);
@@ -139,6 +149,8 @@ export function GestionPage() {
           // ignore
         }
       }
+    } finally {
+      if (!silent) setIsRefreshing(false);
     }
   }
 
@@ -487,10 +499,29 @@ export function GestionPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-green">
               Équipe UCAEP · Organisation
             </p>
-            <div className="flex flex-wrap items-center gap-4">
-              <h1 className="font-serif text-4xl font-semibold text-ucaep-brown">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
                 Gestion du concours
               </h1>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Base connectée (Temps réel)</span>
+              </div>
+              {lastSyncedAt && (
+                <span className="text-[11px] text-ucaep-ink/60 hidden md:inline">
+                  Synchro : {lastSyncedAt.toLocaleTimeString('fr-FR')}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => loadOverview()}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm border border-ucaep-brown/20 bg-white text-ucaep-brown hover:bg-ucaep-paper transition-colors disabled:opacity-50"
+                title="Actualiser les données immédiatement"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>Actualiser</span>
+              </button>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -911,15 +942,27 @@ export function GestionPage() {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={exportCsv}
-                disabled={!data.registrations.length}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-40"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Exporter en CSV (Excel)</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadOverview()}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper transition-colors disabled:opacity-50"
+                  title="Rafraîchir la liste des inscrits"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>Actualiser</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  disabled={!data.registrations.length}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-40"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Exporter en CSV (Excel)</span>
+                </button>
+              </div>
             </div>
 
             {filteredCandidates.length === 0 ? (
