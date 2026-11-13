@@ -10,7 +10,13 @@ if (fs.existsSync(envLocalPath)) {
   dotenv.config({ path: envLocalPath, override: true });
 }
 
-const databaseUrl = process.env.DATABASE_URL;
+let databaseUrl = (process.env.DATABASE_URL || '').trim();
+if ((databaseUrl.startsWith('"') && databaseUrl.endsWith('"')) || (databaseUrl.startsWith("'") && databaseUrl.endsWith("'"))) {
+  databaseUrl = databaseUrl.slice(1, -1).trim();
+}
+if (databaseUrl.includes('/postgre') && !databaseUrl.includes('/postgres')) {
+  databaseUrl = databaseUrl.replace(/\/postgre(?=[\/?#]|$)/g, '/postgres');
+}
 
 if (!databaseUrl) {
   throw new Error(

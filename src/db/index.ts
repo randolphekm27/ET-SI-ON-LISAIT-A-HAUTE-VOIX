@@ -7,24 +7,25 @@ declare global {
   var _postgresPool: Pool | undefined;
 }
 
-export function isCloudSqlConfigured(): boolean {
-  let url = (process.env.DATABASE_URL || '').trim();
-  if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
-    url = url.slice(1, -1).trim();
-  }
-  return Boolean(
-    url &&
-      !url.includes('[VOTRE_MOT_DE_PASSE') &&
-      !url.includes('[YOUR-PASSWORD]'),
-  );
-}
-
 export function getCleanDatabaseUrl(): string {
   let url = (process.env.DATABASE_URL || '').trim();
   if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
     url = url.slice(1, -1).trim();
   }
+  // Corrige automatiquement la faute de frappe courante /postgre au lieu de /postgres
+  if (url.includes('/postgre') && !url.includes('/postgres')) {
+    url = url.replace(/\/postgre(?=[\/?#]|$)/g, '/postgres');
+  }
   return url;
+}
+
+export function isCloudSqlConfigured(): boolean {
+  const url = getCleanDatabaseUrl();
+  return Boolean(
+    url &&
+      !url.includes('[VOTRE_MOT_DE_PASSE') &&
+      !url.includes('[YOUR-PASSWORD]'),
+  );
 }
 
 export const createPool = () => {
