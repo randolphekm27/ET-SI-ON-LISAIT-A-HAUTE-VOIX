@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { BookOpen } from 'lucide-react';
 import {
+  BrandPatternArch,
   BrandPatternBand,
   BrandPatternCircle,
+  BrandPatternSurface,
   BrandPatternWave,
 } from './BrandPattern';
 
@@ -62,19 +65,38 @@ export function PageFolioHeader({
         variant={patternVariant}
         tileWidth={135}
         blendMultiply
-        className="h-2.5 opacity-60 border-b border-ucaep-brown/10 absolute top-0 inset-x-0"
+        className="h-2.5 opacity-65 border-b border-ucaep-brown/10 absolute top-0 inset-x-0"
+      />
+      <BrandPatternSurface
+        variant={patternVariant}
+        tileWidth={220}
+        opacityClass="opacity-[0.045]"
+        blendMultiply
       />
       <BrandPatternCircle
         variant={patternVariant}
         tileWidth={135}
         blendMultiply
-        className="hidden md:block absolute -top-20 -right-16 w-56 h-56 opacity-[0.075]"
+        doubleRing
+        className="hidden md:block -top-20 -right-14 w-56 h-56 opacity-[0.1]"
+      />
+      <BrandPatternArch
+        variant={patternVariant}
+        tileWidth={140}
+        blendMultiply
+        className="hidden lg:block -bottom-8 -left-10 w-36 h-44 opacity-[0.065]"
+      />
+      <BookOpen
+        aria-hidden="true"
+        className="pointer-events-none select-none hidden md:block absolute bottom-3 right-8 w-44 h-44 text-ucaep-brown opacity-[0.04] -rotate-12"
+        strokeWidth={1.1}
       />
       <BrandPatternWave
         variant={patternVariant}
         tileWidth={165}
-        opacity={0.08}
-        className="absolute bottom-0 inset-x-0 h-16"
+        opacity={0.11}
+        doubleWave
+        className="absolute bottom-0 inset-x-0 h-16 sm:h-20"
       />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-end">

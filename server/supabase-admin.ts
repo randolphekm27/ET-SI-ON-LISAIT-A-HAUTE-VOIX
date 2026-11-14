@@ -10,8 +10,12 @@ let cachedAdminClient: SupabaseClient | null = null;
 let bucketEnsured = false;
 
 function readSupabaseServerCredentials(): { url: string; secretKey: string } {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const secretKey = (process.env.SUPABASE_SECRET_KEY || '').trim();
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+  const secretKey = (
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    ''
+  ).trim();
   return { url, secretKey };
 }
 

@@ -6,7 +6,9 @@ import {
   Clock,
   Feather,
   Lock,
+  Megaphone,
   Mic2,
+  Newspaper,
   Scale,
   ScrollText,
   ShieldCheck,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react';
 import gsap from 'gsap';
 import {
+  BrandPatternArch,
   BrandPatternBand,
   BrandPatternCircle,
   BrandPatternEdge,
@@ -195,7 +198,8 @@ export function HomePage() {
         <BrandPatternCircle
           variant="gold"
           tileWidth={135}
-          className="hidden lg:block absolute -top-20 -right-16 w-72 h-72 opacity-20"
+          doubleRing
+          className="hidden lg:block -top-20 -right-16 w-72 h-72 opacity-22"
         />
         <BrandPatternCircle
           variant="obsidian"
@@ -307,7 +311,8 @@ export function HomePage() {
         <BrandPatternWave
           variant="gold"
           tileWidth={170}
-          opacity={0.18}
+          opacity={0.2}
+          doubleWave
           className="absolute bottom-0 inset-x-0 h-16 sm:h-24"
         />
       </section>
@@ -324,7 +329,8 @@ export function HomePage() {
           variant="brown"
           tileWidth={140}
           blendMultiply
-          className="hidden lg:block absolute -top-24 -left-24 w-64 h-64 opacity-[0.07]"
+          doubleRing
+          className="hidden lg:block -top-24 -left-24 w-64 h-64 opacity-[0.08]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
@@ -366,11 +372,18 @@ export function HomePage() {
                 data-reveal
                 data-reveal-delay="0.1"
               >
+                <BrandPatternArch
+                  variant="brown"
+                  tileWidth={130}
+                  blendMultiply
+                  className="hidden sm:block w-40 h-52 opacity-[0.09]"
+                />
                 <BrandPatternCircle
                   variant="gold"
                   tileWidth={120}
                   blendMultiply
-                  className="hidden sm:block absolute w-40 h-40 opacity-[0.12]"
+                  doubleRing
+                  className="hidden sm:block w-40 h-40 opacity-[0.13]"
                 />
                 <img
                   src="/assets/aistudio/LOGO_CONCOURS_8664fa5e.png"
@@ -426,9 +439,17 @@ export function HomePage() {
         <BrandPatternWave
           variant="brown"
           tileWidth={170}
-          opacity={0.08}
+          opacity={0.09}
           flip
+          doubleWave
           className="absolute top-2 inset-x-0 h-20"
+        />
+        <BrandPatternCircle
+          variant="gold"
+          tileWidth={140}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -bottom-24 -right-20 w-72 h-72 opacity-[0.09]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-20">
           <div>
@@ -622,8 +643,26 @@ export function HomePage() {
       </section>
 
       {/* 4. PROGRESSIVE ANNOUNCEMENTS BROADSHEET */}
-      <section className="py-24 lg:py-32 bg-ucaep-paper">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+      <section className="relative py-24 lg:py-32 bg-ucaep-paper paper-grain overflow-hidden">
+        <BrandPatternSurface
+          variant="gold"
+          tileWidth={220}
+          opacityClass="opacity-[0.04]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="green"
+          tileWidth={135}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -top-20 -right-16 w-60 h-60 opacity-[0.08]"
+        />
+        <Megaphone
+          aria-hidden="true"
+          className="pointer-events-none select-none hidden md:block absolute bottom-6 left-8 w-52 h-52 text-ucaep-brown opacity-[0.04] -rotate-12"
+          strokeWidth={1.1}
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
@@ -725,13 +764,21 @@ export function HomePage() {
         <BrandPatternSurface
           variant="brown"
           tileWidth={200}
-          opacityClass="opacity-[0.04]"
+          opacityClass="opacity-[0.045]"
           blendMultiply
+        />
+        <BrandPatternCircle
+          variant="gold"
+          tileWidth={130}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -top-20 -right-16 w-56 h-56 opacity-[0.1]"
         />
         <BrandPatternWave
           variant="brown"
           tileWidth={175}
-          opacity={0.09}
+          opacity={0.1}
+          doubleWave
           className="absolute bottom-0 inset-x-0 h-20"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
@@ -799,7 +846,15 @@ export function HomePage() {
         <BrandPatternCircle
           variant="gold"
           tileWidth={130}
-          className="hidden md:block absolute -top-16 right-16 w-48 h-48 opacity-20"
+          doubleRing
+          className="hidden md:block -top-16 right-16 w-48 h-48 opacity-22"
+        />
+        <BrandPatternWave
+          variant="gold"
+          tileWidth={170}
+          opacity={0.14}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-16"
         />
         <Mic2
           aria-hidden="true"
@@ -836,8 +891,26 @@ export function HomePage() {
       </section>
 
       {/* 7. LATEST NEWS — Magazine Cover Spread */}
-      <section className="py-24 lg:py-32 bg-ucaep-paper">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+      <section className="relative py-24 lg:py-32 bg-ucaep-paper paper-fiber overflow-hidden">
+        <BrandPatternSurface
+          variant="brown"
+          tileWidth={210}
+          opacityClass="opacity-[0.035]"
+          blendMultiply
+        />
+        <BrandPatternWave
+          variant="brown"
+          tileWidth={175}
+          opacity={0.075}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-20"
+        />
+        <Newspaper
+          aria-hidden="true"
+          className="pointer-events-none select-none hidden md:block absolute top-10 right-10 w-44 h-44 text-ucaep-brown opacity-[0.038] rotate-6"
+          strokeWidth={1.1}
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">

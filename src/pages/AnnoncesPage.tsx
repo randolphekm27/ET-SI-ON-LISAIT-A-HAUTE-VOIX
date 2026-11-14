@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import {
+  BrandPatternCircle,
+  BrandPatternSurface,
+  BrandPatternWave,
+} from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
@@ -56,8 +61,28 @@ function AnnouncementsFeedView() {
         subtitle="Les informations concernant le concours seront publiées ici. Certaines choses seront dévoilées progressivement, alors pensez à revenir régulièrement."
       />
 
-      <section className="py-16 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-16 lg:py-24 bg-ucaep-paper paper-fiber overflow-hidden">
+        <BrandPatternSurface
+          variant="gold"
+          tileWidth={220}
+          opacityClass="opacity-[0.035]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="brown"
+          tileWidth={135}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -bottom-24 -left-16 w-60 h-60 opacity-[0.08]"
+        />
+        <BrandPatternWave
+          variant="gold"
+          tileWidth={170}
+          opacity={0.08}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-16"
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loading ? (
             <div className="space-y-8">
               {[1, 2].map((i) => (

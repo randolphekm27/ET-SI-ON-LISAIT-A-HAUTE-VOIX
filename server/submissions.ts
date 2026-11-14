@@ -18,6 +18,22 @@ import {
   getSupabaseAdmin,
   isSupabaseAdminConfigured,
 } from './supabase-admin.ts';
+import {
+  type DbPhaseRowLike,
+  type DbSubmissionRowLike,
+  getCandidateSubmissionsViaSupabaseRest,
+  getPhaseByIdViaSupabaseRest,
+  getSubmissionByIdViaSupabaseRest,
+  getSubmissionForCandidatePhaseViaSupabaseRest,
+  isNetworkOrDnsError,
+  listAdminSubmissionsViaSupabaseRest,
+  listPhasesViaSupabaseRest,
+  markPreferSupabaseRest,
+  shouldUseSupabaseRestFallback,
+  updateSubmissionReviewViaSupabaseRest,
+  upsertSubmissionViaSupabaseRest,
+  verifyCandidateViaSupabaseRest,
+} from './supabase-db.ts';
 import type {
   AdminSubmissionAccess,
   AdminSubmissionItem,
@@ -74,14 +90,50 @@ export function enforceSubmissionRateLimit(ip: string, referenceCode?: string): 
   }
 }
 
+function useRestDb(): boolean {
+  return (
+    shouldUseSupabaseRestFallback() ||
+    (!isCloudSqlConfigured() && isSupabaseAdminConfigured())
+  );
+}
+
+async function withDbFallback<T>(
+  pgFn: () => Promise<T>,
+  restFn: () => Promise<T>,
+): Promise<T> {
+  if (useRestDb()) {
+    return restFn();
+  }
+  try {
+    return await pgFn();
+  } catch (err) {
+    if (isNetworkOrDnsError(err) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return restFn();
+    }
+    throw err;
+  }
+}
+
 async function assertDatabaseReady(): Promise<void> {
+  if (useRestDb()) {
+    return;
+  }
   if (!isCloudSqlConfigured()) {
     throw new SubmissionHttpError(
       503,
       "Le service de dépôt n'est pas disponible sans base de données PostgreSQL configurée (DATABASE_URL manquant).",
     );
   }
-  await ensureDatabaseSchemaReady();
+  try {
+    await ensureDatabaseSchemaReady();
+  } catch (err) {
+    if (isNetworkOrDnsError(err) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return;
+    }
+    throw err;
+  }
 }
 
 function assertStorageConfigured(): void {
@@ -124,28 +176,34 @@ async function verifyCandidateCredentials(referenceCode: string, email: string) 
     );
   }
 
-  const rows = await db
-    .select()
-    .from(registrationsTable)
-    .where(
-      and(
-        sql`upper(trim(${registrationsTable.referenceCode})) = ${cleanRef}`,
-        sql`lower(trim(${registrationsTable.email})) = ${cleanEmail}`,
-      ),
-    )
-    .limit(1);
+  const candidate = await withDbFallback(
+    async () => {
+      const rows = await db
+        .select()
+        .from(registrationsTable)
+        .where(
+          and(
+            sql`upper(trim(${registrationsTable.referenceCode})) = ${cleanRef}`,
+            sql`lower(trim(${registrationsTable.email})) = ${cleanEmail}`,
+          ),
+        )
+        .limit(1);
+      return rows[0] || null;
+    },
+    () => verifyCandidateViaSupabaseRest(cleanRef, cleanEmail),
+  );
 
-  if (!rows[0]) {
+  if (!candidate) {
     throw new SubmissionHttpError(
       401,
       "Aucune inscription trouvée avec ce code de référence et cette adresse e-mail.",
     );
   }
 
-  return rows[0];
+  return candidate;
 }
 
-function evaluatePhaseAcceptance(phase: typeof phasesTable.$inferSelect): {
+function evaluatePhaseAcceptance(phase: DbPhaseRowLike): {
   acceptingNow: boolean;
   closedReason: string | null;
 } {
@@ -180,7 +238,7 @@ function evaluatePhaseAcceptance(phase: typeof phasesTable.$inferSelect): {
 }
 
 function mapCandidateSubmissionSummary(
-  row: typeof submissionsTable.$inferSelect,
+  row: DbSubmissionRowLike,
 ): CandidateSubmissionSummary {
   const excerpt =
     row.kind === 'text' && row.textContent
@@ -223,15 +281,27 @@ export async function getCandidateSubmissionStatus(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const [phaseRows, submissionRows] = await Promise.all([
-    db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
-    db
-      .select()
-      .from(submissionsTable)
-      .where(eq(submissionsTable.registrationId, candidate.id)),
-  ]);
+  const [phaseRows, submissionRows] = await withDbFallback<
+    [DbPhaseRowLike[], DbSubmissionRowLike[]]
+  >(
+    () =>
+      Promise.all([
+        db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
+        db
+          .select()
+          .from(submissionsTable)
+          .where(eq(submissionsTable.registrationId, candidate.id)),
+      ]),
+    () =>
+      Promise.all([
+        listPhasesViaSupabaseRest(),
+        getCandidateSubmissionsViaSupabaseRest(candidate.id),
+      ]),
+  );
 
-  const byPhase = new Map(submissionRows.map((s) => [s.phaseId, s]));
+  const byPhase = new Map<string, DbSubmissionRowLike>(
+    submissionRows.map((s) => [s.phaseId, s]),
+  );
 
   const phaseStatuses: SubmissionPublicPhaseStatus[] = phaseRows.map((phase) => {
     const acceptance = evaluatePhaseAcceptance(phase);
@@ -289,13 +359,18 @@ export async function initCandidateSubmission(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const phaseRows = await db
-    .select()
-    .from(phasesTable)
-    .where(eq(phasesTable.id, (input.phaseId || '').trim()))
-    .limit(1);
-
-  const phase = phaseRows[0];
+  const cleanPhaseId = (input.phaseId || '').trim();
+  const phase = await withDbFallback(
+    async () => {
+      const phaseRows = await db
+        .select()
+        .from(phasesTable)
+        .where(eq(phasesTable.id, cleanPhaseId))
+        .limit(1);
+      return phaseRows[0] || null;
+    },
+    () => getPhaseByIdViaSupabaseRest(cleanPhaseId),
+  );
   if (!phase) {
     throw new SubmissionHttpError(404, 'Phase du concours introuvable.');
   }
@@ -386,13 +461,18 @@ export async function completeCandidateSubmission(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const phaseRows = await db
-    .select()
-    .from(phasesTable)
-    .where(eq(phasesTable.id, (input.phaseId || '').trim()))
-    .limit(1);
-
-  const phase = phaseRows[0];
+  const cleanPhaseId = (input.phaseId || '').trim();
+  const phase = await withDbFallback(
+    async () => {
+      const phaseRows = await db
+        .select()
+        .from(phasesTable)
+        .where(eq(phasesTable.id, cleanPhaseId))
+        .limit(1);
+      return phaseRows[0] || null;
+    },
+    () => getPhaseByIdViaSupabaseRest(cleanPhaseId),
+  );
   if (!phase) {
     throw new SubmissionHttpError(404, 'Phase du concours introuvable.');
   }
@@ -405,17 +485,22 @@ export async function completeCandidateSubmission(input: {
     );
   }
 
-  const existingRows = await db
-    .select()
-    .from(submissionsTable)
-    .where(
-      and(
-        eq(submissionsTable.registrationId, candidate.id),
-        eq(submissionsTable.phaseId, phase.id),
-      ),
-    )
-    .limit(1);
-  const previous = existingRows[0] || null;
+  const previous = await withDbFallback<DbSubmissionRowLike | null>(
+    async () => {
+      const existingRows = await db
+        .select()
+        .from(submissionsTable)
+        .where(
+          and(
+            eq(submissionsTable.registrationId, candidate.id),
+            eq(submissionsTable.phaseId, phase.id),
+          ),
+        )
+        .limit(1);
+      return existingRows[0] || null;
+    },
+    () => getSubmissionForCandidatePhaseViaSupabaseRest(candidate.id, phase.id),
+  );
   const oldStoragePath = previous?.storagePath || null;
 
   if (input.kind === 'text') {
@@ -432,26 +517,47 @@ export async function completeCandidateSubmission(input: {
 
     const now = new Date();
     const byteSize = Buffer.byteLength(cleanText, 'utf8');
-    const savedRows = await db
-      .insert(submissionsTable)
-      .values({
-        id: previous?.id || crypto.randomUUID(),
-        registrationId: candidate.id,
-        phaseId: phase.id,
-        kind: 'text',
-        storagePath: null,
-        fileName: null,
-        mimeType: 'text/plain',
-        sizeBytes: byteSize,
-        textContent: cleanText,
-        status: 'received',
-        organizerNote: '',
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [submissionsTable.registrationId, submissionsTable.phaseId],
-        set: {
+    const savedRow = await withDbFallback<DbSubmissionRowLike>(
+      async () => {
+        const savedRows = await db
+          .insert(submissionsTable)
+          .values({
+            id: previous?.id || crypto.randomUUID(),
+            registrationId: candidate.id,
+            phaseId: phase.id,
+            kind: 'text',
+            storagePath: null,
+            fileName: null,
+            mimeType: 'text/plain',
+            sizeBytes: byteSize,
+            textContent: cleanText,
+            status: 'received',
+            organizerNote: '',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [submissionsTable.registrationId, submissionsTable.phaseId],
+            set: {
+              kind: 'text',
+              storagePath: null,
+              fileName: null,
+              mimeType: 'text/plain',
+              sizeBytes: byteSize,
+              textContent: cleanText,
+              status: 'received',
+              organizerNote: '',
+              updatedAt: now,
+            },
+          })
+          .returning();
+        return savedRows[0];
+      },
+      () =>
+        upsertSubmissionViaSupabaseRest({
+          id: previous?.id || crypto.randomUUID(),
+          registrationId: candidate.id,
+          phaseId: phase.id,
           kind: 'text',
           storagePath: null,
           fileName: null,
@@ -460,10 +566,8 @@ export async function completeCandidateSubmission(input: {
           textContent: cleanText,
           status: 'received',
           organizerNote: '',
-          updatedAt: now,
-        },
-      })
-      .returning();
+        }),
+    );
 
     if (oldStoragePath && isSupabaseAdminConfigured()) {
       getSupabaseAdmin()
@@ -472,7 +576,7 @@ export async function completeCandidateSubmission(input: {
         .catch(() => {});
     }
 
-    return mapCandidateSubmissionSummary(savedRows[0]);
+    return mapCandidateSubmissionSummary(savedRow);
   }
 
   if (input.kind !== 'file') {
@@ -534,26 +638,47 @@ export async function completeCandidateSubmission(input: {
 
   const safeDisplayName = rawFileName.slice(0, 180);
   const now = new Date();
-  const savedRows = await db
-    .insert(submissionsTable)
-    .values({
-      id: previous?.id || crypto.randomUUID(),
-      registrationId: candidate.id,
-      phaseId: phase.id,
-      kind: 'file',
-      storagePath,
-      fileName: safeDisplayName,
-      mimeType: normalizedMime,
-      sizeBytes: storedSize,
-      textContent: null,
-      status: 'received',
-      organizerNote: '',
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [submissionsTable.registrationId, submissionsTable.phaseId],
-      set: {
+  const savedRow = await withDbFallback<DbSubmissionRowLike>(
+    async () => {
+      const savedRows = await db
+        .insert(submissionsTable)
+        .values({
+          id: previous?.id || crypto.randomUUID(),
+          registrationId: candidate.id,
+          phaseId: phase.id,
+          kind: 'file',
+          storagePath,
+          fileName: safeDisplayName,
+          mimeType: normalizedMime,
+          sizeBytes: storedSize,
+          textContent: null,
+          status: 'received',
+          organizerNote: '',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [submissionsTable.registrationId, submissionsTable.phaseId],
+          set: {
+            kind: 'file',
+            storagePath,
+            fileName: safeDisplayName,
+            mimeType: normalizedMime,
+            sizeBytes: storedSize,
+            textContent: null,
+            status: 'received',
+            organizerNote: '',
+            updatedAt: now,
+          },
+        })
+        .returning();
+      return savedRows[0];
+    },
+    () =>
+      upsertSubmissionViaSupabaseRest({
+        id: previous?.id || crypto.randomUUID(),
+        registrationId: candidate.id,
+        phaseId: phase.id,
         kind: 'file',
         storagePath,
         fileName: safeDisplayName,
@@ -562,10 +687,8 @@ export async function completeCandidateSubmission(input: {
         textContent: null,
         status: 'received',
         organizerNote: '',
-        updatedAt: now,
-      },
-    })
-    .returning();
+      }),
+  );
 
   if (oldStoragePath && oldStoragePath !== storagePath) {
     admin.storage
@@ -574,7 +697,7 @@ export async function completeCandidateSubmission(input: {
       .catch(() => {});
   }
 
-  return mapCandidateSubmissionSummary(savedRows[0]);
+  return mapCandidateSubmissionSummary(savedRow);
 }
 
 export async function listAdminSubmissions(filters?: {
@@ -586,36 +709,40 @@ export async function listAdminSubmissions(filters?: {
 }> {
   await assertDatabaseReady();
 
-  const conditions = [];
-  if (filters?.phaseId && filters.phaseId !== 'all') {
-    conditions.push(eq(submissionsTable.phaseId, filters.phaseId));
-  }
-  if (
-    filters?.status &&
-    ['received', 'validated', 'rejected'].includes(filters.status)
-  ) {
-    conditions.push(eq(submissionsTable.status, filters.status as SubmissionStatus));
-  }
+  const rows = await withDbFallback(
+    async () => {
+      const conditions = [];
+      if (filters?.phaseId && filters.phaseId !== 'all') {
+        conditions.push(eq(submissionsTable.phaseId, filters.phaseId));
+      }
+      if (
+        filters?.status &&
+        ['received', 'validated', 'rejected'].includes(filters.status)
+      ) {
+        conditions.push(eq(submissionsTable.status, filters.status as SubmissionStatus));
+      }
 
-  const baseQuery = db
-    .select({
-      submission: submissionsTable,
-      registration: registrationsTable,
-      phase: phasesTable,
-    })
-    .from(submissionsTable)
-    .innerJoin(
-      registrationsTable,
-      eq(submissionsTable.registrationId, registrationsTable.id),
-    )
-    .innerJoin(phasesTable, eq(submissionsTable.phaseId, phasesTable.id));
+      const baseQuery = db
+        .select({
+          submission: submissionsTable,
+          registration: registrationsTable,
+          phase: phasesTable,
+        })
+        .from(submissionsTable)
+        .innerJoin(
+          registrationsTable,
+          eq(submissionsTable.registrationId, registrationsTable.id),
+        )
+        .innerJoin(phasesTable, eq(submissionsTable.phaseId, phasesTable.id));
 
-  const rows =
-    conditions.length > 0
-      ? await baseQuery
-          .where(and(...conditions))
-          .orderBy(desc(submissionsTable.updatedAt))
-      : await baseQuery.orderBy(desc(submissionsTable.updatedAt));
+      return conditions.length > 0
+        ? baseQuery
+            .where(and(...conditions))
+            .orderBy(desc(submissionsTable.updatedAt))
+        : baseQuery.orderBy(desc(submissionsTable.updatedAt));
+    },
+    () => listAdminSubmissionsViaSupabaseRest(filters),
+  );
 
   const items: AdminSubmissionItem[] = rows.map(({ submission, registration, phase }) => ({
     id: submission.id,
@@ -659,13 +786,18 @@ export async function getAdminSubmissionAccess(
   submissionId: string,
 ): Promise<AdminSubmissionAccess> {
   await assertDatabaseReady();
-  const rows = await db
-    .select()
-    .from(submissionsTable)
-    .where(eq(submissionsTable.id, submissionId))
-    .limit(1);
+  const submission = await withDbFallback<DbSubmissionRowLike | null>(
+    async () => {
+      const rows = await db
+        .select()
+        .from(submissionsTable)
+        .where(eq(submissionsTable.id, submissionId))
+        .limit(1);
+      return rows[0] || null;
+    },
+    () => getSubmissionByIdViaSupabaseRest(submissionId),
+  );
 
-  const submission = rows[0];
   if (!submission) {
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
   }
@@ -726,13 +858,18 @@ export async function updateAdminSubmissionReview(
 }> {
   await assertDatabaseReady();
 
-  const existingRows = await db
-    .select()
-    .from(submissionsTable)
-    .where(eq(submissionsTable.id, submissionId))
-    .limit(1);
+  const current = await withDbFallback<DbSubmissionRowLike | null>(
+    async () => {
+      const existingRows = await db
+        .select()
+        .from(submissionsTable)
+        .where(eq(submissionsTable.id, submissionId))
+        .limit(1);
+      return existingRows[0] || null;
+    },
+    () => getSubmissionByIdViaSupabaseRest(submissionId),
+  );
 
-  const current = existingRows[0];
   if (!current) {
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
   }
@@ -747,17 +884,26 @@ export async function updateAdminSubmissionReview(
       ? patch.organizerNote.trim().slice(0, 1500)
       : current.organizerNote;
 
-  const updated = await db
-    .update(submissionsTable)
-    .set({
-      status: nextStatus,
-      organizerNote: nextNote,
-      updatedAt: new Date(),
-    })
-    .where(eq(submissionsTable.id, submissionId))
-    .returning();
+  const row = await withDbFallback<DbSubmissionRowLike>(
+    async () => {
+      const updated = await db
+        .update(submissionsTable)
+        .set({
+          status: nextStatus,
+          organizerNote: nextNote,
+          updatedAt: new Date(),
+        })
+        .where(eq(submissionsTable.id, submissionId))
+        .returning();
+      return updated[0];
+    },
+    () =>
+      updateSubmissionReviewViaSupabaseRest(submissionId, {
+        status: nextStatus,
+        organizerNote: nextNote,
+      }),
+  );
 
-  const row = updated[0];
   return {
     id: row.id,
     status: row.status,

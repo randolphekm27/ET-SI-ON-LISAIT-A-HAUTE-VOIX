@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Feather } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import {
+  BrandPatternCircle,
+  BrandPatternSurface,
+  BrandPatternWave,
+} from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
@@ -161,8 +166,33 @@ export function InscriptionPage() {
         subtitle="C'est gratuit et ouvert à tous les étudiants jusqu'au vendredi 20 novembre 2026. Cela vous prendra deux minutes."
       />
 
-      <section className="py-12 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      <section className="relative py-12 lg:py-20 bg-ucaep-paper paper-fiber overflow-hidden">
+        <BrandPatternSurface
+          variant="gold"
+          tileWidth={220}
+          opacityClass="opacity-[0.04]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="brown"
+          tileWidth={135}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -bottom-24 -left-16 w-64 h-64 opacity-[0.08]"
+        />
+        <BrandPatternWave
+          variant="gold"
+          tileWidth={170}
+          opacity={0.08}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-16"
+        />
+        <Feather
+          aria-hidden="true"
+          className="pointer-events-none select-none hidden md:block absolute top-10 right-8 w-44 h-44 text-ucaep-brown opacity-[0.04] -rotate-12"
+          strokeWidth={1.1}
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           {/* Left Focused Progression Rail */}
           <aside className="lg:col-span-4 space-y-8 lg:sticky lg:top-24">
             <EditorialMark folio={`Étape 0${step} / 04`} label="Progression" tone="brown" />

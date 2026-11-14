@@ -103,18 +103,24 @@ export function BrandPatternCircle({
   tileWidth = 140,
   blendMultiply = false,
   ring = true,
+  doubleRing = false,
   className = '',
 }: {
   variant?: PatternVariant;
   tileWidth?: number;
   blendMultiply?: boolean;
   ring?: boolean;
+  doubleRing?: boolean;
   className?: string;
 }) {
+  const hasExplicitPosition =
+    /\b(relative|fixed|sticky|static)\b/.test(className);
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none select-none rounded-full relative ${className}`}
+      className={`pointer-events-none select-none rounded-full ${
+        hasExplicitPosition ? '' : 'absolute'
+      } ${className}`}
     >
       <div
         className={`w-full h-full rounded-full ${blendMultiply ? 'mix-blend-multiply' : ''}`}
@@ -127,6 +133,9 @@ export function BrandPatternCircle({
       />
       {ring && (
         <span className="absolute -inset-2.5 rounded-full border border-ucaep-gold/30 pointer-events-none" />
+      )}
+      {ring && doubleRing && (
+        <span className="absolute -inset-5 rounded-full border border-dashed border-ucaep-gold/25 pointer-events-none" />
       )}
     </div>
   );
@@ -146,12 +155,14 @@ export function BrandPatternArch({
   blendMultiply?: boolean;
   className?: string;
 }) {
+  const hasExplicitPosition =
+    /\b(relative|fixed|sticky|static)\b/.test(className);
   return (
     <div
       aria-hidden="true"
       className={`pointer-events-none select-none rounded-t-full border border-ucaep-gold/25 ${
-        blendMultiply ? 'mix-blend-multiply' : ''
-      } ${className}`}
+        hasExplicitPosition ? '' : 'absolute'
+      } ${blendMultiply ? 'mix-blend-multiply' : ''} ${className}`}
       style={{
         backgroundImage: `url(${PATTERN_SRC[variant]})`,
         backgroundRepeat: 'repeat',
@@ -170,12 +181,14 @@ export function BrandPatternWave({
   tileWidth = 175,
   opacity = 0.22,
   flip = false,
+  doubleWave = false,
   className = '',
 }: {
   variant?: PatternVariant;
   tileWidth?: number;
   opacity?: number;
   flip?: boolean;
+  doubleWave?: boolean;
   className?: string;
 }) {
   const rawId = useId().replace(/:/g, '');
@@ -205,6 +218,22 @@ export function BrandPatternWave({
           />
         </pattern>
       </defs>
+      {doubleWave && (
+        <>
+          <path
+            d="M0,122 C310,48 620,146 940,86 C1160,44 1330,114 1440,84 L1440,160 L0,160 Z"
+            fill={`url(#${patternId})`}
+            fillOpacity={Math.max(0.05, opacity * 0.6)}
+          />
+          <path
+            d="M0,122 C310,48 620,146 940,86 C1160,44 1330,114 1440,84"
+            fill="none"
+            stroke="#D19A3A"
+            strokeOpacity="0.28"
+            strokeWidth="1"
+          />
+        </>
+      )}
       <path
         d="M0,96 C260,152 520,24 840,78 C1100,122 1290,46 1440,68 L1440,160 L0,160 Z"
         fill={`url(#${patternId})`}

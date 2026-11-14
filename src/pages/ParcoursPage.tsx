@@ -354,7 +354,15 @@ export function ParcoursPage() {
           tileWidth={170}
           opacity={0.14}
           flip
+          doubleWave
           className="absolute top-0 inset-x-0 h-20"
+        />
+        <BrandPatternCircle
+          variant="gold"
+          tileWidth={130}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -bottom-24 -right-16 w-64 h-64 opacity-[0.09]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6" data-reveal>
@@ -568,8 +576,21 @@ export function ParcoursPage() {
       </section>
 
       {/* OVERVIEW OF PHASES 2 & 3 (PROGRESSIVELY REVEALED) */}
-      <section className="py-20 lg:py-24 bg-ucaep-paper border-b border-ucaep-brown/14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section className="relative py-20 lg:py-24 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/14 overflow-hidden">
+        <BrandPatternSurface
+          variant="brown"
+          tileWidth={220}
+          opacityClass="opacity-[0.035]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="green"
+          tileWidth={135}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -top-20 -right-16 w-56 h-56 opacity-[0.08]"
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
             <EditorialMark folio="La suite du parcours" label="Phases 02 & 03" tone="brown" />
             <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
@@ -766,8 +787,15 @@ export function ParcoursPage() {
       </section>
 
       {/* Closing strip */}
-      <section className="py-16 bg-ucaep-paper">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <section className="relative py-16 bg-ucaep-paper paper-grain overflow-hidden">
+        <BrandPatternWave
+          variant="gold"
+          tileWidth={165}
+          opacity={0.09}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-14"
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="space-y-1.5">
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
               Envie de suivre la suite ?

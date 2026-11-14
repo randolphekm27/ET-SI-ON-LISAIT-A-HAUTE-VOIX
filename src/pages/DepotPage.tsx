@@ -12,6 +12,11 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import {
+  BrandPatternCircle,
+  BrandPatternSurface,
+  BrandPatternWave,
+} from '../components/BrandPattern';
 import { PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
@@ -356,8 +361,28 @@ export function DepotPage() {
         patternVariant="green"
       />
 
-      <section className="py-14 lg:py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section className="relative py-14 lg:py-20 bg-ucaep-paper paper-fiber overflow-hidden">
+        <BrandPatternSurface
+          variant="green"
+          tileWidth={220}
+          opacityClass="opacity-[0.04]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="green"
+          tileWidth={135}
+          blendMultiply
+          doubleRing
+          className="hidden lg:block -bottom-24 -right-16 w-64 h-64 opacity-[0.08]"
+        />
+        <BrandPatternWave
+          variant="green"
+          tileWidth={170}
+          opacity={0.085}
+          doubleWave
+          className="absolute bottom-0 inset-x-0 h-16"
+        />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           {!isSupabaseConfigured && (
             <div
               role="status"

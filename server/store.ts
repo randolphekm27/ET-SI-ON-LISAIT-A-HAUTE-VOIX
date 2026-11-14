@@ -15,6 +15,22 @@ import {
   phases as phasesTable,
   registrations as registrationsTable,
 } from '../src/db/schema.ts';
+import { isSupabaseAdminConfigured } from './supabase-admin.ts';
+import {
+  createAnnouncementViaSupabaseRest,
+  createNewsViaSupabaseRest,
+  isNetworkOrDnsError,
+  markPreferSupabaseRest,
+  markRegistrationSyncedViaSupabaseRest,
+  readStoreViaSupabaseRest,
+  saveContactViaSupabaseRest,
+  saveRegistrationViaSupabaseRest,
+  shouldUseSupabaseRestFallback,
+  updateAnnouncementViaSupabaseRest,
+  updateNewsViaSupabaseRest,
+  updatePhaseViaSupabaseRest,
+  updateSettingsViaSupabaseRest,
+} from './supabase-db.ts';
 import type {
   Announcement,
   CompetitionPhase,
@@ -529,7 +545,21 @@ function extractErrorDetail(err: unknown): string {
   return parts.join(' — ');
 }
 
+function getDefaultStoreSlices() {
+  return {
+    phases: DEFAULT_STORE.phases,
+    announcements: DEFAULT_STORE.announcements,
+    news: DEFAULT_STORE.news,
+  };
+}
+
 export async function readStore(): Promise<StoreData> {
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    const restData = await readStoreViaSupabaseRest(getDefaultStoreSlices());
+    cachedStore = restData;
+    return restData;
+  }
+
   if (!isCloudSqlConfigured()) {
     return readJsonStore();
   }
@@ -540,6 +570,12 @@ export async function readStore(): Promise<StoreData> {
   try {
     await ensureDatabaseSchemaReady();
   } catch (schemaErr) {
+    if (isNetworkOrDnsError(schemaErr) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      const restData = await readStoreViaSupabaseRest(getDefaultStoreSlices());
+      cachedStore = restData;
+      return restData;
+    }
     console.warn('Vérification initiale du schéma PostgreSQL :', extractErrorDetail(schemaErr));
   }
 
@@ -597,6 +633,12 @@ export async function readStore(): Promise<StoreData> {
       return storeData;
     } catch (error) {
       lastError = error;
+      if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+        markPreferSupabaseRest();
+        const restData = await readStoreViaSupabaseRest(getDefaultStoreSlices());
+        cachedStore = restData;
+        return restData;
+      }
       console.warn(
         `Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`,
         extractErrorDetail(error),
@@ -636,9 +678,24 @@ export async function createAnnouncementRecord(input: {
   scheduledAt?: string;
   imageKey?: MediaAssetKey;
 }): Promise<Announcement> {
+  const baseSlug = slugify(input.title) || `annonce-${Date.now()}`;
+  const restInput = {
+    slug: baseSlug,
+    title: input.title.trim(),
+    excerpt: input.excerpt.trim(),
+    content: input.content.trim(),
+    category: (input.category || 'Officiel').trim(),
+    status: input.status || ('draft' as PublicationStatus),
+    scheduledAt: input.scheduledAt,
+    imageKey: input.imageKey || ('campus' as MediaAssetKey),
+  };
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return createAnnouncementViaSupabaseRest(restInput);
+  }
+
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
-      const baseSlug = slugify(input.title) || `annonce-${Date.now()}`;
       const uniqueSlug = store.announcements.some((a) => a.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString().slice(-4)}`
         : baseSlug;
@@ -663,7 +720,6 @@ export async function createAnnouncementRecord(input: {
 
   try {
     await ensureDbSeeded();
-    const baseSlug = slugify(input.title) || `annonce-${Date.now()}`;
     const existingSlug = await db
       .select({ id: announcementsTable.id })
       .from(announcementsTable)
@@ -693,9 +749,12 @@ export async function createAnnouncementRecord(input: {
 
     return mapAnnouncementRow(inserted[0]);
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return createAnnouncementViaSupabaseRest(restInput);
+    }
     console.warn('Database createAnnouncementRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
-      const baseSlug = slugify(input.title) || `annonce-${Date.now()}`;
       const uniqueSlug = store.announcements.some((a) => a.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString().slice(-4)}`
         : baseSlug;
@@ -730,6 +789,10 @@ export async function updateAnnouncementRecord(
     scheduledAt?: string;
   },
 ): Promise<Announcement | null> {
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return updateAnnouncementViaSupabaseRest(id, patch);
+  }
+
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
       const idx = store.announcements.findIndex((a) => a.id === id);
@@ -790,6 +853,10 @@ export async function updateAnnouncementRecord(
 
     return updated[0] ? mapAnnouncementRow(updated[0]) : null;
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return updateAnnouncementViaSupabaseRest(id, patch);
+    }
     console.warn('Database updateAnnouncementRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
       const idx = store.announcements.findIndex((a) => a.id === id);
@@ -838,6 +905,16 @@ export async function updatePhaseRecord(
     const err = new Error('La date limite de dépôt est invalide.');
     (err as Error & { statusCode?: number }).statusCode = 400;
     throw err;
+  }
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return updatePhaseViaSupabaseRest(id, {
+      statusLabel: patch.statusLabel,
+      isRevealed: patch.isRevealed,
+      submissionsOpen: patch.submissionsOpen,
+      submissionDeadline: parsedDeadline,
+      testDetails: patch.testDetails,
+    });
   }
 
   if (!isCloudSqlConfigured()) {
@@ -944,6 +1021,16 @@ export async function updatePhaseRecord(
     }
     return result;
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return updatePhaseViaSupabaseRest(id, {
+        statusLabel: patch.statusLabel,
+        isRevealed: patch.isRevealed,
+        submissionsOpen: patch.submissionsOpen,
+        submissionDeadline: parsedDeadline,
+        testDetails: patch.testDetails,
+      });
+    }
     console.warn('Database updatePhaseRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
       const idx = store.phases.findIndex((p) => p.id === id);
@@ -1003,10 +1090,24 @@ export async function createNewsRecord(input: {
     .map((p) => p.trim())
     .filter(Boolean);
   const readTime = `${Math.max(1, Math.ceil(input.content.split(/\s+/).length / 180))} min`;
+  const baseSlug = slugify(input.title) || `actualite-${Date.now()}`;
+  const restInput = {
+    slug: baseSlug,
+    title: input.title.trim(),
+    category: input.category || ('Vie du concours' as NewsArticle['category']),
+    excerpt: input.excerpt.trim(),
+    paragraphs,
+    readTime,
+    imageKey: input.imageKey || ('campus' as MediaAssetKey),
+    status: input.status || ('published' as PublicationStatus),
+  };
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return createNewsViaSupabaseRest(restInput);
+  }
 
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
-      const baseSlug = slugify(input.title) || `actualite-${Date.now()}`;
       const uniqueSlug = store.news.some((n) => n.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString().slice(-4)}`
         : baseSlug;
@@ -1030,7 +1131,6 @@ export async function createNewsRecord(input: {
 
   try {
     await ensureDbSeeded();
-    const baseSlug = slugify(input.title) || `actualite-${Date.now()}`;
     const existingSlug = await db
       .select({ id: newsArticlesTable.id })
       .from(newsArticlesTable)
@@ -1060,9 +1160,12 @@ export async function createNewsRecord(input: {
 
     return mapNewsRow(inserted[0]);
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return createNewsViaSupabaseRest(restInput);
+    }
     console.warn('Database createNewsRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
-      const baseSlug = slugify(input.title) || `actualite-${Date.now()}`;
       const uniqueSlug = store.news.some((n) => n.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString().slice(-4)}`
         : baseSlug;
@@ -1105,6 +1208,17 @@ export async function updateNewsRecord(
       : Array.isArray(patch.content)
         ? patch.content
         : undefined;
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return updateNewsViaSupabaseRest(id, {
+      title: patch.title,
+      excerpt: patch.excerpt,
+      paragraphs,
+      category: patch.category,
+      status: patch.status,
+      imageKey: patch.imageKey,
+    });
+  }
 
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
@@ -1149,6 +1263,17 @@ export async function updateNewsRecord(
 
     return updated[0] ? mapNewsRow(updated[0]) : null;
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return updateNewsViaSupabaseRest(id, {
+        title: patch.title,
+        excerpt: patch.excerpt,
+        paragraphs,
+        category: patch.category,
+        status: patch.status,
+        imageKey: patch.imageKey,
+      });
+    }
     console.warn('Database updateNewsRecord error, bascule sur JSON:', (error as Error).message);
     return withJsonStoreLock((store) => {
       const idx = store.news.findIndex((n) => n.id === id);
@@ -1170,6 +1295,10 @@ export async function updateNewsRecord(
 
 export async function updateSettingsRecord(googleAppsScriptUrl: string) {
   const cleanUrl = googleAppsScriptUrl.trim();
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return updateSettingsViaSupabaseRest(cleanUrl);
+  }
+
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
       store.settings.googleAppsScriptUrl = cleanUrl;
@@ -1198,6 +1327,10 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
       officialEmail: 'ucaeplokossa@gmail.com',
     };
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return updateSettingsViaSupabaseRest(cleanUrl);
+    }
     console.warn('Database updateSettingsRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
       store.settings.googleAppsScriptUrl = cleanUrl;
@@ -1322,11 +1455,55 @@ async function forwardToGoogleAppsScript(
   }
 }
 
+async function saveRegistrationViaRestFlow(
+  payload: RegistrationPayload,
+  normalizedEmail: string,
+  normalizedMatricule: string,
+): Promise<RegistrationRecord> {
+  const { record, gasUrl } = await saveRegistrationViaSupabaseRest(
+    payload,
+    normalizedEmail,
+    normalizedMatricule,
+  );
+
+  if (gasUrl) {
+    try {
+      await forwardToGoogleAppsScript(gasUrl, record);
+      record.syncedToGoogleSheets = true;
+      await markRegistrationSyncedViaSupabaseRest(record.id).catch(() => {});
+    } catch {
+      console.error('Google Sheets sync skipped or failed for ID:', record.id);
+    }
+  }
+
+  if (cachedStore) {
+    const existsInCache = cachedStore.registrations.some((r) => r.id === record.id);
+    if (!existsInCache) {
+      cachedStore.registrations.unshift(record);
+    }
+  }
+
+  withJsonStoreLock(async (store) => {
+    const idx = store.registrations.findIndex((r) => r.id === record.id);
+    if (idx === -1) {
+      store.registrations.unshift(record);
+    } else {
+      store.registrations[idx] = record;
+    }
+  }).catch(() => {});
+
+  return record;
+}
+
 export async function saveRegistration(
   payload: RegistrationPayload,
 ): Promise<RegistrationRecord> {
   const normalizedEmail = payload.email.trim().toLowerCase();
   const normalizedMatricule = payload.studentId.trim().toUpperCase();
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return saveRegistrationViaRestFlow(payload, normalizedEmail, normalizedMatricule);
+  }
 
   if (!isCloudSqlConfigured()) {
     if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
@@ -1513,6 +1690,11 @@ export async function saveRegistration(
 
     return record;
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return saveRegistrationViaRestFlow(payload, normalizedEmail, normalizedMatricule);
+    }
+
     const err = error as Error & { statusCode?: number; code?: string; constraint?: string };
     if (err.statusCode === 409 || err.code === '23505') {
       const duplicateMsg = err.constraint?.includes('student_id')
@@ -1578,6 +1760,10 @@ export async function saveRegistration(
 export async function saveContactMessage(
   payload: ContactPayload,
 ): Promise<ContactMessageRecord> {
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    return saveContactViaSupabaseRest(payload);
+  }
+
   if (!isCloudSqlConfigured()) {
     if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
       const err = new Error(
@@ -1619,6 +1805,10 @@ export async function saveContactMessage(
 
     return record;
   } catch (error) {
+    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return saveContactViaSupabaseRest(payload);
+    }
     console.error('Database saveContactMessage error:', (error as Error).message);
     throw new Error("Impossible d'enregistrer votre message pour le moment.", {
       cause: error,

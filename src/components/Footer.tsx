@@ -13,7 +13,8 @@ export function Footer() {
       <BrandPatternCircle
         variant="gold"
         tileWidth={125}
-        className="hidden md:block absolute -bottom-24 -right-20 w-64 h-64 opacity-[0.09]"
+        doubleRing
+        className="hidden md:block -bottom-24 -right-20 w-64 h-64 opacity-[0.1]"
       />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/12">
@@ -106,17 +107,23 @@ export function Footer() {
                   Confidentialité
                 </Link>
               </li>
-              <li>
-                <Link to="/gestion" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Espace organisateurs
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
 
         <div className="pt-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-ucaep-ivory/55">
-          <p>© {new Date().getFullYear()} UCAEP — ENSET de Lokossa, Bénin.</p>
+          <p>
+            ©{' '}
+            <Link
+              to="/gestion"
+              tabIndex={-1}
+              aria-label="Administration"
+              className="cursor-text text-inherit hover:text-inherit focus:outline-none"
+            >
+              {new Date().getFullYear()}
+            </Link>{' '}
+            UCAEP — ENSET de Lokossa, Bénin.
+          </p>
           <p className="font-serif italic text-sm text-ucaep-ivory/75">
             La Plume · La Connaissance · L&apos;Éloquence
           </p>
