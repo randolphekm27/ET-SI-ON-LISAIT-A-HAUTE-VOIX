@@ -128,6 +128,7 @@ export function GestionPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const isFetchingRef = useRef(false);
+  const requestSeqRef = useRef(0);
 
   // Dépôts des candidats state
   const [submissions, setSubmissions] = useState<AdminSubmissionItem[]>([]);
@@ -213,13 +214,18 @@ export function GestionPage() {
   }
 
   async function loadOverview(overrideAdminToken?: string, silent = false) {
-    if (isFetchingRef.current) return;
+    // Seules les actualisations automatiques sont ignorées si une requête est déjà en cours :
+    // un rechargement demandé après une action (bouton) doit toujours avoir lieu.
+    if (silent && isFetchingRef.current) return;
+    const requestId = ++requestSeqRef.current;
     isFetchingRef.current = true;
     if (!silent) setIsRefreshing(true);
     try {
       const json = await fetchApiJson<AdminOverview>('/api/admin/overview', {
         headers: buildAuthHeaders(undefined, overrideAdminToken),
       });
+      // Ignore une réponse plus ancienne qui arriverait après une réponse plus récente
+      if (requestId !== requestSeqRef.current) return;
       setData(json);
       setGasUrl(json.settings?.googleAppsScriptUrl || '');
       setPhaseDeadlines((prev) => {
@@ -938,7 +944,10 @@ export function GestionPage() {
         )}
 
         {notice && (
-          <div className="p-3.5 text-sm bg-ucaep-green/10 text-ucaep-green border border-ucaep-green/25 rounded-sm">
+          <div
+            role="status"
+            className="sticky top-3 z-40 p-3.5 text-sm bg-white text-ucaep-green border border-ucaep-green/40 rounded-sm shadow-md"
+          >
             {notice}
           </div>
         )}
