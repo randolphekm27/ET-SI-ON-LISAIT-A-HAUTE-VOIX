@@ -45,6 +45,19 @@
   background-position: 0 0, 6px 8px;
 }
 
+.paper-fiber {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(78, 42, 30, 0.022) 0px,
+      rgba(78, 42, 30, 0.022) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    radial-gradient(rgba(78, 42, 30, 0.04) 0.85px, transparent 0);
+  background-size: 100% 28px, 18px 18px;
+}
+
 .editorial-rule {
   border-color: rgba(78, 42, 30, 0.14);
 }

@@ -1,8 +1,24 @@
 import { useState, useEffect, useRef, type FormEvent, useMemo } from 'react';
-import { Download, Lock, LogOut, Plus, RefreshCw, Search, Unlock } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  Eye,
+  FileText,
+  Lock,
+  LogOut,
+  Plus,
+  RefreshCw,
+  Search,
+  Unlock,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
+import { formatFileSize } from '../lib/submissions-config';
 import type {
+  AdminSubmissionAccess,
+  AdminSubmissionItem,
   Announcement,
   CompetitionPhase,
   ContactMessageRecord,
@@ -10,6 +26,7 @@ import type {
   NewsArticle,
   PublicationStatus,
   RegistrationRecord,
+  SubmissionStatus,
 } from '../types/competition';
 
 interface AdminOverview {
@@ -30,6 +47,51 @@ const STATUS_LABELS: Record<PublicationStatus, string> = {
   published: 'Publié',
   archived: 'Archivé',
 };
+
+const SUBMISSION_STATUS_META: Record<
+  SubmissionStatus,
+  { label: string; badgeClass: string }
+> = {
+  received: {
+    label: 'Reçu',
+    badgeClass: 'bg-amber-50 text-amber-900 border-amber-300',
+  },
+  validated: {
+    label: 'Validé',
+    badgeClass: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+  },
+  rejected: {
+    label: 'Refusé',
+    badgeClass: 'bg-red-50 text-red-900 border-red-300',
+  },
+};
+
+function toDateTimeLocalValue(iso?: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}`;
+}
+
+type GestionTab =
+  | 'annonces'
+  | 'actualites'
+  | 'parcours'
+  | 'candidats'
+  | 'depots'
+  | 'config';
+
+const VALID_TABS: GestionTab[] = [
+  'annonces',
+  'actualites',
+  'parcours',
+  'candidats',
+  'depots',
+  'config',
+];
 
 const CANDIDATES_PER_PAGE = 50;
 
@@ -53,16 +115,11 @@ export function GestionPage() {
   const [accessCode, setAccessCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [data, setData] = useState<AdminOverview | null>(null);
-  const [tab, setTab] = useState<
-    'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config'
-  >(() => {
+  const [tab, setTab] = useState<GestionTab>(() => {
     try {
-      const savedTab = sessionStorage.getItem('ucaep_admin_tab');
-      if (
-        savedTab &&
-        ['annonces', 'actualites', 'parcours', 'candidats', 'config'].includes(savedTab)
-      ) {
-        return savedTab as 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config';
+      const savedTab = sessionStorage.getItem('ucaep_admin_tab') as GestionTab | null;
+      if (savedTab && VALID_TABS.includes(savedTab)) {
+        return savedTab;
       }
     } catch {
       // ignore
@@ -74,7 +131,25 @@ export function GestionPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const isFetchingRef = useRef(false);
 
-  function selectTab(newTab: 'annonces' | 'actualites' | 'parcours' | 'candidats' | 'config') {
+  // Dépôts des candidats state
+  const [submissions, setSubmissions] = useState<AdminSubmissionItem[]>([]);
+  const [submissionsStorageReady, setSubmissionsStorageReady] = useState<boolean>(true);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState('');
+  const [submissionPhaseFilter, setSubmissionPhaseFilter] = useState('all');
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
+  const [submissionSearch, setSubmissionSearch] = useState('');
+  const [inspectingItem, setInspectingItem] = useState<AdminSubmissionItem | null>(null);
+  const [inspectingAccess, setInspectingAccess] = useState<AdminSubmissionAccess | null>(
+    null,
+  );
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [inspectError, setInspectError] = useState('');
+  const [reviewNoteDraft, setReviewNoteDraft] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [phaseDeadlines, setPhaseDeadlines] = useState<Record<string, string>>({});
+
+  function selectTab(newTab: GestionTab) {
     setTab(newTab);
     try {
       sessionStorage.setItem('ucaep_admin_tab', newTab);
@@ -94,6 +169,11 @@ export function GestionPage() {
 
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    if (!token || tab !== 'depots') return;
+    loadSubmissions(token);
+  }, [token, tab]);
 
   // Announcement creation form
   const [annTitle, setAnnTitle] = useState('');
@@ -144,6 +224,15 @@ export function GestionPage() {
       });
       setData(json);
       setGasUrl(json.settings?.googleAppsScriptUrl || '');
+      setPhaseDeadlines((prev) => {
+        const next = { ...prev };
+        for (const p of json.phases || []) {
+          if (next[p.id] === undefined) {
+            next[p.id] = toDateTimeLocalValue(p.submissionDeadline);
+          }
+        }
+        return next;
+      });
       setLastSyncedAt(new Date());
       setAuthError('');
     } catch (err) {
@@ -162,6 +251,27 @@ export function GestionPage() {
     } finally {
       isFetchingRef.current = false;
       if (!silent) setIsRefreshing(false);
+    }
+  }
+
+  async function loadSubmissions(overrideAdminToken?: string) {
+    setSubmissionsLoading(true);
+    setSubmissionsError('');
+    try {
+      const res = await fetchApiJson<{
+        storageConfigured: boolean;
+        submissions: AdminSubmissionItem[];
+      }>('/api/admin/submissions', {
+        headers: buildAuthHeaders(undefined, overrideAdminToken),
+      });
+      setSubmissions(res.submissions || []);
+      setSubmissionsStorageReady(res.storageConfigured);
+    } catch (err) {
+      setSubmissionsError(
+        err instanceof Error ? err.message : 'Impossible de charger les dépôts.',
+      );
+    } finally {
+      setSubmissionsLoading(false);
     }
   }
 
@@ -315,6 +425,167 @@ export function GestionPage() {
     }
   }
 
+  async function handleToggleSubmissionsOpen(phase: CompetitionPhase) {
+    try {
+      await fetchApiJson(`/api/admin/phases/${phase.id}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ submissionsOpen: !phase.submissionsOpen }),
+      });
+      await loadOverview();
+      setNotice(
+        !phase.submissionsOpen
+          ? `Dépôts en ligne ouverts pour la Phase ${phase.number}.`
+          : `Dépôts fermés pour la Phase ${phase.number}.`,
+      );
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
+  }
+
+  async function handleSavePhaseDeadline(phaseId: string, rawValue: string | null) {
+    try {
+      const isoDeadline =
+        rawValue && rawValue.trim() ? new Date(rawValue).toISOString() : null;
+      await fetchApiJson(`/api/admin/phases/${phaseId}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ submissionDeadline: isoDeadline }),
+      });
+      setPhaseDeadlines((prev) => ({
+        ...prev,
+        [phaseId]: rawValue || '',
+      }));
+      await loadOverview();
+      setNotice(
+        isoDeadline
+          ? 'Date limite de dépôt enregistrée.'
+          : 'Date limite de dépôt effacée.',
+      );
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    }
+  }
+
+  async function handleInspectSubmission(item: AdminSubmissionItem) {
+    setInspectingItem(item);
+    setInspectingAccess(null);
+    setInspectError('');
+    setReviewNoteDraft(item.organizerNote || '');
+    setInspectLoading(true);
+    try {
+      const access = await fetchApiJson<AdminSubmissionAccess>(
+        `/api/admin/submissions/${item.id}/download`,
+        {
+          headers: buildAuthHeaders(),
+        },
+      );
+      setInspectingAccess(access);
+    } catch (err) {
+      setInspectError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de récupérer ce dépôt pour le moment.',
+      );
+    } finally {
+      setInspectLoading(false);
+    }
+  }
+
+  async function handleUpdateSubmissionReview(
+    submissionId: string,
+    patch: { status?: SubmissionStatus; organizerNote?: string },
+  ) {
+    setReviewSaving(true);
+    try {
+      const res = await fetchApiJson<{
+        submission: {
+          id: string;
+          status: SubmissionStatus;
+          organizerNote: string;
+          updatedAt: string;
+        };
+      }>(`/api/admin/submissions/${submissionId}`, {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(patch),
+      });
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.id === submissionId
+            ? {
+                ...s,
+                status: res.submission.status,
+                organizerNote: res.submission.organizerNote,
+                updatedAt: res.submission.updatedAt,
+              }
+            : s,
+        ),
+      );
+      setInspectingItem((prev) =>
+        prev && prev.id === submissionId
+          ? {
+              ...prev,
+              status: res.submission.status,
+              organizerNote: res.submission.organizerNote,
+              updatedAt: res.submission.updatedAt,
+            }
+          : prev,
+      );
+      setNotice('Évaluation du dépôt enregistrée.');
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+    } finally {
+      setReviewSaving(false);
+    }
+  }
+
+  function exportSubmissionsCsv() {
+    if (!filteredSubmissions.length) return;
+    const headers = [
+      'Référence',
+      'Candidat',
+      'Filière',
+      'Niveau',
+      'Phase',
+      'Type',
+      'Fichier',
+      'Taille (octets)',
+      'Statut',
+      'Note interne',
+      'Date dépôt',
+    ];
+    const rows = filteredSubmissions.map((s) => [
+      s.referenceCode,
+      s.candidateName,
+      s.candidateDepartment,
+      s.candidateStudyLevel,
+      `Phase ${s.phaseNumber} — ${s.phaseTitle}`,
+      s.kind === 'file' ? 'Fichier' : 'Texte écrit',
+      s.fileName || (s.kind === 'text' ? 'Texte en ligne' : ''),
+      s.sizeBytes ?? '',
+      SUBMISSION_STATUS_META[s.status].label,
+      s.organizerNote || '',
+      s.updatedAt,
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(';'),
+      )
+      .join('\r\n');
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `depots-ucaep-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleSaveSettings(e: FormEvent) {
     e.preventDefault();
     setNotice('');
@@ -448,6 +719,39 @@ export function GestionPage() {
       byLevel,
     };
   }, [data?.registrations]);
+
+  const submissionStats = useMemo(() => {
+    let received = 0;
+    let validated = 0;
+    let rejected = 0;
+    for (const s of submissions) {
+      if (s.status === 'validated') validated += 1;
+      else if (s.status === 'rejected') rejected += 1;
+      else received += 1;
+    }
+    return { total: submissions.length, received, validated, rejected };
+  }, [submissions]);
+
+  const filteredSubmissions = useMemo(() => {
+    return submissions.filter((s) => {
+      if (submissionPhaseFilter !== 'all' && s.phaseId !== submissionPhaseFilter) {
+        return false;
+      }
+      if (submissionStatusFilter !== 'all' && s.status !== submissionStatusFilter) {
+        return false;
+      }
+      if (submissionSearch.trim()) {
+        const q = submissionSearch.trim().toLowerCase();
+        return (
+          s.referenceCode.toLowerCase().includes(q) ||
+          s.candidateName.toLowerCase().includes(q) ||
+          s.candidateDepartment.toLowerCase().includes(q) ||
+          (s.fileName || '').toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [submissions, submissionPhaseFilter, submissionStatusFilter, submissionSearch]);
 
   if (!token) {
     return (
@@ -604,6 +908,7 @@ export function GestionPage() {
                 ['actualites', `Actualités (${data.news.length})`],
                 ['parcours', 'Phases'],
                 ['candidats', `Inscrits (${data.registrations.length})`],
+                ['depots', `Dépôts${submissions.length ? ` (${submissions.length})` : ''}`],
                 ['config', 'Paramètres'],
               ] as const
             ).map(([id, label]) => (
@@ -959,6 +1264,77 @@ export function GestionPage() {
                       </>
                     )}
                   </button>
+
+                  {phase.format !== 'En présentiel' && phase.id !== 'phase-3' ? (
+                    <div className="pt-3 border-t border-ucaep-brown/10 space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSubmissionsOpen(phase)}
+                        className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 border transition-colors ${
+                          phase.submissionsOpen
+                            ? 'bg-ucaep-gold text-ucaep-ink border-ucaep-gold'
+                            : 'bg-white text-ucaep-brown border-ucaep-brown/25 hover:bg-ucaep-paper'
+                        }`}
+                      >
+                        <span>
+                          {phase.submissionsOpen
+                            ? 'Dépôts ouverts (cliquer pour fermer)'
+                            : 'Ouvrir les dépôts en ligne'}
+                        </span>
+                      </button>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor={`deadline-${phase.id}`}
+                          className="block text-[11px] font-medium text-ucaep-brown"
+                        >
+                          Date limite de dépôt
+                        </label>
+                        <input
+                          id={`deadline-${phase.id}`}
+                          type="datetime-local"
+                          value={
+                            phaseDeadlines[phase.id] ??
+                            toDateTimeLocalValue(phase.submissionDeadline)
+                          }
+                          onChange={(e) =>
+                            setPhaseDeadlines((prev) => ({
+                              ...prev,
+                              [phase.id]: e.target.value,
+                            }))
+                          }
+                          className="w-full px-3 py-1.5 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSavePhaseDeadline(
+                                phase.id,
+                                phaseDeadlines[phase.id] ?? '',
+                              )
+                            }
+                            className="flex-1 py-1.5 px-2.5 text-[11px] font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
+                          >
+                            Enregistrer la date
+                          </button>
+                          {(phase.submissionDeadline || phaseDeadlines[phase.id]) && (
+                            <button
+                              type="button"
+                              onClick={() => handleSavePhaseDeadline(phase.id, null)}
+                              className="py-1.5 px-2.5 text-[11px] font-medium rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-ucaep-paper"
+                            >
+                              Effacer
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-3 border-t border-ucaep-brown/10 text-[11px] text-ucaep-ink/65">
+                      Épreuve en présentiel sur le campus : aucun dépôt de fichier en ligne.
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1116,6 +1492,392 @@ export function GestionPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ONGLET DÉPÔTS */}
+        {tab === 'depots' && (
+          <div className="space-y-6">
+            {!submissionsStorageReady && (
+              <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 leading-relaxed">
+                Les variables serveur <code className="font-mono font-bold">SUPABASE_URL</code> et{' '}
+                <code className="font-mono font-bold">SUPABASE_SECRET_KEY</code> ne sont pas encore
+                configurées. La génération de liens de téléchargement pour les fichiers sera disponible
+                dès leur ajout.
+              </div>
+            )}
+
+            {submissionsError && (
+              <div className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900">
+                {submissionsError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm">
+                <p className="text-[11px] uppercase tracking-wider text-ucaep-brown/75 font-medium">
+                  Total dépôts
+                </p>
+                <p className="text-3xl font-serif font-bold text-ucaep-brown tabular-nums mt-1">
+                  {submissionStats.total}
+                </p>
+              </div>
+              <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm">
+                <p className="text-[11px] uppercase tracking-wider text-amber-800 font-medium">
+                  Reçus (à relire)
+                </p>
+                <p className="text-3xl font-serif font-bold text-amber-800 tabular-nums mt-1">
+                  {submissionStats.received}
+                </p>
+              </div>
+              <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm">
+                <p className="text-[11px] uppercase tracking-wider text-ucaep-green font-medium">
+                  Validés
+                </p>
+                <p className="text-3xl font-serif font-bold text-ucaep-green tabular-nums mt-1">
+                  {submissionStats.validated}
+                </p>
+              </div>
+              <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm">
+                <p className="text-[11px] uppercase tracking-wider text-red-800 font-medium">
+                  Refusés
+                </p>
+                <p className="text-3xl font-serif font-bold text-red-800 tabular-nums mt-1">
+                  {submissionStats.rejected}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3 flex-1">
+                <div className="relative flex-1 min-w-[210px] max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ucaep-brown/50" />
+                  <input
+                    type="text"
+                    placeholder="Nom, référence, fichier..."
+                    value={submissionSearch}
+                    onChange={(e) => setSubmissionSearch(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2 text-sm border border-ucaep-brown/25 rounded-sm bg-white focus:outline-none focus:border-ucaep-gold"
+                  />
+                </div>
+                <select
+                  aria-label="Filtrer par phase"
+                  value={submissionPhaseFilter}
+                  onChange={(e) => setSubmissionPhaseFilter(e.target.value)}
+                  className="px-3 py-2 text-xs font-medium border border-ucaep-brown/25 rounded-sm bg-white"
+                >
+                  <option value="all">Toutes les phases</option>
+                  {data.phases
+                    .filter((p) => p.format !== 'En présentiel' && p.id !== 'phase-3')
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        Phase {p.number} — {p.title}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  aria-label="Filtrer par statut"
+                  value={submissionStatusFilter}
+                  onChange={(e) => setSubmissionStatusFilter(e.target.value)}
+                  className="px-3 py-2 text-xs font-medium border border-ucaep-brown/25 rounded-sm bg-white"
+                >
+                  <option value="all">Tous les statuts</option>
+                  <option value="received">Reçu</option>
+                  <option value="validated">Validé</option>
+                  <option value="rejected">Refusé</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadSubmissions()}
+                  disabled={submissionsLoading}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${submissionsLoading ? 'animate-spin' : ''}`} />
+                  <span>Actualiser</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={exportSubmissionsCsv}
+                  disabled={!filteredSubmissions.length}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] disabled:opacity-40"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Exporter CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {submissionsLoading && submissions.length === 0 ? (
+              <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/70">
+                Chargement des dépôts en cours...
+              </div>
+            ) : filteredSubmissions.length === 0 ? (
+              <div className="p-8 bg-white border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/70">
+                Aucun dépôt reçu pour ces critères pour le moment.
+              </div>
+            ) : (
+              <div className="overflow-x-auto bg-white border border-ucaep-brown/15 rounded-sm">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-ucaep-brown/15 text-xs uppercase tracking-wider text-ucaep-brown bg-ucaep-paper">
+                    <tr>
+                      <th className="py-3 px-4">Candidat</th>
+                      <th className="py-3 px-4">Phase</th>
+                      <th className="py-3 px-4">Production</th>
+                      <th className="py-3 px-4">Statut</th>
+                      <th className="py-3 px-4">Date</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ucaep-brown/10 tabular-nums">
+                    {filteredSubmissions.map((item) => {
+                      const badge = SUBMISSION_STATUS_META[item.status];
+                      return (
+                        <tr key={item.id} className="hover:bg-ucaep-paper/60 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-ucaep-brown">
+                              {item.candidateName}
+                            </div>
+                            <div className="text-xs text-ucaep-ink/65">
+                              <span className="font-mono">{item.referenceCode}</span> ·{' '}
+                              {item.candidateDepartment}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-xs text-ucaep-brown">
+                            Phase {item.phaseNumber} — {item.phaseTitle}
+                          </td>
+                          <td className="py-3.5 px-4 max-w-xs">
+                            {item.kind === 'file' ? (
+                              <div className="space-y-0.5">
+                                <div className="text-xs font-medium text-ucaep-ink truncate">
+                                  {item.fileName || 'Fichier'}
+                                </div>
+                                <div className="text-[11px] text-ucaep-ink/60">
+                                  {formatFileSize(item.sizeBytes)}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5">
+                                <div className="inline-flex items-center gap-1 text-xs font-medium text-ucaep-brown">
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>Texte écrit</span>
+                                </div>
+                                <p className="text-[11px] text-ucaep-ink/65 line-clamp-2">
+                                  {item.textPreview}
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-block px-2.5 py-0.5 text-[11px] font-semibold border rounded-sm ${badge.badgeClass}`}
+                            >
+                              {badge.label}
+                            </span>
+                            {item.organizerNote && (
+                              <p className="text-[11px] text-ucaep-ink/60 mt-1 line-clamp-1">
+                                Note : {item.organizerNote}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-xs text-ucaep-ink/65">
+                            {formatFrenchDate(item.updatedAt)}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleInspectSubmission(item)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Voir / Évaluer</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* FENÊTRE D'INSPECTION & ÉVALUATION D'UN DÉPÔT */}
+            {inspectingItem && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Dépôt de ${inspectingItem.candidateName}`}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+              >
+                <div className="w-full max-w-3xl bg-white border border-ucaep-brown/20 rounded-sm shadow-2xl overflow-hidden my-8">
+                  <div className="px-6 py-4 bg-ucaep-paper border-b border-ucaep-brown/15 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-ucaep-green">
+                        Phase {inspectingItem.phaseNumber} — {inspectingItem.phaseTitle}
+                      </p>
+                      <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                        {inspectingItem.candidateName} ({inspectingItem.referenceCode})
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInspectingItem(null);
+                        setInspectingAccess(null);
+                      }}
+                      aria-label="Fermer"
+                      className="p-1.5 text-ucaep-brown/70 hover:text-ucaep-brown rounded-sm"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                    {inspectLoading ? (
+                      <div className="py-10 text-center text-sm text-ucaep-ink/70">
+                        Préparation de la lecture sécurisée...
+                      </div>
+                    ) : inspectError ? (
+                      <div className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900">
+                        {inspectError}
+                      </div>
+                    ) : inspectingAccess ? (
+                      <div className="space-y-4">
+                        {inspectingAccess.kind === 'text' ? (
+                          <div className="p-5 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm max-h-96 overflow-y-auto">
+                            <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
+                              {inspectingAccess.textContent}
+                            </p>
+                          </div>
+                        ) : inspectingAccess.signedUrl ? (
+                          <div className="space-y-4">
+                            {inspectingAccess.mimeType?.startsWith('video/') && (
+                              <video
+                                controls
+                                src={inspectingAccess.signedUrl}
+                                className="w-full max-h-[50vh] bg-black rounded-sm"
+                              />
+                            )}
+                            {inspectingAccess.mimeType?.startsWith('audio/') && (
+                              <div className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm">
+                                <audio
+                                  controls
+                                  src={inspectingAccess.signedUrl}
+                                  className="w-full"
+                                />
+                              </div>
+                            )}
+                            {inspectingAccess.mimeType === 'application/pdf' && (
+                              <iframe
+                                title={inspectingAccess.fileName || 'Aperçu PDF'}
+                                src={inspectingAccess.signedUrl}
+                                className="w-full h-96 border border-ucaep-brown/15 rounded-sm"
+                              />
+                            )}
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm">
+                              <div className="text-xs text-ucaep-ink/75">
+                                <span className="font-semibold text-ucaep-brown">
+                                  {inspectingAccess.fileName}
+                                </span>{' '}
+                                · {formatFileSize(inspectingAccess.sizeBytes)} · Lien temporaire
+                                valable 10 minutes
+                              </div>
+                              <a
+                                href={inspectingAccess.signedUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={inspectingAccess.fileName || undefined}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Ouvrir / Télécharger</span>
+                              </a>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {/* VALIDATION & NOTE INTERNE */}
+                    <div className="pt-4 border-t border-ucaep-brown/15 space-y-4">
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="review-note"
+                          className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
+                        >
+                          Note interne (ou motif si refus)
+                        </label>
+                        <textarea
+                          id="review-note"
+                          rows={3}
+                          value={reviewNoteDraft}
+                          onChange={(e) => setReviewNoteDraft(e.target.value)}
+                          placeholder="Observation de l'équipe UCAEP ou du jury..."
+                          className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={reviewSaving}
+                            onClick={() =>
+                              handleUpdateSubmissionReview(inspectingItem.id, {
+                                status: 'validated',
+                                organizerNote: reviewNoteDraft,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Valider</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reviewSaving}
+                            onClick={() =>
+                              handleUpdateSubmissionReview(inspectingItem.id, {
+                                status: 'rejected',
+                                organizerNote: reviewNoteDraft,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Refuser</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reviewSaving}
+                            onClick={() =>
+                              handleUpdateSubmissionReview(inspectingItem.id, {
+                                organizerNote: reviewNoteDraft,
+                              })
+                            }
+                            className="px-4 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                          >
+                            Enregistrer la note
+                          </button>
+                        </div>
+
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold border rounded-sm ${
+                            SUBMISSION_STATUS_META[inspectingItem.status].badgeClass
+                          }`}
+                        >
+                          Statut actuel : {SUBMISSION_STATUS_META[inspectingItem.status].label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

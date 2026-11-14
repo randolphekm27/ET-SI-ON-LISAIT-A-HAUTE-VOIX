@@ -4,6 +4,10 @@ import crypto from 'node:crypto';
 import { asc, desc, eq, or, sql } from 'drizzle-orm';
 import { db, isCloudSqlConfigured } from '../src/db/index.ts';
 import {
+  ensureDatabaseSchemaReady,
+  isSchemaDriftError,
+} from '../src/db/schema-sync.ts';
+import {
   announcements as announcementsTable,
   appSettings as appSettingsTable,
   contactMessages as contactMessagesTable,
@@ -56,17 +60,20 @@ const DEFAULT_STORE: StoreData = {
       number: '01',
       title: 'La Plume',
       shortDescription:
-        "Nous allons commencer par l'écriture et l'expression personnelle, tranquillement depuis chez vous.",
+        "À domicile (Jours 1 à 3) · Notée sur 20 points (phase qualificative). Deux épreuves personnelles sous anonymat : « Je suis… » et « Les mots que l'on n'ose pas dire ». Jusqu'à 5 minutes pour votre présentation.",
       format: 'En ligne',
-      statusLabel: 'À venir',
-      isRevealed: false,
+      statusLabel: 'Ouverte',
+      isRevealed: true,
+      submissionsOpen: false,
+      submissionDeadline: null,
       imageKey: 'plume',
       testDetails: {
-        instructionsTitle: 'Consigne — Phase 01 (Confidentiel)',
-        theme: 'Sujet communiqué uniquement lors du lancement officiel.',
+        instructionsTitle: 'Phase 01 — La Plume : deux textes personnels (jusqu’à 5 min de présentation)',
+        theme: 'Épreuve 1 : « Je suis… » · Épreuve 2 : « Les mots que l’on n’ose pas dire »',
         instructions:
-          'Les consignes exactes et le lien de dépôt seront publiés sur la page Annonces au démarrage de la phase.',
-        submissionNote: 'Dépôt en ligne réservé aux étudiants inscrits.',
+          "Épreuve 1 (« Je suis… ») : ici, vous êtes appelé(e) à vous présenter vraiment, au-delà de votre nom ou de votre filière — racontez votre parcours, vos doutes, vos rêves et ce qui vous anime, dans la forme littéraire qui vous ressemble. Épreuve 2 (« Les mots que l’on n’ose pas dire ») : ici, vous êtes invité(e) à poser sur papier une pensée, une gratitude ou une vérité gardée pour vous, adressée à quelqu’un de réel ou d’imaginaire. Chaque épreuve est notée sur 20 points (Sincérité 6, Qualité de la langue 6, Originalité 5, Cohérence 3). Chaque candidat dispose de jusqu’à 5 minutes pour sa présentation. Les candidats retenus accèdent à la Phase 2.",
+        submissionNote:
+          'Phase qualificative · Dépôt anonyme sous votre code UCAEP · Jusqu’à 5 minutes par présentation.',
       },
     },
     {
@@ -74,17 +81,19 @@ const DEFAULT_STORE: StoreData = {
       number: '02',
       title: 'La Connaissance',
       shortDescription:
-        'Ensuite, nous passerons aux idées, à la lecture et au partage des savoirs.',
+        "À domicile (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves écrites dont les intitulés et sujets seront dévoilés au lancement de cette étape. Jusqu'à 5 minutes pour votre présentation.",
       format: 'En ligne',
       statusLabel: 'Verrouillée',
       isRevealed: false,
+      submissionsOpen: false,
+      submissionDeadline: null,
       imageKey: 'connaissance',
       testDetails: {
-        instructionsTitle: 'Consigne — Phase 02 (Confidentiel)',
-        theme: 'Thématiques communiquées après la Phase 01.',
+        instructionsTitle: 'Consigne — Phase 02 : La Connaissance (phase qualificative)',
+        theme: "La science dans notre quotidien · L'enseignant que je veux devenir",
         instructions:
-          'Le fonctionnement précis de cette étape sera partagé avec les candidats retenus au moment voulu.',
-        submissionNote: 'Accès réservé aux candidats qualifiés.',
+          'Les consignes détaillées des épreuves 3 et 4 seront débloquées au Jour 6 pour les candidats qualifiés après la Phase 1. Jusqu’à 5 minutes pour votre présentation. Notation sur 20 points menant à la sélection des finalistes.',
+        submissionNote: 'Dépôt anonyme · Sélection des finalistes pour la scène.',
       },
     },
     {
@@ -92,17 +101,19 @@ const DEFAULT_STORE: StoreData = {
       number: '03',
       title: "L'Éloquence",
       shortDescription:
-        'Pour terminer, place à la prise de parole et à la rencontre avec le public sur le campus.',
+        "Grande Finale sur scène (Jour 14) · Notée sur 20 points (sans élimination). Deux jours d'ateliers de diction (J12–13) puis deux passages sur scène devant le public. Jusqu'à 5 minutes par présentation.",
       format: 'En présentiel',
       statusLabel: 'Verrouillée',
       isRevealed: false,
+      submissionsOpen: false,
+      submissionDeadline: null,
       imageKey: 'eloquence',
       testDetails: {
-        instructionsTitle: 'Consigne — Finale (Confidentiel)',
-        theme: "Sujets annoncés à l'approche de la finale.",
+        instructionsTitle: "Consigne — Phase 03 : Grande Finale sur scène",
+        theme: "Épreuve 5 : « Un thème, une voix » · Épreuve 6 : « La parole à l'instant »",
         instructions:
-          'Les consignes de passage sur scène seront communiquées après les qualifications.',
-        submissionNote: "Finale en personne à l'ENSET de Lokossa.",
+          'Ateliers de diction et de présence scénique les Jours 12 et 13 avec les finalistes avant le passage devant le jury et le public au Jour 14. Jusqu’à 5 minutes par passage.',
+        submissionNote: "Finale en personne à Lokossa · Remise des attestations.",
       },
     },
   ],
@@ -244,6 +255,7 @@ async function ensureDbSeeded(): Promise<void> {
   if (!seedPromise) {
     seedPromise = (async () => {
       try {
+        await ensureDatabaseSchemaReady();
         const existingPhases = await db
           .select({ id: phasesTable.id })
           .from(phasesTable)
@@ -261,6 +273,8 @@ async function ensureDbSeeded(): Promise<void> {
                 format: p.format,
                 statusLabel: p.statusLabel,
                 isRevealed: p.isRevealed,
+                submissionsOpen: Boolean(p.submissionsOpen),
+                submissionDeadline: p.submissionDeadline ? new Date(p.submissionDeadline) : null,
                 imageKey: p.imageKey,
                 testDetails: p.testDetails || null,
                 sortOrder: idx + 1,
@@ -442,6 +456,12 @@ function mapPhaseRow(row: typeof phasesTable.$inferSelect): CompetitionPhase {
     format: row.format,
     statusLabel: row.statusLabel,
     isRevealed: row.isRevealed,
+    submissionsOpen: Boolean(row.submissionsOpen),
+    submissionDeadline: row.submissionDeadline
+      ? row.submissionDeadline instanceof Date
+        ? row.submissionDeadline.toISOString()
+        : String(row.submissionDeadline)
+      : null,
     imageKey: row.imageKey,
     testDetails: row.testDetails || null,
   };
@@ -517,18 +537,24 @@ export async function readStore(): Promise<StoreData> {
   let lastError: unknown = null;
   const maxAttempts = 3;
 
+  try {
+    await ensureDatabaseSchemaReady();
+  } catch (schemaErr) {
+    console.warn('Vérification initiale du schéma PostgreSQL :', extractErrorDetail(schemaErr));
+  }
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const phaseRows = await db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder));
+      let phaseRows = await db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder));
+      if (phaseRows.length === 0) {
+        await ensureDbSeeded();
+        phaseRows = await db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder));
+      }
       const announcementRows = await db.select().from(announcementsTable).orderBy(desc(announcementsTable.publishedAt));
       const newsRows = await db.select().from(newsArticlesTable).orderBy(desc(newsArticlesTable.publishedAt));
       const registrationRows = await db.select().from(registrationsTable).orderBy(desc(registrationsTable.createdAt));
       const contactRows = await db.select().from(contactMessagesTable).orderBy(desc(contactMessagesTable.createdAt));
       const settingsRows = await db.select().from(appSettingsTable);
-
-      if (phaseRows.length === 0) {
-        ensureDbSeeded().catch(() => {});
-      }
 
       const settingsMap = new Map(
         settingsRows.map((s) => [
@@ -571,9 +597,16 @@ export async function readStore(): Promise<StoreData> {
       return storeData;
     } catch (error) {
       lastError = error;
-      console.warn(`Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`, (error as Error).message);
+      console.warn(
+        `Tentative ${attempt}/${maxAttempts} lecture PostgreSQL échouée:`,
+        extractErrorDetail(error),
+      );
       if (attempt < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (isSchemaDriftError(error)) {
+          await ensureDatabaseSchemaReady(true).catch(() => {});
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
       }
     }
   }
@@ -789,19 +822,47 @@ export async function updatePhaseRecord(
   patch: {
     statusLabel?: CompetitionPhase['statusLabel'];
     isRevealed?: boolean;
+    submissionsOpen?: boolean;
+    submissionDeadline?: string | null;
     testDetails?: Partial<PhaseTestDetails>;
   },
 ): Promise<CompetitionPhase | null> {
+  const parsedDeadline =
+    patch.submissionDeadline === undefined
+      ? undefined
+      : patch.submissionDeadline === null || patch.submissionDeadline === ''
+        ? null
+        : new Date(patch.submissionDeadline);
+
+  if (parsedDeadline instanceof Date && Number.isNaN(parsedDeadline.getTime())) {
+    const err = new Error('La date limite de dépôt est invalide.');
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    throw err;
+  }
+
   if (!isCloudSqlConfigured()) {
     return withJsonStoreLock((store) => {
       const idx = store.phases.findIndex((p) => p.id === id);
       if (idx === -1) return null;
       const current = store.phases[idx];
+      const nextOpen =
+        current.format === 'En présentiel' || current.id === 'phase-3'
+          ? false
+          : typeof patch.submissionsOpen === 'boolean'
+            ? patch.submissionsOpen
+            : Boolean(current.submissionsOpen);
       store.phases[idx] = {
         ...current,
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
+        submissionsOpen: nextOpen,
+        submissionDeadline:
+          parsedDeadline === undefined
+            ? current.submissionDeadline ?? null
+            : parsedDeadline
+              ? parsedDeadline.toISOString()
+              : null,
         testDetails: patch.testDetails
           ? {
               instructionsTitle:
@@ -850,12 +911,22 @@ export async function updatePhaseRecord(
         }
       : current.testDetails;
 
+    const nextOpen =
+      current.format === 'En présentiel' || current.id === 'phase-3'
+        ? false
+        : typeof patch.submissionsOpen === 'boolean'
+          ? patch.submissionsOpen
+          : Boolean(current.submissionsOpen);
+
     const updated = await db
       .update(phasesTable)
       .set({
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
+        submissionsOpen: nextOpen,
+        submissionDeadline:
+          parsedDeadline === undefined ? current.submissionDeadline : parsedDeadline,
         testDetails: nextDetails,
         updatedAt: new Date(),
       })
@@ -878,11 +949,24 @@ export async function updatePhaseRecord(
       const idx = store.phases.findIndex((p) => p.id === id);
       if (idx === -1) return null;
       const current = store.phases[idx];
+      const nextOpen =
+        current.format === 'En présentiel' || current.id === 'phase-3'
+          ? false
+          : typeof patch.submissionsOpen === 'boolean'
+            ? patch.submissionsOpen
+            : Boolean(current.submissionsOpen);
       store.phases[idx] = {
         ...current,
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
+        submissionsOpen: nextOpen,
+        submissionDeadline:
+          parsedDeadline === undefined
+            ? current.submissionDeadline ?? null
+            : parsedDeadline
+              ? parsedDeadline.toISOString()
+              : null,
         testDetails: patch.testDetails
           ? {
               instructionsTitle:
@@ -1146,19 +1230,32 @@ export function sanitizeAnnouncementForPublic(a: Announcement): PublicAnnounceme
 
 export function sanitizePhaseForPublic(phase: CompetitionPhase): CompetitionPhase {
   if (!phase.isRevealed) {
+    const progressiveDescription =
+      phase.id === 'phase-2'
+        ? "À domicile (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves écrites dont les intitulés et sujets seront dévoilés au lancement de cette étape. Jusqu'à 5 minutes pour votre présentation."
+        : phase.id === 'phase-3'
+          ? "Grande Finale sur scène (Jour 14) · Notée sur 20 points (sans élimination). Deux jours d'ateliers de diction (J12–13) puis deux passages sur scène devant le public. Jusqu'à 5 minutes par présentation."
+          : phase.shortDescription;
+
     return {
       id: phase.id,
       number: phase.number,
       title: phase.title,
-      shortDescription: phase.shortDescription,
+      shortDescription: progressiveDescription,
       format: phase.format,
       statusLabel: phase.statusLabel,
       isRevealed: false,
+      submissionsOpen: Boolean(phase.submissionsOpen),
+      submissionDeadline: phase.submissionDeadline ?? null,
       imageKey: phase.imageKey,
       testDetails: null,
     };
   }
-  return phase;
+  return {
+    ...phase,
+    submissionsOpen: Boolean(phase.submissionsOpen),
+    submissionDeadline: phase.submissionDeadline ?? null,
+  };
 }
 
 export function sanitizeNewsForPublic(article: NewsArticle): PublicNewsArticle {

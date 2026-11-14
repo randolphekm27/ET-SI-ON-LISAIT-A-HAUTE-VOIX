@@ -14,6 +14,7 @@ import {
   PolitiqueConfidentialitePage,
 } from './pages/LegalPages';
 import { GestionPage } from './pages/GestionPage';
+import { DepotPage } from './pages/DepotPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
             element={<PolitiqueConfidentialitePage />}
           />
           <Route path="/gestion" element={<GestionPage />} />
+          <Route path="/depot" element={<DepotPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Layout>

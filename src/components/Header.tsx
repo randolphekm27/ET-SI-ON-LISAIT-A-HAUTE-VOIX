@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { fetchApiJson } from '../lib/api';
+import type { CompetitionPhase } from '../types/competition';
 
 const NAV_ITEMS = [
   { to: '/concours', label: 'Le concours', num: '01' },
@@ -30,11 +32,26 @@ export function UcaepMark({ light = false }: { light?: boolean }) {
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hasOpenSubmissions, setHasOpenSubmissions] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
 
   useEffect(() => {
     setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let active = true;
+    fetchApiJson<{ phases: CompetitionPhase[] }>('/api/phases')
+      .then((res) => {
+        if (!active) return;
+        const anyOpen = (res.phases || []).some((p) => Boolean(p.submissionsOpen));
+        setHasOpenSubmissions(anyOpen);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [location.pathname]);
 
   useEffect(() => {
@@ -60,7 +77,7 @@ export function Header() {
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           overDarkHero
-            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#14100E]/92 via-[#14100E]/65 to-transparent text-ucaep-paper'
+            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#341910]/92 via-[#4E2A1E]/65 to-transparent text-ucaep-paper'
             : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
@@ -116,8 +133,20 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Zone 3: 1 primary CTA + mobile drawer button */}
+          {/* Zone 3: Primary CTA (+ Deposit link when a phase is open) + mobile drawer button */}
           <div className="flex items-center gap-3 shrink-0">
+            {hasOpenSubmissions && (
+              <Link
+                to="/depot"
+                className={`hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-semibold tracking-wider uppercase rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
+                  overDarkHero
+                    ? 'border-ucaep-gold/60 text-ucaep-gold hover:bg-ucaep-gold/10'
+                    : 'border-ucaep-green/40 text-ucaep-green hover:bg-ucaep-green/8'
+                }`}
+              >
+                Déposer ma production
+              </Link>
+            )}
             <Link
               to="/inscription"
               className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
@@ -202,7 +231,16 @@ export function Header() {
               </nav>
             </div>
 
-            <div className="pt-8 space-y-4">
+            <div className="pt-8 space-y-3">
+              {hasOpenSubmissions && (
+                <Link
+                  to="/depot"
+                  className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10 transition-colors"
+                >
+                  <span>Déposer ma production</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
               <Link
                 to="/inscription"
                 className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"

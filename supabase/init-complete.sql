@@ -23,11 +23,17 @@ CREATE TABLE IF NOT EXISTS public.competition_phases (
 	format text NOT NULL,
 	status_label text NOT NULL,
 	is_revealed boolean DEFAULT false NOT NULL,
+	submissions_open boolean DEFAULT false NOT NULL,
+	submission_deadline timestamp with time zone,
 	image_key text NOT NULL,
 	test_details jsonb,
 	display_order integer DEFAULT 0 NOT NULL,
 	updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+ALTER TABLE public.competition_phases
+	ADD COLUMN IF NOT EXISTS submissions_open boolean DEFAULT false NOT NULL;
+ALTER TABLE public.competition_phases
+	ADD COLUMN IF NOT EXISTS submission_deadline timestamp with time zone;
 
 -- 3. Table des annonces
 CREATE TABLE IF NOT EXISTS public.announcements (
@@ -106,7 +112,26 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 	updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- 8. Séquence de numérotation pour les références d'inscription (UCAEP-2026-0001)
+-- 8. Table des dépôts de candidatures (fichiers et textes écrits)
+CREATE TABLE IF NOT EXISTS public.submissions (
+	id text PRIMARY KEY NOT NULL,
+	registration_id text NOT NULL REFERENCES public.registrations(id) ON DELETE CASCADE,
+	phase_id text NOT NULL REFERENCES public.competition_phases(id) ON DELETE CASCADE,
+	kind text NOT NULL,
+	storage_path text,
+	file_name text,
+	mime_type text,
+	size_bytes integer,
+	text_content text,
+	status text DEFAULT 'received' NOT NULL,
+	organizer_note text DEFAULT '' NOT NULL,
+	created_at timestamp with time zone DEFAULT now() NOT NULL,
+	updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS submissions_registration_phase_uidx
+	ON public.submissions (registration_id, phase_id);
+
+-- 9. Séquence de numérotation pour les références d'inscription (UCAEP-2026-0001)
 CREATE SEQUENCE IF NOT EXISTS public.registration_ref_seq START WITH 1 INCREMENT BY 1;
 SELECT setval(
   'public.registration_ref_seq',
@@ -114,12 +139,13 @@ SELECT setval(
   false
 );
 
--- 9. Sécurité RLS (Row Level Security)
+-- 10. Sécurité RLS (Row Level Security)
 ALTER TABLE public.users              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.competition_phases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.news_articles      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registrations      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.submissions        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_messages   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_settings      ENABLE ROW LEVEL SECURITY;
 

@@ -9,7 +9,7 @@ export function MentionsLegalesPage() {
   );
 
   return (
-    <div className="py-16 lg:py-24 bg-ucaep-paper">
+    <div className="py-10 lg:py-14 bg-ucaep-paper">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
         <header className="space-y-4 border-b border-ucaep-brown/15 pb-6">
           <EditorialMark folio="Cadre" label="Informations légales" tone="green" />
@@ -76,7 +76,7 @@ export function PolitiqueConfidentialitePage() {
   );
 
   return (
-    <div className="py-16 lg:py-24 bg-ucaep-paper">
+    <div className="py-10 lg:py-14 bg-ucaep-paper">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
         <header className="space-y-4 border-b border-ucaep-brown/15 pb-6">
           <EditorialMark folio="Confidentialité" label="Données personnelles" tone="green" />

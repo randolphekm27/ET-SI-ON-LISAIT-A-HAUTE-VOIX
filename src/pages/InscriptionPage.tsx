@@ -204,7 +204,7 @@ export function InscriptionPage() {
 
             <div className="hidden lg:block text-xs text-ucaep-brown/75 space-y-1.5 leading-relaxed">
               <p className="font-semibold text-ucaep-brown">Participation gratuite</p>
-              <p>Ouvert à toutes les filières de l&apos;ENSET de Lokossa.</p>
+              <p>Ouvert à tous les étudiants, quelle que soit votre filière.</p>
             </div>
           </aside>
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Mail, MapPin, Phone, Send } from 'lucide-react';
+import { BrandPatternSurface } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
@@ -7,7 +8,7 @@ import { usePageSeo } from '../lib/format';
 export function ContactPage() {
   usePageSeo(
     'Contact',
-    "Écrire à l'équipe de l'UCAEP pour toute question sur le concours à l'ENSET de Lokossa.",
+    "Écrire à la Session Théâtre de l'UCAEP pour toute question sur le concours à l'ENSET de Lokossa.",
   );
 
   const [name, setName] = useState('');
@@ -50,14 +51,20 @@ export function ContactPage() {
     <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Correspondance"
-        section="Équipe UCAEP"
+        section="Session Théâtre · UCAEP"
         title="Une question ?"
         italicWord="On peut en discuter."
-        subtitle="Vous souhaitez obtenir une précision sur le concours ? Écrivez-nous, nous vous répondrons dès que possible."
+        subtitle="Vous souhaitez obtenir une précision sur la Phase 1, votre code candidat ou l'organisation à l'ENSET de Lokossa ? Écrivez-nous directement."
       />
 
-      <section className="py-16 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+      <section className="relative py-16 lg:py-24 overflow-hidden">
+        <BrandPatternSurface
+          variant="brown"
+          tileWidth={230}
+          opacityClass="opacity-[0.035]"
+          blendMultiply
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5 space-y-8">
             <div className="space-y-3">
               <EditorialMark folio="Repères" label="Sur le campus" tone="brown" />
@@ -66,7 +73,7 @@ export function ContactPage() {
               </h2>
               <p className="text-sm sm:text-base text-ucaep-ink/75 leading-relaxed">
                 Vous pouvez passer par le formulaire ci-contre ou joindre directement
-                l&apos;équipe organisatrice par téléphone ou par e-mail.
+                l&apos;équipe organisatrice par téléphone, par e-mail ou via nos pages @UCAEP.
               </p>
             </div>
 
@@ -76,13 +83,16 @@ export function ContactPage() {
                   Qui organise ?
                 </dt>
                 <dd className="mt-1.5 font-serif text-xl font-semibold text-ucaep-ink">
-                  UCAEP — Union Culturelle et Artistique des Élèves-Professeurs
+                  Session Théâtre de l&apos;UCAEP — Union Culturelle et Artistique des Élèves-Professeurs
+                </dd>
+                <dd className="mt-1 text-xs text-ucaep-brown/75">
+                  Devise : Créer · Transmettre · Rayonner
                 </dd>
               </div>
 
               <div className="py-5">
                 <dt className="text-xs font-semibold uppercase tracking-widest text-ucaep-brown/70">
-                  Téléphone et e-mail
+                  Téléphones &amp; e-mail
                 </dt>
                 <dd className="mt-2.5 space-y-2.5 text-ucaep-ink">
                   <a
@@ -91,6 +101,13 @@ export function ContactPage() {
                   >
                     <Phone className="w-4 h-4 text-ucaep-gold shrink-0" />
                     <span className="editorial-underline">+229 01 68 62 46 00</span>
+                  </a>
+                  <a
+                    href="tel:+2290196118037"
+                    className="flex items-center gap-2.5 hover:text-ucaep-brown tabular-nums"
+                  >
+                    <Phone className="w-4 h-4 text-ucaep-gold shrink-0" />
+                    <span className="editorial-underline">+229 01 96 11 80 37</span>
                   </a>
                   <a
                     href="mailto:ucaeplokossa@gmail.com"
@@ -104,24 +121,34 @@ export function ContactPage() {
 
               <div className="py-5">
                 <dt className="text-xs font-semibold uppercase tracking-widest text-ucaep-brown/70">
-                  Où nous trouver ?
+                  Campus &amp; réseaux sociaux
                 </dt>
-                <dd className="mt-2 flex items-start gap-2.5 text-ucaep-ink">
-                  <MapPin className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" />
-                  <span>
-                    Campus de l&apos;ENSET de Lokossa
-                    <br />
-                    Lokossa, Département du Mono, Bénin
-                  </span>
+                <dd className="mt-2 space-y-2 text-ucaep-ink">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" />
+                    <span>
+                      ENSET de Lokossa — UNSTIM
+                      <br />
+                      Lokossa, Département du Mono, Bénin
+                    </span>
+                  </div>
+                  <p className="text-xs text-ucaep-brown/75 pl-6">
+                    Facebook · Instagram · YouTube : @UCAEP
+                  </p>
                 </dd>
               </div>
             </dl>
           </div>
 
           <div className="lg:col-span-7">
-            <div className="p-8 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm">
+            <div className="relative overflow-hidden p-8 sm:p-10 bg-white paper-fiber border border-ucaep-brown/15 rounded-sm">
+              <Send
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute -bottom-8 -right-6 w-40 h-40 text-ucaep-brown opacity-[0.04] -rotate-12"
+                strokeWidth={1.1}
+              />
               {status === 'sent' ? (
-                <div className="py-12 text-center space-y-4">
+                <div className="relative z-10 py-12 text-center space-y-4">
                   <CheckCircle2 className="w-8 h-8 text-ucaep-green mx-auto" />
                   <h2 className="font-serif text-4xl font-semibold text-ucaep-brown">
                     C&apos;est envoyé !
@@ -139,7 +166,7 @@ export function ContactPage() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
                   <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
                     Nous laisser un message
                   </h2>
@@ -167,7 +194,7 @@ export function ContactPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -183,7 +210,7 @@ export function ContactPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -201,7 +228,7 @@ export function ContactPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -218,7 +245,7 @@ export function ContactPage() {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 

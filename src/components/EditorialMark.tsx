@@ -1,4 +1,9 @@
 import type { ReactNode } from 'react';
+import {
+  BrandPatternBand,
+  BrandPatternCircle,
+  BrandPatternWave,
+} from './BrandPattern';
 
 interface EditorialMarkProps {
   label?: string;
@@ -41,6 +46,7 @@ export function PageFolioHeader({
   italicWord,
   subtitle,
   aside,
+  patternVariant = 'gold',
 }: {
   folio?: string;
   section: string;
@@ -48,10 +54,29 @@ export function PageFolioHeader({
   italicWord?: string;
   subtitle: string;
   aside?: ReactNode;
+  patternVariant?: 'brown' | 'green' | 'gold';
 }) {
   return (
-    <section className="relative py-20 lg:py-28 border-b border-ucaep-brown/12 bg-ucaep-paper">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative pt-8 pb-12 sm:pt-10 sm:pb-14 lg:pt-12 lg:pb-16 border-b border-ucaep-brown/12 bg-ucaep-paper paper-grain overflow-hidden">
+      <BrandPatternBand
+        variant={patternVariant}
+        tileWidth={135}
+        blendMultiply
+        className="h-2.5 opacity-60 border-b border-ucaep-brown/10 absolute top-0 inset-x-0"
+      />
+      <BrandPatternCircle
+        variant={patternVariant}
+        tileWidth={135}
+        blendMultiply
+        className="hidden md:block absolute -top-20 -right-16 w-56 h-56 opacity-[0.075]"
+      />
+      <BrandPatternWave
+        variant={patternVariant}
+        tileWidth={165}
+        opacity={0.08}
+        className="absolute bottom-0 inset-x-0 h-16"
+      />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-end">
           <div className="lg:col-span-8 space-y-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">

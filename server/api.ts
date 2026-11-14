@@ -16,11 +16,23 @@ import {
   updatePhaseRecord,
   updateSettingsRecord,
 } from './store.ts';
+import {
+  completeCandidateSubmission,
+  enforceSubmissionRateLimit,
+  getAdminSubmissionAccess,
+  getCandidateSubmissionStatus,
+  initCandidateSubmission,
+  isSubmissionHttpError,
+  listAdminSubmissions,
+  updateAdminSubmissionReview,
+} from './submissions.ts';
 import type {
   MediaAssetKey,
   NewsArticle,
   PublicationStatus,
   RegistrationPayload,
+  SubmissionKind,
+  SubmissionStatus,
 } from '../src/types/competition';
 
 function normalizeCode(raw: string): string {
@@ -28,24 +40,22 @@ function normalizeCode(raw: string): string {
 }
 
 function getOrganizerCodes(): string[] {
-  const envVal = process.env.ORGANIZER_ACCESS_CODE || 'UCAEP-LOKOSSA-2026';
-  const list = envVal
+  const envVal = (process.env.ORGANIZER_ACCESS_CODE || '').trim();
+  if (!envVal) return [];
+  return envVal
     .split(',')
     .map((c) => c.trim())
     .filter(Boolean);
-  if (!list.some((c) => normalizeCode(c) === 'UCAEPLOKOSSA2026')) {
-    list.push('UCAEP-LOKOSSA-2026');
-  }
-  return list;
 }
 
 function isOrganizerCodeValid(inputCode: string): boolean {
+  const codes = getOrganizerCodes();
+  if (codes.length === 0) return false;
   if (!inputCode || typeof inputCode !== 'string') return false;
   const trimmed = inputCode.trim();
   if (!trimmed) return false;
   const inputUpper = trimmed.toUpperCase();
   const inputNorm = normalizeCode(trimmed);
-  const codes = getOrganizerCodes();
 
   for (const expected of codes) {
     const expectedTrimmed = expected.trim();
@@ -58,32 +68,38 @@ function isOrganizerCodeValid(inputCode: string): boolean {
   return false;
 }
 
-function getTokenSecret(): string {
+function getTokenSecret(): string | null {
   const codes = getOrganizerCodes();
-  const seed = codes[0] || 'ucaep-static-auth-secret';
+  if (codes.length === 0) return null;
   return crypto
     .createHash('sha256')
-    .update(`ucaep-session:${seed}`)
+    .update(`ucaep-session:${codes[0]}`)
     .digest('hex');
 }
 
 function createAdminToken(): string {
+  const secret = getTokenSecret();
+  if (!secret) {
+    throw new Error('ORGANIZER_ACCESS_CODE non configuré.');
+  }
   const payload = Buffer.from(
     JSON.stringify({ iat: Date.now(), nonce: crypto.randomBytes(8).toString('hex') }),
   ).toString('base64url');
   const sig = crypto
-    .createHmac('sha256', getTokenSecret())
+    .createHmac('sha256', secret)
     .update(payload)
     .digest('base64url');
   return `${payload}.${sig}`;
 }
 
 function verifyAdminToken(token: string): boolean {
+  const secret = getTokenSecret();
+  if (!secret) return false;
   const parts = token.split('.');
   if (parts.length !== 2) return false;
   const [payload, sig] = parts;
   const expected = crypto
-    .createHmac('sha256', getTokenSecret())
+    .createHmac('sha256', secret)
     .update(payload)
     .digest('base64url');
   if (sig.length !== expected.length) return false;
@@ -376,6 +392,102 @@ export function registerApiRoutes(app: express.Express) {
     }
   });
 
+  // Public API: Candidate Submissions (direct-to-storage signed upload & text submission)
+  const extractClientIp = (req: express.Request): string => {
+    const xff = req.headers['x-forwarded-for'];
+    if (typeof xff === 'string' && xff.trim()) {
+      return xff.split(',')[0].trim();
+    }
+    return req.ip || 'unknown';
+  };
+
+  app.post('/api/submissions/status', async (req, res) => {
+    try {
+      const { referenceCode, email } = (req.body || {}) as {
+        referenceCode?: string;
+        email?: string;
+      };
+      enforceSubmissionRateLimit(extractClientIp(req), referenceCode);
+      const result = await getCandidateSubmissionStatus({
+        referenceCode: referenceCode || '',
+        email: email || '',
+      });
+      res.json(result);
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Impossible de vérifier votre dossier pour le moment.' });
+    }
+  });
+
+  app.post('/api/submissions/init', async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        referenceCode?: string;
+        email?: string;
+        phaseId?: string;
+        kind?: SubmissionKind;
+        fileName?: string;
+        mimeType?: string;
+        sizeBytes?: number;
+      };
+      enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
+      const result = await initCandidateSubmission({
+        referenceCode: body.referenceCode || '',
+        email: body.email || '',
+        phaseId: body.phaseId || '',
+        kind: body.kind || 'file',
+        fileName: body.fileName,
+        mimeType: body.mimeType,
+        sizeBytes: body.sizeBytes,
+      });
+      res.json(result);
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Impossible de préparer votre dépôt pour le moment.' });
+    }
+  });
+
+  app.post('/api/submissions/complete', async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        referenceCode?: string;
+        email?: string;
+        phaseId?: string;
+        kind?: SubmissionKind;
+        storagePath?: string;
+        fileName?: string;
+        mimeType?: string;
+        sizeBytes?: number;
+        textContent?: string;
+      };
+      enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
+      const submission = await completeCandidateSubmission({
+        referenceCode: body.referenceCode || '',
+        email: body.email || '',
+        phaseId: body.phaseId || '',
+        kind: body.kind || 'file',
+        storagePath: body.storagePath,
+        fileName: body.fileName,
+        mimeType: body.mimeType,
+        sizeBytes: body.sizeBytes,
+        textContent: body.textContent,
+      });
+      res.status(201).json({ ok: true, submission });
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: "Impossible d'enregistrer votre dépôt pour le moment." });
+    }
+  });
+
   // Organizer CMS Auth (access code)
   app.post('/api/admin/auth', (req, res) => {
     const configuredCodes = getOrganizerCodes();
@@ -474,12 +586,14 @@ export function registerApiRoutes(app: express.Express) {
     }
   });
 
-  // Organizer CMS: Update Phase Reveal & Status
+  // Organizer CMS: Update Phase Reveal, Status & Submissions Settings
   app.patch('/api/admin/phases/:id', requireAdmin, async (req, res) => {
     try {
       const updated = await updatePhaseRecord(String(req.params.id), {
         statusLabel: req.body.statusLabel,
         isRevealed: req.body.isRevealed,
+        submissionsOpen: req.body.submissionsOpen,
+        submissionDeadline: req.body.submissionDeadline,
         testDetails: req.body.testDetails,
       });
       if (!updated) {
@@ -488,8 +602,61 @@ export function registerApiRoutes(app: express.Express) {
       }
       res.json({ phase: updated });
     } catch (error) {
-      const err = error as Error;
-      res.status(500).json({ error: err.message || 'Mise à jour impossible.' });
+      const err = error as Error & { statusCode?: number };
+      res
+        .status(err.statusCode || 500)
+        .json({ error: err.message || 'Mise à jour impossible.' });
+    }
+  });
+
+  // Organizer CMS: Candidate Submissions List, Signed Download URL & Review
+  app.get('/api/admin/submissions', requireAdmin, async (req, res) => {
+    try {
+      const phaseId =
+        typeof req.query.phaseId === 'string' ? req.query.phaseId : undefined;
+      const status =
+        typeof req.query.status === 'string' ? req.query.status : undefined;
+      const result = await listAdminSubmissions({ phaseId, status });
+      res.json(result);
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Impossible de charger les dépôts.' });
+    }
+  });
+
+  app.get('/api/admin/submissions/:id/download', requireAdmin, async (req, res) => {
+    try {
+      const access = await getAdminSubmissionAccess(String(req.params.id));
+      res.json(access);
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Impossible de préparer la lecture du dépôt.' });
+    }
+  });
+
+  app.patch('/api/admin/submissions/:id', requireAdmin, async (req, res) => {
+    try {
+      const { status, organizerNote } = (req.body || {}) as {
+        status?: SubmissionStatus;
+        organizerNote?: string;
+      };
+      const updated = await updateAdminSubmissionReview(String(req.params.id), {
+        status,
+        organizerNote,
+      });
+      res.json({ submission: updated });
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Mise à jour du dépôt impossible.' });
     }
   });
 

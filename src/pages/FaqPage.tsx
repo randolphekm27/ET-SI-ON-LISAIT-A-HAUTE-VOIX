@@ -1,45 +1,70 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Feather, MessageCircleQuestion, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import {
+  BrandPatternCircle,
+  BrandPatternSurface,
+  BrandPatternWave,
+} from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { usePageSeo } from '../lib/format';
 
 const FAQ_ITEMS = [
   {
-    q: 'Qui peut participer ?',
-    a: "Le concours est ouvert à toutes les étudiantes et à tous les étudiants inscrits à l'ENSET de Lokossa, quelle que soit votre filière ou votre année d'études.",
+    q: 'Qui peut participer au concours ?',
+    a: "Le concours est ouvert à tous les étudiants, quelle que soit votre filière ou votre année d'études. Aucune expérience préalable en théâtre, poésie ou prise de parole n'est demandée.",
   },
   {
-    q: "Est-ce que c'est gratuit ?",
-    a: 'Oui, la participation est entièrement gratuite du début à la fin.',
+    q: "Est-ce que l'inscription est gratuite ?",
+    a: "Oui, la participation est 100 % gratuite du début à la fin. Il suffit de remplir le formulaire en ligne pour obtenir votre numéro d'anonymat.",
   },
   {
-    q: "Comment s'inscrire ?",
-    a: "Il suffit de remplir le formulaire sur la page S'inscrire avant le vendredi 20 novembre 2026.",
+    q: 'En quoi consiste exactement la Phase 1 (La Plume) ?',
+    a: "La Phase 1 compte deux épreuves personnelles notées sur 20 points : l'épreuve 1 « Je suis… » (ici, vous êtes appelé(e) à vous présenter vraiment au-delà de votre nom ou filière, sous forme de poème, prose, monologue ou récit) et l'épreuve 2 « Les mots que l'on n'ose pas dire » (ici, vous êtes invité(e) à confier au papier une vérité, une gratitude ou une émotion gardée pour vous).",
   },
   {
-    q: 'Comment se déroulent les phases ?',
-    a: "Le concours avance en trois étapes : 01. La Plume (en ligne), 02. La Connaissance (en ligne) et 03. L'Éloquence (en présentiel à l'ENSET de Lokossa).",
+    q: 'Combien de temps dure la présentation ?',
+    a: "Chaque candidat dispose de jusqu'à 5 minutes pour sa présentation. Vous pouvez envoyer vos productions au format PDF, Word, audio, vidéo ou directement en texte saisi depuis la page Dépôt candidat.",
   },
   {
-    q: 'Quand les épreuves seront-elles dévoilées ?',
-    a: 'Nous publions les consignes étape par étape sur la page Annonces, au moment où chaque phase démarre.',
+    q: 'Puis-je utiliser des expressions en langues nationales ?',
+    a: "Les textes sont rédigés en français, mais l'usage de mots, proverbes ou expressions en langues nationales béninoises est tout à fait autorisé s'il sert votre propos et enrichit votre texte.",
   },
   {
-    q: 'Comment envoyer les vidéos ?',
-    a: "Si une étape demande une vidéo, nous vous indiquerons comment l'envoyer (format, durée et lien de dépôt) dès le lancement de l'épreuve.",
+    q: "Le plagiat ou l'intelligence artificielle sont-ils tolérés ?",
+    a: "Non. Tous les textes doivent être personnels, originaux et inédits. Tout plagiat ou texte généré par intelligence artificielle entraîne l'élimination immédiate — le jury se réserve aussi le droit d'en vérifier la maîtrise à l'oral.",
   },
   {
-    q: 'Comment se déroule la finale ?',
-    a: "La finale se tient en présentiel à l'ENSET de Lokossa devant un jury et le public étudiant. Nous partagerons l'organisation pratique après les phases en ligne.",
+    q: 'Comment fonctionne la notation et y a-t-il des éliminations à chaque phase ?',
+    a: "Chaque phase possède ses propres notes sur 20 points. La Phase 1 et la Phase 2 sont qualificatives : les candidats ayant obtenu les meilleurs résultats passent à l'étape suivante. La Phase 3 (Grande Finale sur scène) est notée sur 20 points sans élimination en cours de soirée.",
+  },
+  {
+    q: 'Qui compose le jury et comment garantit-il l’équité ?',
+    a: "Un jury mixte de 6 à 8 membres (enseignants littéraires et scientifiques de l'ENSET, représentants de la Session Théâtre UCAEP et personnalité culturelle) corrige vos écrits en double lecture anonyme, sous votre seul code candidat.",
+  },
+  {
+    q: 'Que reçoit chaque participant ?',
+    a: "Chaque étudiant participant reçoit une attestation officielle de la Session Théâtre de l'UCAEP et une invitation à la Grande Finale sur le campus.",
+  },
+  {
+    q: 'Peut-on demander une vérification en cas d’erreur sur une note ?',
+    a: "Oui. Les résultats paraissent d'abord sous numéro d'anonymat puis par nom, et chaque candidat dispose d'un délai écrit de 24 heures pour signaler toute erreur matérielle de report ou de calcul.",
+  },
+  {
+    q: 'Que font les finalistes avant et pendant la Grande Finale (Jour 14) ?',
+    a: "Les finalistes profitent de deux jours d'ateliers de diction, de lecture expressive et de répétitions (Jours 12 et 13). Le Jour 14 sur scène, ils passent les épreuves finales qui leur seront révélées progressivement après la Phase 2, dans la limite de 5 minutes par passage.",
+  },
+  {
+    q: 'Comment m’inscrire et suivre les annonces ?',
+    a: "Remplissez le formulaire sur la page S'inscrire en deux minutes avant le vendredi 20 novembre 2026 pour obtenir votre code de référence UCAEP. Toutes les dates d'ouverture et résultats sont publiés sur la page Annonces.",
   },
 ];
 
 export function FaqPage() {
   usePageSeo(
     'FAQ',
-    "Réponses rapides aux questions sur le concours UCAEP « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.",
+    "Réponses complètes aux questions sur le concours UCAEP « Et si on lisait à haute voix ? » : Phase 1, durée de présentation (5 minutes), jury et inscription ouverte à tous les étudiants.",
   );
 
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -48,30 +73,66 @@ export function FaqPage() {
     <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Index"
-        section="En pratique"
+        section="En pratique · 12 réponses"
         title="Vous vous posez peut-être"
         italicWord="ces questions."
-        subtitle="L'essentiel pour savoir comment ça se passe et comment participer."
+        subtitle="L'essentiel sur la Phase 1, les 5 minutes de présentation, la correction anonyme et le déroulement sur trois semaines."
       />
 
-      <section className="py-16 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+      <section className="relative py-16 lg:py-24 overflow-hidden">
+        <BrandPatternSurface
+          variant="gold"
+          tileWidth={230}
+          opacityClass="opacity-[0.035]"
+          blendMultiply
+        />
+        <BrandPatternCircle
+          variant="brown"
+          tileWidth={130}
+          blendMultiply
+          className="hidden lg:block absolute -top-16 -right-16 w-56 h-56 opacity-[0.07]"
+        />
+        <BrandPatternWave
+          variant="brown"
+          tileWidth={170}
+          opacity={0.08}
+          className="absolute bottom-0 inset-x-0 h-20"
+        />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 h-fit">
-            <EditorialMark folio="07 questions" label="Repères" tone="brown" />
-            <p className="font-serif italic text-2xl text-ucaep-brown leading-snug">
-              « Pas besoin d&apos;avoir déjà fait de la scène pour se lancer. »
-            </p>
-            <div className="p-6 bg-ucaep-linen/70 border border-ucaep-brown/14 rounded-sm space-y-3">
-              <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+            <EditorialMark folio="12 repères" label="Questions fréquentes" tone="brown" />
+
+            <div className="relative overflow-hidden p-6 bg-white border border-ucaep-brown/14 rounded-sm space-y-3 paper-fiber">
+              <Feather
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
+                strokeWidth={1.25}
+              />
+              <p className="relative z-10 font-serif italic text-2xl text-ucaep-brown leading-snug">
+                « Pas besoin d&apos;avoir déjà fait de la scène pour se lancer. »
+              </p>
+              <p className="relative z-10 text-xs text-ucaep-ink/75 leading-relaxed">
+                Les deux premières phases se préparent calmement chez vous, avec jusqu&apos;à
+                5 minutes pour votre présentation.
+              </p>
+            </div>
+
+            <div className="relative overflow-hidden p-6 bg-ucaep-linen/80 paper-grain border border-ucaep-brown/14 rounded-sm space-y-3">
+              <MessageCircleQuestion
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
+                strokeWidth={1.25}
+              />
+              <h2 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown">
                 Vous avez une autre question ?
               </h2>
-              <p className="text-sm text-ucaep-ink/75 leading-relaxed">
-                Écrivez directement à l&apos;équipe de l&apos;UCAEP, on vous répondra dès
+              <p className="relative z-10 text-sm text-ucaep-ink/75 leading-relaxed">
+                Écrivez directement à l&apos;équipe de la Session Théâtre UCAEP, on vous répondra dès
                 que possible.
               </p>
               <Link
                 to="/contact"
-                className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
+                className="relative z-10 group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
               >
                 <span className="editorial-underline">Nous écrire</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -80,9 +141,10 @@ export function FaqPage() {
           </aside>
 
           <div className="lg:col-span-8">
-            <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15">
+            <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15 bg-ucaep-paper/85">
               {FAQ_ITEMS.map((item, idx) => {
                 const isOpen = openIndex === idx;
+                const displayIdx = String(idx + 1).padStart(2, '0');
                 return (
                   <div key={item.q}>
                     <button
@@ -93,7 +155,7 @@ export function FaqPage() {
                     >
                       <div className="flex items-baseline gap-5">
                         <span className="font-serif text-xl sm:text-2xl text-ucaep-gold tabular-nums shrink-0">
-                          0{idx + 1}
+                          {displayIdx}
                         </span>
                         <span className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors">
                           {item.q}
@@ -115,7 +177,7 @@ export function FaqPage() {
                           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className="pb-6 pl-9 sm:pl-11 pr-6 text-base text-ucaep-ink/80 leading-relaxed max-w-2xl">
+                          <div className="pb-6 pl-9 sm:pl-11 pr-6 text-base text-ucaep-ink/82 leading-relaxed max-w-2xl">
                             {item.a}
                           </div>
                         </motion.div>

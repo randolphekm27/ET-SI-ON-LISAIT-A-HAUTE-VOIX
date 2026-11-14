@@ -22,6 +22,10 @@ export interface Announcement {
 
 export type PublicAnnouncement = Omit<Announcement, 'status' | 'scheduledAt'>;
 
+export type SubmissionStatus = 'received' | 'validated' | 'rejected';
+
+export type SubmissionKind = 'file' | 'text';
+
 export interface PhaseTestDetails {
   instructionsTitle: string;
   theme: string;
@@ -37,8 +41,72 @@ export interface CompetitionPhase {
   format: 'En ligne' | 'En présentiel';
   statusLabel: 'À venir' | 'Ouverte' | 'En cours' | 'Verrouillée' | 'Clôturée';
   isRevealed: boolean;
+  submissionsOpen?: boolean;
+  submissionDeadline?: string | null;
   imageKey: MediaAssetKey;
   testDetails?: PhaseTestDetails | null;
+}
+
+export interface CandidateSubmissionSummary {
+  id: string;
+  phaseId: string;
+  kind: SubmissionKind;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  textExcerpt?: string | null;
+  textContent?: string | null;
+  status: SubmissionStatus;
+  organizerNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmissionPublicPhaseStatus {
+  id: string;
+  number: string;
+  title: string;
+  format: 'En ligne' | 'En présentiel';
+  statusLabel: CompetitionPhase['statusLabel'];
+  isRevealed: boolean;
+  submissionsOpen: boolean;
+  submissionDeadline: string | null;
+  acceptingNow: boolean;
+  closedReason: string | null;
+  testDetails: PhaseTestDetails | null;
+  existingSubmission: CandidateSubmissionSummary | null;
+}
+
+export interface AdminSubmissionItem {
+  id: string;
+  registrationId: string;
+  referenceCode: string;
+  candidateName: string;
+  candidateDepartment: string;
+  candidateStudyLevel: string;
+  phaseId: string;
+  phaseNumber: string;
+  phaseTitle: string;
+  kind: SubmissionKind;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  textPreview: string | null;
+  status: SubmissionStatus;
+  organizerNote: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSubmissionAccess {
+  id: string;
+  kind: SubmissionKind;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  signedUrl: string | null;
+  expiresInSeconds: number | null;
+  textContent: string | null;
 }
 
 export interface NewsArticle {

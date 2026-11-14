@@ -46,7 +46,7 @@ export function ConfirmationInscriptionPage() {
   }
 
   return (
-    <div className="py-20 lg:py-28 bg-ucaep-paper">
+    <div className="py-10 lg:py-14 bg-ucaep-paper">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 space-y-8">
         <div className="p-8 sm:p-12 border border-ucaep-green/25 bg-white rounded-sm space-y-7">
           <div className="flex items-center justify-between gap-4">
@@ -114,6 +114,12 @@ export function ConfirmationInscriptionPage() {
             >
               <span>Voir les annonces</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+            <Link
+              to={`/depot?ref=${encodeURIComponent(state.referenceCode)}`}
+              className="editorial-underline text-sm font-semibold text-ucaep-green"
+            >
+              Espace de dépôt candidat
             </Link>
             <Link
               to="/parcours"

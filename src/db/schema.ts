@@ -7,12 +7,15 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import type {
   MediaAssetKey,
   NewsArticle,
   PhaseTestDetails,
   PublicationStatus,
+  SubmissionKind,
+  SubmissionStatus,
 } from '../types/competition';
 
 export const users = pgTable('users', {
@@ -35,6 +38,8 @@ export const phases = pgTable('competition_phases', {
     .$type<'À venir' | 'Ouverte' | 'En cours' | 'Verrouillée' | 'Clôturée'>()
     .notNull(),
   isRevealed: boolean('is_revealed').notNull().default(false),
+  submissionsOpen: boolean('submissions_open').notNull().default(false),
+  submissionDeadline: timestamp('submission_deadline', { withTimezone: true }),
   imageKey: text('image_key').$type<MediaAssetKey>().notNull(),
   testDetails: jsonb('test_details').$type<PhaseTestDetails | null>(),
   sortOrder: integer('display_order').notNull().default(0),
@@ -102,6 +107,35 @@ export const registrations = pgTable('registrations', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
+export const submissions = pgTable(
+  'submissions',
+  {
+    id: text('id').primaryKey(),
+    registrationId: text('registration_id')
+      .notNull()
+      .references(() => registrations.id, { onDelete: 'cascade' }),
+    phaseId: text('phase_id')
+      .notNull()
+      .references(() => phases.id, { onDelete: 'cascade' }),
+    kind: text('kind').$type<SubmissionKind>().notNull(),
+    storagePath: text('storage_path'),
+    fileName: text('file_name'),
+    mimeType: text('mime_type'),
+    sizeBytes: integer('size_bytes'),
+    textContent: text('text_content'),
+    status: text('status').$type<SubmissionStatus>().notNull().default('received'),
+    organizerNote: text('organizer_note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('submissions_registration_phase_uidx').on(
+      table.registrationId,
+      table.phaseId,
+    ),
+  ],
+);
+
 export const contactMessages = pgTable('contact_messages', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -122,9 +156,25 @@ export const usersRelations = relations(users, ({ many }) => ({
   registrations: many(registrations),
 }));
 
-export const registrationsRelations = relations(registrations, ({ one }) => ({
+export const registrationsRelations = relations(registrations, ({ one, many }) => ({
   user: one(users, {
     fields: [registrations.userUid],
     references: [users.uid],
+  }),
+  submissions: many(submissions),
+}));
+
+export const phasesRelations = relations(phases, ({ many }) => ({
+  submissions: many(submissions),
+}));
+
+export const submissionsRelations = relations(submissions, ({ one }) => ({
+  registration: one(registrations, {
+    fields: [submissions.registrationId],
+    references: [registrations.id],
+  }),
+  phase: one(phases, {
+    fields: [submissions.phaseId],
+    references: [phases.id],
   }),
 }));

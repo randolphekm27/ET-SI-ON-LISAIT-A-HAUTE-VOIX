@@ -24,8 +24,21 @@ export function isCloudSqlConfigured(): boolean {
   return Boolean(
     url &&
       !url.includes('[VOTRE_MOT_DE_PASSE') &&
-      !url.includes('[YOUR-PASSWORD]'),
+      !url.includes('[YOUR-PASSWORD]') &&
+      !url.includes('placeholder'),
   );
+}
+
+function resolveSslOption(connectionString: string): boolean | { rejectUnauthorized: false } {
+  if (!connectionString) return false;
+  if (
+    connectionString.includes('sslmode=disable') ||
+    connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1')
+  ) {
+    return false;
+  }
+  return { rejectUnauthorized: false };
 }
 
 export const createPool = () => {
@@ -33,7 +46,7 @@ export const createPool = () => {
     const connectionString = getCleanDatabaseUrl();
     global._postgresPool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
+      ssl: resolveSslOption(connectionString),
       max: process.env.VERCEL ? 1 : 5,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 10000,
