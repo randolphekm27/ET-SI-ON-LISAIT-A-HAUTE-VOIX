@@ -22,7 +22,7 @@ export function NotFoundPage() {
         <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
           <Link
             to="/"
-            className="group inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors"
+            className="btn-tactile group inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
           >
             <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
             <span>Revenir à l&apos;accueil</span>

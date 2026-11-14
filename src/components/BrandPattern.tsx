@@ -104,6 +104,7 @@ export function BrandPatternCircle({
   blendMultiply = false,
   ring = true,
   doubleRing = false,
+  orbit = false,
   className = '',
 }: {
   variant?: PatternVariant;
@@ -111,6 +112,7 @@ export function BrandPatternCircle({
   blendMultiply?: boolean;
   ring?: boolean;
   doubleRing?: boolean;
+  orbit?: boolean;
   className?: string;
 }) {
   const hasExplicitPosition =
@@ -123,7 +125,9 @@ export function BrandPatternCircle({
       } ${className}`}
     >
       <div
-        className={`w-full h-full rounded-full ${blendMultiply ? 'mix-blend-multiply' : ''}`}
+        className={`w-full h-full rounded-full ${blendMultiply ? 'mix-blend-multiply' : ''} ${
+          orbit ? 'animate-orbit-slow' : ''
+        }`}
         style={{
           backgroundImage: `url(${PATTERN_SRC[variant]})`,
           backgroundRepeat: 'repeat',

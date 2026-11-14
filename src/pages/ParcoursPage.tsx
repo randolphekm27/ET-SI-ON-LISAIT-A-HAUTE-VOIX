@@ -152,19 +152,24 @@ export function ParcoursPage() {
         title="Voici comment"
         italicWord="on va avancer."
         subtitle="Toutes les consignes et le barème de la Phase 1 (La Plume) sont déjà visibles ici pour vous préparer sereinement. Chaque candidat dispose de jusqu'à 5 minutes pour sa présentation."
+        quickFacts={[
+          { label: 'Phase 1', value: 'Visible dès maintenant' },
+          { label: 'Phases 2 & 3', value: 'Révélées en cours de route' },
+          { label: 'Présentation', value: "Jusqu'à 5 minutes" },
+          { label: 'Notation', value: 'Sur 20 points / phase' },
+        ]}
       />
 
       {loading ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-          <div className="h-24 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
-          <div className="h-96 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-20 space-y-8">
+          <div className="h-24 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
+          <div className="h-96 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
         </div>
       ) : (
         <>
           {/* DESKTOP: Horizontal 3-Chapter Progression Rail + Atmospheric Stage */}
           <section className="hidden lg:block py-16 lg:py-20 bg-ucaep-paper">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-              {/* Horizontal progression selector */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
               <div
                 role="tablist"
                 aria-label="Chapitres du parcours"
@@ -187,7 +192,9 @@ export function ParcoursPage() {
                       <div className="flex items-baseline justify-between gap-4">
                         <span
                           className={`font-serif text-5xl font-semibold tabular-nums leading-none transition-colors ${
-                            isActive ? 'text-ucaep-gold' : 'text-ucaep-brown/35 group-hover:text-ucaep-gold'
+                            isActive
+                              ? 'text-ucaep-gold'
+                              : 'text-ucaep-brown/35 group-hover:text-ucaep-gold'
                           }`}
                         >
                           {phase.number}
@@ -212,7 +219,6 @@ export function ParcoursPage() {
                 })}
               </div>
 
-              {/* Active Horizontal Atmospheric Stage */}
               {activePhase && (
                 <AnimatePresence mode="wait">
                   <motion.article
@@ -220,8 +226,8 @@ export function ParcoursPage() {
                     initial={{ opacity: 0, x: 18 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -18 }}
-                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                    className={`relative overflow-hidden rounded-sm border ${activeStyle.border} ${activeStyle.bg} ${activeStyle.text} p-10 lg:p-12 transition-colors`}
+                    transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+                    className={`relative overflow-hidden rounded-[2px] border ${activeStyle.border} ${activeStyle.bg} ${activeStyle.text} p-10 lg:p-12 transition-colors`}
                   >
                     <BrandPatternEdge
                       variant={activeStyle.patternVariant}
@@ -230,7 +236,7 @@ export function ParcoursPage() {
                     />
                     <div className="grid grid-cols-12 gap-12 items-center">
                       <div className="col-span-6">
-                        <div className="aspect-4/3 overflow-hidden rounded-sm bg-black/15">
+                        <div className="aspect-4/3 overflow-hidden rounded-[2px] bg-black/15 border border-ucaep-gold/20">
                           <EditorialImage assetKey={activePhase.imageKey} />
                         </div>
                       </div>
@@ -264,18 +270,19 @@ export function ParcoursPage() {
                           mutedColor={activeStyle.muted}
                         />
 
-                        {/* Prev / Next chapter progression buttons */}
-                        <div className={`pt-4 border-t ${activeStyle.border} flex items-center justify-between`}>
+                        <div
+                          className={`pt-4 border-t ${activeStyle.border} flex items-center justify-between`}
+                        >
                           <button
                             type="button"
                             onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
                             disabled={activeIdx === 0}
-                            className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest disabled:opacity-30 transition-opacity ${activeStyle.heading}`}
+                            className={`group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest disabled:opacity-30 transition-opacity ${activeStyle.heading}`}
                           >
-                            <ArrowLeft className="w-4 h-4" />
+                            <ArrowLeft className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
                             <span>Chapitre précédent</span>
                           </button>
-                          <span className={`text-xs tabular-nums ${activeStyle.muted}`}>
+                          <span className={`font-mono text-xs tabular-nums ${activeStyle.muted}`}>
                             0{activeIdx + 1} / 0{phases.length}
                           </span>
                           <button
@@ -284,10 +291,10 @@ export function ParcoursPage() {
                               setActiveIdx((i) => Math.min(phases.length - 1, i + 1))
                             }
                             disabled={activeIdx === phases.length - 1}
-                            className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest disabled:opacity-30 transition-opacity ${activeStyle.heading}`}
+                            className={`group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest disabled:opacity-30 transition-opacity ${activeStyle.heading}`}
                           >
                             <span>Chapitre suivant</span>
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-0.5" />
                           </button>
                         </div>
                       </div>
@@ -298,7 +305,7 @@ export function ParcoursPage() {
             </div>
           </section>
 
-          {/* MOBILE / TABLET: Deliberate Vertical Chapter Progression */}
+          {/* MOBILE / TABLET: Vertical Chapter Progression */}
           <section className="lg:hidden divide-y divide-ucaep-brown/15">
             {phases.map((phase, idx) => {
               const style = PHASE_ATMOSPHERES[idx % PHASE_ATMOSPHERES.length];
@@ -313,12 +320,14 @@ export function ParcoursPage() {
                       <span className="font-serif text-5xl font-semibold text-ucaep-gold tabular-nums leading-none">
                         {phase.number}
                       </span>
-                      <span className={`text-xs font-semibold uppercase tracking-widest ${style.muted}`}>
+                      <span
+                        className={`text-xs font-semibold uppercase tracking-widest ${style.muted}`}
+                      >
                         {phase.format} · {isPhaseOne ? 'Consignes visibles' : phase.statusLabel}
                       </span>
                     </div>
 
-                    <div className="aspect-4/3 overflow-hidden rounded-sm bg-black/15">
+                    <div className="aspect-4/3 overflow-hidden rounded-[2px] bg-black/15">
                       <EditorialImage assetKey={phase.imageKey} />
                     </div>
 
@@ -364,9 +373,10 @@ export function ParcoursPage() {
           tileWidth={130}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -bottom-24 -right-16 w-64 h-64 opacity-[0.09]"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6" data-reveal>
             <div className="space-y-3 max-w-2xl">
               <EditorialMark
@@ -375,7 +385,7 @@ export function ParcoursPage() {
                 tone="green"
               />
               <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-                Tout savoir sur <em className="italic font-medium text-ucaep-brown">la Phase 1 : La Plume</em>
+                Tout savoir sur <em className="italic font-normal text-ucaep-brown">la Phase 1 : La Plume</em>
               </h2>
             </div>
             <div className="text-xs sm:text-sm text-ucaep-brown/80 space-y-1 tabular-nums">
@@ -386,11 +396,10 @@ export function ParcoursPage() {
             </div>
           </div>
 
-          {/* Two large Épreuve Cards in direct, warm 2nd-person voice */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <article
               data-reveal
-              className="group relative overflow-hidden rounded-sm border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
+              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
             >
               <Feather
                 aria-hidden="true"
@@ -409,28 +418,29 @@ export function ParcoursPage() {
                 « Je suis… »
               </h3>
               <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/82 leading-relaxed">
-                Ici, vous êtes appelé(e) à vous présenter vraiment, au-delà de votre nom, de votre
-                âge ou de votre filière. Racontez qui vous êtes au fond : votre parcours, vos rêves,
-                vos contradictions, vos difficultés et la façon dont vous regardez le monde.
+                Ici, vous êtes appelé(e) à vous présenter vraiment,{' '}
+                <strong className="font-semibold text-ucaep-brown">
+                  au-delà de votre nom, de votre âge ou de votre filière
+                </strong>
+                . Racontez qui vous êtes au fond : votre parcours, vos rêves, vos contradictions, vos difficultés et la façon dont vous regardez le monde.
               </p>
-              <div className="relative z-10 p-4 rounded-sm bg-ucaep-linen/75 border border-ucaep-brown/12 space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ucaep-brown">
+              <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
                   Question pour vous guider
                 </p>
                 <p className="font-serif italic text-lg text-ucaep-ink">
                   « Qui suis-je réellement, au-delà de ce que les autres voient de moi ? »
                 </p>
               </div>
-              <p className="relative z-10 text-xs text-ucaep-brown/75 leading-relaxed">
-                <strong>Formes possibles :</strong> poème, prose poétique, monologue intérieur, récit
-                autobiographique ou portrait littéraire.
+              <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
+                <strong>Formes possibles :</strong> poème, prose poétique, monologue intérieur, récit autobiographique ou portrait littéraire.
               </p>
             </article>
 
             <article
               data-reveal
               data-reveal-delay="0.08"
-              className="group relative overflow-hidden rounded-sm border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
+              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
             >
               <MessageSquareQuote
                 aria-hidden="true"
@@ -449,30 +459,30 @@ export function ParcoursPage() {
                 « Les mots que l&apos;on n&apos;ose pas dire »
               </h3>
               <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/82 leading-relaxed">
-                Ici, vous êtes invité(e) à poser sur papier une pensée, une émotion ou une vérité que
-                vous gardez d&apos;habitude pour vous par pudeur, peur, fierté ou respect : un regret,
-                une gratitude jamais dite, une blessure ou une question restée sans réponse.
+                Ici, vous êtes invité(e) à poser sur papier{' '}
+                <strong className="font-semibold text-ucaep-brown">
+                  une pensée, une émotion ou une vérité gardée pour vous
+                </strong>{' '}
+                par pudeur, peur, fierté ou respect : un regret, une gratitude jamais dite, une blessure ou une question restée sans réponse.
               </p>
-              <div className="relative z-10 p-4 rounded-sm bg-ucaep-linen/75 border border-ucaep-brown/12 space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ucaep-brown">
+              <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
                   Ce que le jury regarde
                 </p>
                 <p className="font-serif italic text-lg text-ucaep-ink">
                   Pas de phrases compliquées à tout prix : juste un texte vrai, sincère et bien construit.
                 </p>
               </div>
-              <p className="relative z-10 text-xs text-ucaep-brown/75 leading-relaxed">
-                <strong>Formes possibles :</strong> lettre jamais envoyée, monologue, confession, poème,
-                récit ou message adressé à une personne réelle ou imaginaire.
+              <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
+                <strong>Formes possibles :</strong> lettre jamais envoyée, monologue, confession, poème, récit ou message adressé à une personne réelle ou imaginaire.
               </p>
             </article>
           </div>
 
-          {/* Rubric + Modalities & Qualification */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <article
               data-reveal
-              className="lg:col-span-5 group relative overflow-hidden rounded-sm border border-ucaep-brown/16 bg-white paper-fiber p-7 sm:p-8 space-y-5"
+              className="lg:col-span-5 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-white paper-fiber p-7 sm:p-8 space-y-5"
             >
               <Scale
                 aria-hidden="true"
@@ -491,22 +501,21 @@ export function ParcoursPage() {
                 {PHASE_1_RUBRIC.map((item) => (
                   <div key={item.label} className="py-3 flex items-center justify-between gap-4">
                     <dt className="text-ucaep-ink/85">{item.label}</dt>
-                    <dd className="font-serif text-xl font-semibold text-ucaep-brown shrink-0">
+                    <dd className="font-mono text-lg font-semibold text-ucaep-brown shrink-0">
                       {item.points}
                     </dd>
                   </div>
                 ))}
               </dl>
               <p className="relative z-10 text-xs text-ucaep-brown/75 leading-relaxed">
-                Chaque copie porte uniquement votre numéro de référence anonyme et passe entre
-                les mains de deux correcteurs du jury.
+                Chaque copie porte uniquement votre numéro de référence anonyme et passe entre les mains de deux correcteurs du jury.
               </p>
             </article>
 
             <article
               data-reveal
               data-reveal-delay="0.06"
-              className="lg:col-span-7 group relative overflow-hidden rounded-sm border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-8 space-y-5"
+              className="lg:col-span-7 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-8 space-y-5"
             >
               <BrandPatternSurface
                 variant="green"
@@ -517,6 +526,7 @@ export function ParcoursPage() {
                 variant="gold"
                 tileWidth={120}
                 ring={false}
+                orbit
                 className="hidden sm:block absolute -top-12 -right-12 w-36 h-36 opacity-20"
               />
               <Award
@@ -533,24 +543,20 @@ export function ParcoursPage() {
                 </h3>
               </div>
               <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
-                <div className="p-4 rounded-sm bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
+                <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
                   <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
                     Votre présentation
                   </p>
                   <p>
-                    Chaque candidat dispose de <strong>jusqu&apos;à 5 minutes</strong> pour sa
-                    présentation. Rédigez en français (touches de langues nationales béninoises
-                    possibles), de façon 100 % personnelle.
+                    Chaque candidat dispose de <strong>jusqu&apos;à 5 minutes</strong> pour sa présentation. Rédigez en français (touches de langues nationales béninoises possibles), de façon 100 % personnelle.
                   </p>
                 </div>
-                <div className="p-4 rounded-sm bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
+                <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
                   <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
                     Suite &amp; attestation
                   </p>
                   <p>
-                    La Phase 1 est <strong>qualificative</strong> : les candidats retenus poursuivent
-                    en Phase 2. Chaque inscrit reçoit son attestation de participation et son invitation
-                    à la Finale.
+                    La Phase 1 est <strong>qualificative</strong> : les candidats retenus poursuivent en Phase 2. Chaque inscrit reçoit son attestation de participation et son invitation à la Finale.
                   </p>
                 </div>
               </div>
@@ -558,19 +564,19 @@ export function ParcoursPage() {
                 {candidateSession ? (
                   <Link
                     to="/depot"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors"
+                    className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                   >
                     <span>Accéder à mon dossier ({candidateSession.referenceCode})</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
                   </Link>
                 ) : (
                   <>
                     <Link
                       to="/inscription"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors"
+                      className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                     >
                       <span>M&apos;inscrire pour recevoir mon code</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
                     </Link>
                     {hasOpenDeposits && (
                       <Link
@@ -602,13 +608,14 @@ export function ParcoursPage() {
           tileWidth={135}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -top-20 -right-16 w-56 h-56 opacity-[0.08]"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
             <EditorialMark folio="La suite du parcours" label="Phases 02 & 03" tone="brown" />
             <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Ce qui vous attend <em className="italic font-medium text-ucaep-brown">après La Plume</em>
+              Ce qui vous attend <em className="italic font-normal text-ucaep-brown">après La Plume</em>
             </h2>
           </div>
 
@@ -616,7 +623,7 @@ export function ParcoursPage() {
             {/* PHASE 02 CARD */}
             <article
               data-reveal
-              className="group relative overflow-hidden rounded-sm border border-ucaep-brown/15 bg-white p-8 space-y-4"
+              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
             >
               <BookOpen
                 aria-hidden="true"
@@ -678,7 +685,7 @@ export function ParcoursPage() {
             <article
               data-reveal
               data-reveal-delay="0.08"
-              className="group relative overflow-hidden rounded-sm border border-ucaep-brown/15 bg-white p-8 space-y-4"
+              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
             >
               <Mic2
                 aria-hidden="true"
@@ -751,13 +758,14 @@ export function ParcoursPage() {
           variant="brown"
           tileWidth={140}
           blendMultiply
+          orbit
           className="hidden lg:block absolute -bottom-24 -left-16 w-64 h-64 opacity-[0.07]"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
             <EditorialMark folio="Organisation" label="Calendrier en 3 semaines" tone="green" />
             <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Le rythme <em className="italic font-medium text-ucaep-brown">du concours</em>
+              Le rythme <em className="italic font-normal text-ucaep-brown">du concours</em>
             </h2>
           </div>
 
@@ -769,18 +777,18 @@ export function ParcoursPage() {
                   key={week.step}
                   data-reveal
                   data-reveal-delay={String(idx * 0.06)}
-                  className="group relative overflow-hidden rounded-sm border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-4"
+                  className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-4"
                 >
                   <Icon
                     aria-hidden="true"
-                    className="pointer-events-none select-none absolute -bottom-6 -right-5 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12"
+                    className="pointer-events-none select-none absolute -bottom-6 -right-5 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
                     strokeWidth={1.25}
                   />
                   <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/12 pb-3">
                     <span className="font-serif text-2xl font-semibold text-ucaep-brown">
                       {week.step}
                     </span>
-                    <span className="text-xs font-semibold text-ucaep-gold tabular-nums inline-flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums inline-flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" aria-hidden="true" />
                       {week.span}
                     </span>
@@ -809,7 +817,7 @@ export function ParcoursPage() {
           doubleWave
           className="absolute bottom-0 inset-x-0 h-14"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="space-y-1.5">
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
               Envie de suivre la suite ?
@@ -822,7 +830,7 @@ export function ParcoursPage() {
             {candidateSession ? (
               <Link
                 to="/depot"
-                className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors whitespace-nowrap shrink-0"
+                className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] whitespace-nowrap shrink-0"
               >
                 <span>Mon espace dépôt</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -832,7 +840,7 @@ export function ParcoursPage() {
                 {hasOpenDeposits && (
                   <Link
                     to="/depot"
-                    className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors whitespace-nowrap shrink-0"
+                    className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] whitespace-nowrap shrink-0"
                   >
                     <span>Déposer ma production</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -840,7 +848,7 @@ export function ParcoursPage() {
                 )}
                 <Link
                   to="/inscription"
-                  className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+                  className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
                 >
                   <span>Je m&apos;inscris</span>
                   <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -849,7 +857,7 @@ export function ParcoursPage() {
             )}
             <Link
               to="/annonces"
-              className="px-5 py-3 text-sm font-medium rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors whitespace-nowrap shrink-0"
+              className="px-5 py-3 text-sm font-medium rounded-[2px] border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors whitespace-nowrap shrink-0"
             >
               Voir les annonces
             </Link>
@@ -888,7 +896,8 @@ function PhaseDetailsBlock({
         ? 'Épreuve 1 : « Je suis… » · Épreuve 2 : « Les mots que l’on n’ose pas dire »'
         : '';
   const instructions =
-    phase.testDetails?.instructions && !phase.testDetails.instructions.includes('seront publiés sur la page Annonces')
+    phase.testDetails?.instructions &&
+    !phase.testDetails.instructions.includes('seront publiés sur la page Annonces')
       ? phase.testDetails.instructions
       : isPhaseOne
         ? "Épreuve 1 : ici, vous êtes appelé(e) à vous présenter vraiment, au-delà de votre nom ou de votre filière. Épreuve 2 : ici, vous êtes invité(e) à confier au papier ce que l'on n'ose pas dire d'habitude. Chaque épreuve est notée sur 20 points avec jusqu'à 5 minutes pour votre présentation."
@@ -902,7 +911,9 @@ function PhaseDetailsBlock({
   return (
     <div className="space-y-4">
       {phase.submissionsOpen && (
-        <div className={`p-5 ${sealBg} border border-ucaep-gold/60 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
+        <div
+          className={`p-5 ${sealBg} border border-ucaep-gold/60 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
+        >
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-gold">
               Dépôts en ligne ouverts
@@ -915,7 +926,7 @@ function PhaseDetailsBlock({
           </div>
           <Link
             to="/depot"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors whitespace-nowrap shrink-0"
+            className="btn-tactile inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
           >
             <span>Déposer ma production</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -924,20 +935,18 @@ function PhaseDetailsBlock({
       )}
 
       {revealed ? (
-        <div className={`p-6 ${sealBg} border border-ucaep-gold/60 rounded-sm space-y-2.5`}>
+        <div className={`p-6 ${sealBg} border border-ucaep-gold/60 rounded-[2px] space-y-2.5`}>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ucaep-gold">
             <Unlock className="w-3.5 h-3.5" />
             <span>Consignes disponibles</span>
           </div>
-          <h3 className={`font-serif text-2xl font-semibold ${headingColor}`}>
-            {title}
-          </h3>
+          <h3 className={`font-serif text-2xl font-semibold ${headingColor}`}>{title}</h3>
           {theme && <p className="text-sm font-medium">{theme}</p>}
           {instructions && <p className="text-sm opacity-90 leading-relaxed">{instructions}</p>}
           {note && <p className={`text-xs pt-1 ${mutedColor}`}>{note}</p>}
         </div>
       ) : (
-        <div className={`p-5 ${sealBg} border ${border} rounded-sm flex items-start gap-3.5`}>
+        <div className={`p-5 ${sealBg} border ${border} rounded-[2px] flex items-start gap-3.5`}>
           <Lock className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
           <div className="space-y-1">
             <p className={`text-sm font-semibold ${headingColor}`}>

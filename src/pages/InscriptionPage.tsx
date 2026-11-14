@@ -193,7 +193,7 @@ export function InscriptionPage() {
             blendMultiply
           />
           <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
-            <div className="p-8 sm:p-10 bg-white border border-ucaep-green/25 rounded-sm space-y-6">
+            <div className="art-card p-8 sm:p-10 bg-white border border-ucaep-green/25 rounded-[2px] space-y-6">
               <div className="flex items-center justify-between gap-4">
                 <EditorialMark folio="Confirmé" label="Déjà inscrit(e)" tone="green" />
                 <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
@@ -216,7 +216,7 @@ export function InscriptionPage() {
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <Link
                   to="/depot"
-                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                  className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                 >
                   <span>Accéder à mon espace dépôt</span>
                   <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -254,6 +254,12 @@ export function InscriptionPage() {
         title="S'inscrire"
         italicWord="au concours"
         subtitle="C'est gratuit et ouvert à tous les étudiants jusqu'au vendredi 20 novembre 2026. Cela vous prendra deux minutes."
+        quickFacts={[
+          { label: 'Durée du formulaire', value: '2 minutes' },
+          { label: 'Frais', value: '100 % gratuit' },
+          { label: 'Code anonyme', value: 'Délivré immédiatement' },
+          { label: 'Date limite', value: '20 novembre 2026' },
+        ]}
       />
 
       <section className="relative py-12 lg:py-20 bg-ucaep-paper paper-fiber overflow-hidden">
@@ -268,6 +274,7 @@ export function InscriptionPage() {
           tileWidth={135}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -bottom-24 -left-16 w-64 h-64 opacity-[0.08]"
         />
         <BrandPatternWave

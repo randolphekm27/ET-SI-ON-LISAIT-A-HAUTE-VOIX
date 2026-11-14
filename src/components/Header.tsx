@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 
 export function UcaepMark({ light = false }: { light?: boolean }) {
   return (
-    <span className="inline-flex items-center whitespace-nowrap shrink-0">
+    <span className="inline-flex items-center whitespace-nowrap shrink-0 transition-transform duration-200 hover:scale-[1.02]">
       <img
         src={
           light
@@ -79,7 +79,7 @@ export function Header() {
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           overDarkHero
-            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#341910]/92 via-[#4E2A1E]/65 to-transparent text-ucaep-paper'
+            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#2B140C]/92 via-[#4E2A1E]/60 to-transparent text-ucaep-paper'
             : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
@@ -111,10 +111,10 @@ export function Header() {
                     overDarkHero
                       ? isActive
                         ? 'text-ucaep-ivory font-semibold'
-                        : 'text-ucaep-paper/78 hover:text-ucaep-ivory'
+                        : 'text-ucaep-paper/80 hover:text-ucaep-ivory'
                       : isActive
                         ? 'text-ucaep-brown font-semibold'
-                        : 'text-ucaep-ink/72 hover:text-ucaep-brown'
+                        : 'text-ucaep-ink/75 hover:text-ucaep-brown'
                   }`
                 }
               >
@@ -135,13 +135,13 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Zone 3: Primary CTA (Switches to Mon espace dépôt once registered) + mobile drawer button */}
+          {/* Zone 3: Strictly 1 Primary Action + Mobile Drawer Toggle */}
           <div className="flex items-center gap-3 shrink-0">
             {candidateSession ? (
               <Link
                 to="/depot"
                 title={`Dossier ${candidateSession.referenceCode}`}
-                className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
+                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] whitespace-nowrap shrink-0 group ${
                   overDarkHero
                     ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
                     : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
@@ -151,31 +151,17 @@ export function Header() {
                 <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             ) : (
-              <>
-                {hasOpenSubmissions && (
-                  <Link
-                    to="/depot"
-                    className={`hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-semibold tracking-wider uppercase rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
-                      overDarkHero
-                        ? 'border-ucaep-gold/60 text-ucaep-gold hover:bg-ucaep-gold/10'
-                        : 'border-ucaep-green/40 text-ucaep-green hover:bg-ucaep-green/8'
-                    }`}
-                  >
-                    Déposer ma production
-                  </Link>
-                )}
-                <Link
-                  to="/inscription"
-                  className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
-                    overDarkHero
-                      ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
-                      : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
-                  }`}
-                >
-                  <span>S&apos;inscrire</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </Link>
-              </>
+              <Link
+                to="/inscription"
+                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] whitespace-nowrap shrink-0 group ${
+                  overDarkHero
+                    ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                    : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
+                }`}
+              >
+                <span>S&apos;inscrire</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
             )}
 
             <button
@@ -183,7 +169,7 @@ export function Header() {
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-              className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-sm transition-colors ${
+              className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-sm transition-colors active:scale-95 ${
                 overDarkHero
                   ? 'text-ucaep-paper hover:bg-white/10'
                   : 'text-ucaep-brown hover:bg-ucaep-brown/8'
@@ -209,15 +195,15 @@ export function Header() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
                 Sommaire · ENSET Lokossa
               </p>
-              <nav aria-label="Menu mobile" className="divide-y divide-white/10 border-t border-b border-white/10">
-                <Link
-                  to="/"
-                  className="flex items-baseline justify-between py-4 group"
-                >
+              <nav
+                aria-label="Menu mobile"
+                className="divide-y divide-white/10 border-t border-b border-white/10"
+              >
+                <Link to="/" className="flex items-baseline justify-between py-4 group">
                   <span className="font-serif text-3xl font-medium text-ucaep-paper group-hover:text-ucaep-gold transition-colors">
                     Accueil
                   </span>
-                  <span className="text-xs tabular-nums text-ucaep-gold/75">00</span>
+                  <span className="font-mono text-xs tabular-nums text-ucaep-gold/75">00</span>
                 </Link>
                 {NAV_ITEMS.map((item, idx) => (
                   <motion.div
@@ -241,7 +227,7 @@ export function Header() {
                       }
                     >
                       <span className="font-serif text-3xl font-medium">{item.label}</span>
-                      <span className="text-xs tabular-nums text-ucaep-ivory/55">
+                      <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
                         {item.num}
                       </span>
                     </NavLink>
@@ -261,7 +247,7 @@ export function Header() {
                   </p>
                   <Link
                     to="/depot"
-                    className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                    className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                   >
                     <span>Mon espace dépôt</span>
                     <ArrowRight className="w-4 h-4" />
@@ -272,7 +258,7 @@ export function Header() {
                   {hasOpenSubmissions && (
                     <Link
                       to="/depot"
-                      className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10 transition-colors"
+                      className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10"
                     >
                       <span>Déposer ma production</span>
                       <ArrowRight className="w-4 h-4" />
@@ -280,7 +266,7 @@ export function Header() {
                   )}
                   <Link
                     to="/inscription"
-                    className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                    className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                   >
                     <span>Je m&apos;inscris au concours</span>
                     <ArrowRight className="w-4 h-4" />

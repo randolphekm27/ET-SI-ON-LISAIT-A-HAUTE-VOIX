@@ -23,6 +23,7 @@ import {
   createAnnouncementViaSupabaseRest,
   createNewsViaSupabaseRest,
   isNetworkOrDnsError,
+  isPgFallbackEligibleError,
   markPreferSupabaseRest,
   markRegistrationSyncedViaSupabaseRest,
   readStoreViaSupabaseRest,
@@ -604,7 +605,7 @@ export async function readStore(): Promise<StoreData> {
   try {
     await ensureDatabaseSchemaReady();
   } catch (schemaErr) {
-    if (isNetworkOrDnsError(schemaErr) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(schemaErr) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       const restData = await readStoreViaSupabaseRest(getDefaultStoreSlices());
       cachedStore = restData;
@@ -667,7 +668,7 @@ export async function readStore(): Promise<StoreData> {
       return storeData;
     } catch (error) {
       lastError = error;
-      if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+      if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
         markPreferSupabaseRest();
         const restData = await readStoreViaSupabaseRest(getDefaultStoreSlices());
         cachedStore = restData;
@@ -799,7 +800,7 @@ export async function createAnnouncementRecord(input: {
 
     return mapAnnouncementRow(inserted[0]);
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return createAnnouncementViaSupabaseRest(restInput);
     }
@@ -903,7 +904,7 @@ export async function updateAnnouncementRecord(
 
     return updated[0] ? mapAnnouncementRow(updated[0]) : null;
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return updateAnnouncementViaSupabaseRest(id, patch);
     }
@@ -1101,7 +1102,7 @@ export async function updatePhaseRecord(
     }
 
     if (isSupabaseAdminConfigured()) {
-      if (isNetworkOrDnsError(error)) {
+      if (isPgFallbackEligibleError(error)) {
         markPreferSupabaseRest();
       }
       return updatePhaseViaSupabaseRest(id, {
@@ -1255,7 +1256,7 @@ export async function createNewsRecord(input: {
 
     return mapNewsRow(inserted[0]);
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return createNewsViaSupabaseRest(restInput);
     }
@@ -1358,7 +1359,7 @@ export async function updateNewsRecord(
 
     return updated[0] ? mapNewsRow(updated[0]) : null;
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return updateNewsViaSupabaseRest(id, {
         title: patch.title,
@@ -1422,7 +1423,7 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
       officialEmail: 'ucaeplokossa@gmail.com',
     };
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return updateSettingsViaSupabaseRest(cleanUrl);
     }
@@ -1785,7 +1786,7 @@ export async function saveRegistration(
 
     return record;
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return saveRegistrationViaRestFlow(payload, normalizedEmail, normalizedMatricule);
     }
@@ -1900,7 +1901,7 @@ export async function saveContactMessage(
 
     return record;
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return saveContactViaSupabaseRest(payload);
     }

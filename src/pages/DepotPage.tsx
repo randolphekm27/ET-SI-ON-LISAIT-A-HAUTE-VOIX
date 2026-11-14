@@ -55,15 +55,15 @@ const SUBMISSION_STATUS_BADGE: Record<
 > = {
   received: {
     label: 'Reçu',
-    className: 'bg-amber-50 text-amber-900 border-amber-300',
+    className: 'text-amber-800',
   },
   validated: {
     label: 'Validé par le jury',
-    className: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+    className: 'text-ucaep-green',
   },
   rejected: {
     label: 'À reprendre',
-    className: 'bg-red-50 text-red-900 border-red-300',
+    className: 'text-red-800',
   },
 };
 
@@ -398,11 +398,18 @@ export function DepotPage() {
   return (
     <div className="bg-ucaep-paper min-h-screen">
       <PageFolioHeader
-        section="Espace candidat · Dépôt"
+        folio="Dépôt"
+        section="Espace candidat · Production"
         title="Déposer votre"
         italicWord="production"
         subtitle="Retrouvez votre dossier à l’aide de votre code de référence et de votre adresse e-mail, puis envoyez votre texte, votre audio, votre vidéo ou votre document."
         patternVariant="green"
+        quickFacts={[
+          { label: 'Identifiant', value: 'Code UCAEP + E-mail' },
+          { label: 'Durée max', value: "Jusqu'à 5 minutes" },
+          { label: 'Formats', value: 'PDF · Word · Audio · Vidéo · Texte' },
+          { label: 'Taille limite', value: '50 Mo max' },
+        ]}
       />
 
       <section className="relative py-14 lg:py-20 bg-ucaep-paper paper-fiber overflow-hidden">
@@ -417,6 +424,7 @@ export function DepotPage() {
           tileWidth={135}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -bottom-24 -right-16 w-64 h-64 opacity-[0.08]"
         />
         <BrandPatternWave
@@ -587,8 +595,8 @@ export function DepotPage() {
                             {phase.number}
                           </span>
                           {phase.acceptingNow ? (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-ucaep-green/12 text-ucaep-green rounded-sm">
-                              Dépôts ouverts
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-ucaep-green">
+                              · Dépôts ouverts
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ucaep-brown/60">
@@ -616,9 +624,9 @@ export function DepotPage() {
                         )}
 
                         {existingBadge && (
-                          <div className="pt-1">
+                          <div className="pt-1 border-t border-ucaep-brown/10">
                             <span
-                              className={`inline-block px-2 py-0.5 text-[10px] font-semibold border rounded-sm ${existingBadge.className}`}
+                              className={`text-[11px] font-semibold uppercase tracking-wider ${existingBadge.className}`}
                             >
                               Dépôt : {existingBadge.label}
                             </span>
@@ -671,11 +679,11 @@ export function DepotPage() {
                           </div>
                         </div>
                         <span
-                          className={`self-start px-3 py-1 text-xs font-semibold border rounded-sm ${
+                          className={`self-start text-xs font-semibold uppercase tracking-wider ${
                             SUBMISSION_STATUS_BADGE[displayedSubmission.status].className
                           }`}
                         >
-                          {SUBMISSION_STATUS_BADGE[displayedSubmission.status].label}
+                          Statut : {SUBMISSION_STATUS_BADGE[displayedSubmission.status].label}
                         </span>
                       </div>
 

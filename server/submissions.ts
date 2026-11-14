@@ -34,7 +34,7 @@ import {
   getPhaseByIdViaSupabaseRest,
   getSubmissionByIdViaSupabaseRest,
   getSubmissionForCandidatePhaseViaSupabaseRest,
-  isNetworkOrDnsError,
+  isPgFallbackEligibleError,
   listAdminSubmissionsViaSupabaseRest,
   listPhasesViaSupabaseRest,
   markPreferSupabaseRest,
@@ -207,7 +207,7 @@ async function withDbMode<T>(handlers: {
         err = retryErr;
       }
     }
-    if (isNetworkOrDnsError(err) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(err) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return handlers.rest();
     }
@@ -222,7 +222,7 @@ async function assertDatabaseReady(): Promise<void> {
   try {
     await ensureDatabaseSchemaReady();
   } catch (err) {
-    if (isNetworkOrDnsError(err) && isSupabaseAdminConfigured()) {
+    if (isPgFallbackEligibleError(err) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
       return;
     }

@@ -151,6 +151,49 @@ export function isNetworkOrDnsError(err: unknown, depth = 0): boolean {
   return false;
 }
 
+export function isPgFallbackEligibleError(err: unknown, depth = 0): boolean {
+  if (isNetworkOrDnsError(err, depth)) return true;
+  if (!err || typeof err !== 'object' || depth > 4) return false;
+  const e = err as {
+    code?: unknown;
+    message?: unknown;
+    cause?: unknown;
+    originalError?: unknown;
+    errors?: unknown[];
+  };
+  const code = String(e.code || '').toUpperCase();
+  const msg = String(e.message || '').toLowerCase();
+  if (
+    [
+      '28P01', // password authentication failed
+      '28000', // invalid authorization specification
+      'XX000', // Supabase pooler tenant/user not found / internal auth
+      '3D000', // invalid catalog name
+      '08001', // sqlclient unable to establish sqlconnection
+      '08006', // connection failure
+      '57P01', // admin shutdown
+      '57P03', // cannot connect now
+    ].includes(code)
+  ) {
+    return true;
+  }
+  if (
+    msg.includes('password authentication failed') ||
+    msg.includes('tenant or user not found') ||
+    msg.includes('no pg_hba.conf entry') ||
+    msg.includes('connection terminated unexpectedly') ||
+    msg.includes('remaining connection slots are reserved')
+  ) {
+    return true;
+  }
+  if (e.cause && isPgFallbackEligibleError(e.cause, depth + 1)) return true;
+  if (e.originalError && isPgFallbackEligibleError(e.originalError, depth + 1)) return true;
+  if (Array.isArray(e.errors)) {
+    return e.errors.some((nested) => isPgFallbackEligibleError(nested, depth + 1));
+  }
+  return false;
+}
+
 function mapPhaseFromRest(row: Record<string, any>): CompetitionPhase {
   return {
     id: String(row.id),

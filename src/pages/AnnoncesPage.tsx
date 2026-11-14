@@ -59,7 +59,7 @@ function AnnouncementsFeedView() {
         section="En direct de l'équipe"
         title="On vous tient"
         italicWord="au courant."
-        subtitle="Les informations concernant le concours seront publiées ici. Certaines choses seront dévoilées progressivement, alors pensez à revenir régulièrement."
+        subtitle="Les informations officielles concernant le concours sont publiées ici, au fil du lancement de chaque étape."
       />
 
       <section className="relative py-16 lg:py-24 bg-ucaep-paper paper-fiber overflow-hidden">
@@ -74,6 +74,7 @@ function AnnouncementsFeedView() {
           tileWidth={135}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -bottom-24 -left-16 w-60 h-60 opacity-[0.08]"
         />
         <BrandPatternWave
@@ -83,18 +84,18 @@ function AnnouncementsFeedView() {
           doubleWave
           className="absolute bottom-0 inset-x-0 h-16"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
           {loading ? (
             <div className="space-y-8">
               {[1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-64 rounded-sm bg-ucaep-ivory/30 animate-pulse border border-ucaep-brown/10"
+                  className="h-64 rounded-[2px] bg-ucaep-ivory/30 animate-pulse border border-ucaep-brown/10"
                 />
               ))}
             </div>
           ) : announcements.length === 0 ? (
-            <div className="p-12 border border-ucaep-brown/15 rounded-sm bg-ucaep-linen/40 text-center space-y-3">
+            <div className="p-12 border border-ucaep-brown/15 rounded-[2px] bg-ucaep-linen/40 text-center space-y-3">
               <p className="font-serif text-3xl text-ucaep-brown">
                 La prochaine annonce arrive bientôt.
               </p>
@@ -120,7 +121,7 @@ function AnnouncementsFeedView() {
                     >
                       <Link
                         to={`/annonces/${item.slug}`}
-                        className="block aspect-[16/10] overflow-hidden rounded-sm bg-ucaep-brown/5"
+                        className="block aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
                       >
                         <EditorialImage
                           assetKey={item.imageKey}
@@ -134,7 +135,7 @@ function AnnouncementsFeedView() {
                         isFirst ? 'lg:col-span-6' : 'lg:col-span-7 lg:order-1'
                       }`}
                     >
-                      <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                      <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3 group-hover:border-ucaep-gold transition-colors">
                         <span className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-gold tabular-nums leading-none">
                           № {displayNumber}
                         </span>
@@ -150,7 +151,7 @@ function AnnouncementsFeedView() {
                       </div>
 
                       <h2
-                        className={`font-serif font-semibold text-ucaep-ink leading-[1.08] ${
+                        className={`font-serif font-semibold text-ucaep-ink leading-[1.06] ${
                           isFirst ? 'text-3xl sm:text-5xl' : 'text-3xl sm:text-4xl'
                         }`}
                       >
@@ -224,7 +225,7 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24">
-        <div className="h-80 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
+        <div className="h-80 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
       </div>
     );
   }
@@ -275,7 +276,7 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
         </header>
 
         <figure>
-          <div className="aspect-[16/9] overflow-hidden rounded-sm bg-ucaep-brown/5">
+          <div className="aspect-[16/9] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
             <EditorialImage assetKey={announcement.imageKey} />
           </div>
         </figure>
@@ -305,7 +306,7 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
           {candidateSession ? (
             <Link
               to="/depot"
-              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors"
+              className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]"
             >
               <span>Mon espace dépôt</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -313,7 +314,7 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
           ) : (
             <Link
               to="/inscription"
-              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+              className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
             >
               <span>Je m&apos;inscris</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />

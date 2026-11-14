@@ -79,7 +79,7 @@ function NewsMagazineView() {
           <div
             role="tablist"
             aria-label="Filtrer les actualités par rubrique"
-            className="flex flex-wrap items-center gap-1.5 p-1 bg-ucaep-linen rounded-sm border border-ucaep-brown/14"
+            className="flex flex-wrap items-center gap-1 p-1 bg-ucaep-linen rounded-[2px] border border-ucaep-brown/14"
           >
             {CATEGORIES.map((cat) => (
               <button
@@ -88,7 +88,7 @@ function NewsMagazineView() {
                 role="tab"
                 aria-selected={filter === cat}
                 onClick={() => setFilter(cat)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-[2px] transition-colors whitespace-nowrap shrink-0 ${
                   filter === cat
                     ? 'bg-ucaep-brown text-ucaep-paper'
                     : 'text-ucaep-brown/80 hover:text-ucaep-ink'
@@ -113,6 +113,7 @@ function NewsMagazineView() {
           tileWidth={135}
           blendMultiply
           doubleRing
+          orbit
           className="hidden lg:block -bottom-24 -right-16 w-60 h-60 opacity-[0.08]"
         />
         <BrandPatternWave
@@ -122,11 +123,11 @@ function NewsMagazineView() {
           doubleWave
           className="absolute bottom-0 inset-x-0 h-16"
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
           {loading ? (
-            <div className="h-96 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
+            <div className="h-96 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
           ) : filtered.length === 0 ? (
-            <div className="p-12 border border-ucaep-brown/15 rounded-sm bg-ucaep-linen/40 text-center space-y-3">
+            <div className="p-12 border border-ucaep-brown/15 rounded-[2px] bg-ucaep-linen/40 text-center space-y-3">
               <p className="font-serif text-3xl text-ucaep-brown">
                 Il n&apos;y a pas encore d&apos;article dans cette rubrique.
               </p>
@@ -147,7 +148,7 @@ function NewsMagazineView() {
                   data-reveal
                   className="group grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
                 >
-                  <div className="lg:col-span-7 aspect-[16/10] overflow-hidden rounded-sm bg-ucaep-brown/5">
+                  <div className="lg:col-span-7 aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
                     <EditorialImage
                       assetKey={leadArticle.imageKey}
                       className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
@@ -192,7 +193,7 @@ function NewsMagazineView() {
                         idx === 0 ? 'md:pr-10' : 'md:pl-10'
                       }`}
                     >
-                      <div className="aspect-[16/10] overflow-hidden rounded-sm bg-ucaep-brown/5">
+                      <div className="aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
                         <EditorialImage
                           assetKey={article.imageKey}
                           className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
@@ -298,7 +299,7 @@ function NewsArticleView({ slug }: { slug: string }) {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24">
-        <div className="h-80 rounded-sm bg-ucaep-ivory/30 animate-pulse" />
+        <div className="h-80 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
       </div>
     );
   }
@@ -346,7 +347,7 @@ function NewsArticleView({ slug }: { slug: string }) {
         </header>
 
         <figure>
-          <div className="aspect-[16/9] overflow-hidden rounded-sm bg-ucaep-brown/5">
+          <div className="aspect-[16/9] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
             <EditorialImage assetKey={article.imageKey} />
           </div>
         </figure>

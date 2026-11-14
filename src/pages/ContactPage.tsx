@@ -55,6 +55,12 @@ export function ContactPage() {
         title="Une question ?"
         italicWord="On peut en discuter."
         subtitle="Vous souhaitez obtenir une précision sur la Phase 1, votre code candidat ou l'organisation à l'ENSET de Lokossa ? Écrivez-nous directement."
+        quickFacts={[
+          { label: 'Équipe', value: 'Session Théâtre UCAEP' },
+          { label: 'Campus', value: 'ENSET Lokossa' },
+          { label: 'E-mail', value: 'ucaeplokossa@gmail.com' },
+          { label: 'Réseaux', value: '@UCAEP' },
+        ]}
       />
 
       <section className="relative py-16 lg:py-24 overflow-hidden">
@@ -64,7 +70,7 @@ export function ContactPage() {
           opacityClass="opacity-[0.035]"
           blendMultiply
         />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5 space-y-8">
             <div className="space-y-3">
               <EditorialMark folio="Repères" label="Sur le campus" tone="brown" />
@@ -141,7 +147,7 @@ export function ContactPage() {
           </div>
 
           <div className="lg:col-span-7">
-            <div className="relative overflow-hidden p-8 sm:p-10 bg-white paper-fiber border border-ucaep-brown/15 rounded-sm">
+            <div className="art-card relative overflow-hidden p-8 sm:p-10 bg-white paper-fiber border border-ucaep-brown/15 rounded-[2px]">
               <Send
                 aria-hidden="true"
                 className="pointer-events-none select-none absolute -bottom-8 -right-6 w-40 h-40 text-ucaep-brown opacity-[0.04] -rotate-12"
@@ -174,7 +180,7 @@ export function ContactPage() {
                   {status === 'error' && (
                     <p
                       role="alert"
-                      className="p-3.5 text-sm rounded-sm bg-red-50 text-red-900 border border-red-800/20"
+                      className="p-3.5 text-sm rounded-[2px] bg-red-50 text-red-900 border border-red-800/20"
                     >
                       {errorMsg}
                     </p>
@@ -194,7 +200,7 @@ export function ContactPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-[2px] focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -210,7 +216,7 @@ export function ContactPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-[2px] focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -228,7 +234,7 @@ export function ContactPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-[2px] focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -245,14 +251,14 @@ export function ContactPage() {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       required
-                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/70 border border-ucaep-brown/25 rounded-[2px] focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={status === 'submitting'}
-                    className="group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
+                    className="btn-tactile group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] disabled:opacity-60"
                   >
                     <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                     <span>{status === 'submitting' ? 'Envoi…' : 'Envoyer'}</span>

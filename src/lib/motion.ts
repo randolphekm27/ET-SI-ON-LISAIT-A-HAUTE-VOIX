@@ -10,7 +10,7 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * Orchestrates masked kinetic line reveals and restrained scroll entrances inside a container.
+ * Orchestrates masked kinetic line reveals, hairline sweeps, and restrained scroll entrances inside a container.
  * Cleans up automatically on unmount and skips hidden states if prefers-reduced-motion is active.
  */
 export function useEditorialScrollMotion(
@@ -26,15 +26,31 @@ export function useEditorialScrollMotion(
       revealBlocks.forEach((el) => {
         const delay = Number(el.dataset.revealDelay || 0);
         gsap.from(el, {
-          y: 24,
+          y: 22,
           opacity: 0,
-          duration: 0.72,
+          duration: 0.68,
           delay,
           ease: 'power3.out',
           clearProps: 'transform,opacity',
           scrollTrigger: {
             trigger: el,
-            start: 'top 86%',
+            start: 'top 88%',
+            once: true,
+          },
+        });
+      });
+
+      const hairlines = gsap.utils.toArray<HTMLElement>('[data-hairline-reveal]');
+      hairlines.forEach((line) => {
+        gsap.from(line, {
+          scaleX: 0,
+          transformOrigin: 'left center',
+          duration: 0.72,
+          ease: 'power3.out',
+          clearProps: 'transform',
+          scrollTrigger: {
+            trigger: line,
+            start: 'top 90%',
             once: true,
           },
         });
@@ -43,14 +59,14 @@ export function useEditorialScrollMotion(
       const clipFrames = gsap.utils.toArray<HTMLElement>('[data-clip-reveal]');
       clipFrames.forEach((frame) => {
         gsap.from(frame, {
-          clipPath: 'inset(10% 0% 0% 0%)',
+          clipPath: 'inset(8% 0% 0% 0%)',
           opacity: 0,
-          duration: 0.85,
+          duration: 0.82,
           ease: 'power3.out',
           clearProps: 'clipPath,opacity',
           scrollTrigger: {
             trigger: frame,
-            start: 'top 85%',
+            start: 'top 86%',
             once: true,
           },
         });
