@@ -103,11 +103,9 @@ export function GestionPage() {
 
   const [token, setToken] = useState<string>(() => {
     try {
-      return (
-        localStorage.getItem('ucaep_admin_token') ||
-        sessionStorage.getItem('ucaep_admin_token') ||
-        ''
-      );
+      // Supprime l'ancien stockage permanent : la session ne dure plus que pour l'onglet en cours
+      localStorage.removeItem('ucaep_admin_token');
+      return sessionStorage.getItem('ucaep_admin_token') || '';
     } catch {
       return '';
     }
@@ -285,7 +283,6 @@ export function GestionPage() {
         body: JSON.stringify({ code: accessCode }),
       });
       try {
-        localStorage.setItem('ucaep_admin_token', json.token);
         sessionStorage.setItem('ucaep_admin_token', json.token);
       } catch {
         // ignore
