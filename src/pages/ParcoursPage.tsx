@@ -66,10 +66,10 @@ const PHASE_ATMOSPHERES = [
 ];
 
 const PHASE_1_RUBRIC = [
-  { label: 'Sincérité et profondeur du propos', points: '6 pts' },
-  { label: 'Qualité de la langue et de l’écriture', points: '6 pts' },
-  { label: 'Originalité et créativité', points: '5 pts' },
-  { label: 'Cohérence et construction du texte', points: '3 pts' },
+  { label: 'Sincérité et profondeur du propos', value: 6, points: '6 pts' },
+  { label: 'Qualité de la langue et de l’écriture', value: 6, points: '6 pts' },
+  { label: 'Originalité et créativité', value: 5, points: '5 pts' },
+  { label: 'Cohérence et construction du texte', value: 3, points: '3 pts' },
 ];
 
 const CALENDAR_WEEKS = [
@@ -384,9 +384,14 @@ export function ParcoursPage() {
                 label="La Plume · Notée sur 20 points"
                 tone="green"
               />
-              <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-                Tout savoir sur <em className="italic font-normal text-ucaep-brown">la Phase 1 : La Plume</em>
-              </h2>
+              <div className="overflow-hidden">
+                <h2
+                  data-mask-title
+                  className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
+                >
+                  Tout savoir sur <em className="italic font-normal text-ucaep-brown">la Phase 1 : La Plume</em>
+                </h2>
+              </div>
             </div>
             <div className="text-xs sm:text-sm text-ucaep-brown/80 space-y-1 tabular-nums">
               <p className="font-semibold text-ucaep-brown">
@@ -501,7 +506,11 @@ export function ParcoursPage() {
                 {PHASE_1_RUBRIC.map((item) => (
                   <div key={item.label} className="py-3 flex items-center justify-between gap-4">
                     <dt className="text-ucaep-ink/85">{item.label}</dt>
-                    <dd className="font-mono text-lg font-semibold text-ucaep-brown shrink-0">
+                    <dd
+                      data-counter={item.value}
+                      data-counter-suffix=" pts"
+                      className="font-mono text-lg font-semibold text-ucaep-brown shrink-0"
+                    >
                       {item.points}
                     </dd>
                   </div>
@@ -614,9 +623,14 @@ export function ParcoursPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
             <EditorialMark folio="La suite du parcours" label="Phases 02 & 03" tone="brown" />
-            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Ce qui vous attend <em className="italic font-normal text-ucaep-brown">après La Plume</em>
-            </h2>
+            <div className="overflow-hidden">
+              <h2
+                data-mask-title
+                className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
+              >
+                Ce qui vous attend <em className="italic font-normal text-ucaep-brown">après La Plume</em>
+              </h2>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

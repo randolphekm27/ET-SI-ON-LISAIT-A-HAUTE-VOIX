@@ -20,6 +20,7 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { ScenicStageAsset } from '../components/ScenicStageAsset';
 import { useCandidateSession } from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
 import { useEditorialScrollMotion } from '../lib/motion';
@@ -190,22 +191,38 @@ export function ConcoursPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
           <div className="space-y-3 max-w-2xl" data-reveal>
             <EditorialMark folio="Trois volets" label="Points & progression" tone="brown" />
-            <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]">
-              Trois façons de <em className="italic font-normal text-ucaep-brown">faire entendre sa voix</em>
-            </h2>
+            <div className="overflow-hidden">
+              <h2
+                data-mask-title
+                className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]"
+              >
+                Trois façons de <em className="italic font-normal text-ucaep-brown">faire entendre sa voix</em>
+              </h2>
+            </div>
           </div>
 
           <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
             {PILLARS.map((pillar, idx) => {
               const reversed = idx % 2 === 1;
+              const isEloquence = pillar.index === 'III';
               return (
                 <article
                   key={pillar.index}
                   data-reveal
-                  className="group py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
+                  data-scenic-stage={isEloquence ? 'eloquence' : undefined}
+                  className="group relative py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
                 >
+                  {isEloquence && (
+                    <ScenicStageAsset
+                      assetKey="tamtam"
+                      plan={1}
+                      motionId="tamtam"
+                      className="order-3 ml-auto w-24 opacity-40 sm:order-none sm:ml-0 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:right-4 lg:right-6 sm:w-40 lg:w-48 sm:opacity-30 lg:opacity-35"
+                    />
+                  )}
+
                   <div
-                    className={`lg:col-span-6 ${
+                    className={`relative z-10 lg:col-span-6 ${
                       reversed ? 'lg:order-2' : 'lg:order-1'
                     }`}
                   >
@@ -224,9 +241,9 @@ export function ConcoursPage() {
                   </div>
 
                   <div
-                    className={`lg:col-span-6 space-y-5 ${
-                      reversed ? 'lg:order-1' : 'lg:order-2'
-                    }`}
+                    className={`relative z-10 lg:col-span-6 space-y-5 ${
+                      isEloquence ? 'sm:pr-28 lg:pr-36' : ''
+                    } ${reversed ? 'lg:order-1' : 'lg:order-2'}`}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3">
                       <span className="font-serif text-5xl sm:text-6xl font-semibold text-ucaep-gold tabular-nums leading-none">
@@ -274,9 +291,14 @@ export function ConcoursPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
           <div className="space-y-2 max-w-2xl" data-reveal>
             <EditorialMark folio="Règlement simple" label="Équité & modalités" tone="green" />
-            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Des règles claires <em className="italic font-normal text-ucaep-brown">pour que chacun parte à égalité</em>
-            </h2>
+            <div className="overflow-hidden">
+              <h2
+                data-mask-title
+                className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
+              >
+                Des règles claires <em className="italic font-normal text-ucaep-brown">pour que chacun parte à égalité</em>
+              </h2>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -336,9 +358,14 @@ export function ConcoursPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-green">
                 Pour tous les participants
               </p>
-              <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                Une attestation pour chacun et une Grande Finale ouverte à tous
-              </h2>
+              <div className="overflow-hidden">
+                <h2
+                  data-mask-title
+                  className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown"
+                >
+                  Une attestation pour chacun et une Grande Finale ouverte à tous
+                </h2>
+              </div>
               <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed max-w-2xl">
                 Chaque étudiant participant reçoit une attestation de la Session Théâtre de
                 l&apos;UCAEP et est chaleureusement invité à la Grande Finale sur le campus.

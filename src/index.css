@@ -14,6 +14,15 @@
   --color-ucaep-ink: #171412;
 }
 
+:root {
+  /* Système strict de superposition et de profondeur (Plans 1 à 5) */
+  --z-plan-1: 1;   /* Arrière-plan et textures */
+  --z-plan-2: 10;  /* Contenu principal et photographies */
+  --z-plan-3: 20;  /* Objets PNG scénographiques */
+  --z-plan-4: 30;  /* Éléments de transition, masques et plans opaques */
+  --z-plan-5: 50;  /* Navigation et interface prioritaire */
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
@@ -96,9 +105,9 @@
 /* Tactile gallery surface card with sweeping gold hairline */
 .art-card {
   position: relative;
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .art-card::after {
@@ -159,6 +168,32 @@
 .animate-orbit-slow {
   animation: orbit-slow 48s linear infinite;
   will-change: transform;
+}
+
+/* Subtle lantern warm flame flicker (GPU-composited opacity & scale) */
+@keyframes lantern-flicker {
+  0%, 100% {
+    opacity: 0.86;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+  75% {
+    opacity: 0.91;
+    transform: scale(0.985);
+  }
+}
+
+.animate-lantern-flicker {
+  animation: lantern-flicker 3.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.scenic-object {
+  will-change: transform, opacity;
+  filter: drop-shadow(0 18px 34px rgba(23, 14, 10, 0.22));
 }
 
 .tabular-nums {

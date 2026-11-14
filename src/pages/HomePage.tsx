@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Award,
   Clock,
   Feather,
   Lock,
@@ -15,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   BrandPatternArch,
   BrandPatternBand,
@@ -24,15 +24,20 @@ import {
   BrandPatternWave,
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
+import { LanterneSequence } from '../components/LanterneSequence';
+import { ScenicStageAsset } from '../components/ScenicStageAsset';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { prefersReducedMotion, useEditorialScrollMotion } from '../lib/motion';
+import { SCENIC_ASSETS } from '../lib/scenic-assets';
 import type {
   CompetitionPhase,
   PublicAnnouncement,
   PublicNewsArticle,
 } from '../types/competition';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const MANIFESTO_CARDS = [
   {
@@ -66,30 +71,6 @@ const MANIFESTO_CARDS = [
     detail:
       'Copies corrigées à l’aveugle sous votre code candidat par un jury mixte ENSET et UCAEP.',
     Icon: ShieldCheck,
-  },
-];
-
-const JOURNEY_GUARANTEES = [
-  {
-    number: '01',
-    kicker: 'Rythme personnel',
-    title: 'Jusqu’à 5 minutes pour convaincre',
-    text: 'Chaque candidat dispose de jusqu’à 5 minutes pour sa présentation : prenez le temps de poser votre voix, votre rythme et vos idées.',
-    Icon: Clock,
-  },
-  {
-    number: '02',
-    kicker: 'Progression douce',
-    title: 'Des phases simples et progressives',
-    text: 'On commence chez soi à l’écrit (Phases 1 et 2, avec sélection des meilleurs à chaque étape) avant de rejoindre la scène en finale.',
-    Icon: Feather,
-  },
-  {
-    number: '03',
-    kicker: 'Reconnaissance',
-    title: 'Une attestation pour chaque participant',
-    text: 'Quelle que soit l’issue du parcours, chacun repart avec son attestation officielle et une place pour vivre la Grande Finale sur le campus.',
-    Icon: Award,
   },
 ];
 
@@ -129,9 +110,10 @@ export function HomePage() {
     };
   }, []);
 
-  // Controlled calligraphic GSAP opening sequence
+  // Séquence d'ouverture du Hero + Animation Signature 01 (La Plume du Hero au scroll)
   useEffect(() => {
-    if (!heroRef.current || prefersReducedMotion()) return;
+    const heroEl = heroRef.current;
+    if (!heroEl || prefersReducedMotion()) return;
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -185,7 +167,48 @@ export function HomePage() {
           },
           '-=0.5',
         );
-    }, heroRef);
+
+      // ANIMATION SIGNATURE 01 — LA PLUME DU HERO
+      // Déjà en place au chargement sur la jonction basse du hero ; au scroll,
+      // glisse en diagonale avec une légère rotation et disparaît derrière la section suivante opaque (Plan 4).
+      const mm = gsap.matchMedia();
+      mm.add('(min-width: 1024px)', () => {
+        gsap.fromTo(
+          '.hero-plume-img',
+          { x: 0, y: 0, rotate: -6 },
+          {
+            x: 34,
+            y: 115,
+            rotate: -13,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 0.65,
+            },
+          },
+        );
+      });
+      mm.add('(max-width: 1023px)', () => {
+        gsap.fromTo(
+          '.hero-plume-img',
+          { x: 0, y: 0, rotate: -5 },
+          {
+            x: 12,
+            y: 50,
+            rotate: -10,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 0.65,
+            },
+          },
+        );
+      });
+    }, heroEl);
 
     return () => ctx.revert();
   }, []);
@@ -198,46 +221,55 @@ export function HomePage() {
 
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
-      {/* 1. HERO: Warm Earth Brown Radial Atelier + Fraunces Art Display + Scannable Key Strip */}
+      {/* ================================================================
+          SECTION 1 · HERO (Plan 2 = z-20) + SIGNATURE 01 : LA PLUME (jonction basse)
+          ================================================================ */}
       <section
         ref={heroRef}
-        className="relative w-full bg-[radial-gradient(ellipse_at_top_right,#6B3B2B_0%,#4E2A1E_52%,#2E160E_100%)] text-ucaep-ivory pt-[88px] pb-14 sm:pt-[96px] sm:pb-16 lg:pt-[108px] lg:pb-20 flex flex-col justify-between overflow-hidden"
+        className="relative z-20 w-full bg-[radial-gradient(ellipse_at_top_right,#6B3B2B_0%,#4E2A1E_52%,#2E160E_100%)] text-ucaep-ivory pt-[88px] pb-16 sm:pt-[96px] sm:pb-20 lg:pt-[108px] lg:pb-24 flex flex-col justify-between"
       >
-        <BrandPatternEdge
-          variant="gold"
-          side="left"
-          className="w-3 sm:w-4 lg:w-6 opacity-85"
-        />
-        <BrandPatternSurface
-          variant="gold"
-          tileWidth={210}
-          opacityClass="opacity-[0.06]"
-        />
+        {/* Plan 1 : Arrière-plan décoratif contenu dans son propre clip sans couper la Plume */}
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
+          <BrandPatternEdge
+            variant="gold"
+            side="left"
+            className="w-3 sm:w-4 lg:w-6 opacity-85"
+          />
+          <BrandPatternSurface
+            variant="gold"
+            tileWidth={210}
+            opacityClass="opacity-[0.06]"
+          />
+          <BrandPatternCircle
+            variant="gold"
+            tileWidth={135}
+            doubleRing
+            orbit
+            className="hidden lg:block -top-20 -right-16 w-72 h-72 opacity-22"
+          />
+          <BrandPatternCircle
+            variant="obsidian"
+            tileWidth={120}
+            ring={false}
+            className="hidden md:block absolute bottom-24 left-12 w-36 h-36 opacity-15"
+          />
+          <Mic2
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute bottom-12 right-6 w-72 h-72 text-ucaep-gold opacity-[0.055] -rotate-12"
+            strokeWidth={1}
+          />
+          <BrandPatternWave
+            variant="gold"
+            tileWidth={170}
+            opacity={0.2}
+            doubleWave
+            className="absolute bottom-0 inset-x-0 h-16 sm:h-24"
+          />
+        </div>
 
-        {/* Orbiting cultural medallions */}
-        <BrandPatternCircle
-          variant="gold"
-          tileWidth={135}
-          doubleRing
-          orbit
-          className="hidden lg:block -top-20 -right-16 w-72 h-72 opacity-22"
-        />
-        <BrandPatternCircle
-          variant="obsidian"
-          tileWidth={120}
-          ring={false}
-          className="hidden md:block absolute bottom-24 left-12 w-36 h-36 opacity-15"
-        />
-
-        <Mic2
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute bottom-12 right-6 w-72 h-72 text-ucaep-gold opacity-[0.055] -rotate-12"
-          strokeWidth={1}
-        />
-
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10">
+        {/* Plan 2 : Contenu éditorial principal et portrait cadré */}
+        <div className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-12 items-center">
-            {/* Left Typographic Composition */}
             <div className="lg:col-span-7 space-y-7">
               <div className="hero-meta-fade flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-ucaep-gold">
                 <span>Session Théâtre · UCAEP</span>
@@ -258,13 +290,11 @@ export function HomePage() {
                 </span>
               </h1>
 
-              {/* Instant-read 1-sentence focal summary */}
               <p className="hero-meta-fade text-base sm:text-lg text-ucaep-ivory/88 max-w-lg leading-relaxed font-normal">
                 Un concours gratuit pour <strong className="text-ucaep-paper font-semibold">tous les étudiants</strong> autour de l&apos;écriture, de la lecture et de la parole — avec{' '}
                 <strong className="text-ucaep-gold font-semibold">jusqu&apos;à 5 minutes</strong> pour présenter vos idées.
               </p>
 
-              {/* Scannable mini-ledger directly in hero */}
               <dl className="hero-meta-fade grid grid-cols-3 gap-4 max-w-lg border-y border-ucaep-ivory/18 py-3.5 text-xs">
                 <div>
                   <dt className="uppercase tracking-[0.16em] text-ucaep-gold/85 text-[10px]">Accès</dt>
@@ -323,7 +353,6 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Right Framed Portrait + Orbiting Gold Medallion */}
             <div className="lg:col-span-5 relative">
               <BrandPatternCircle
                 variant="gold"
@@ -356,10 +385,10 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Bottom Architectural 3-Phase Index */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10 mt-10 lg:mt-14">
+        {/* Repère de bas de Hero */}
+        <div className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10 mt-10 lg:mt-14">
           <div className="hero-rule-draw h-px bg-ucaep-ivory/22 mb-5" />
-          <div className="hero-meta-fade flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ucaep-ivory/82 tabular-nums">
+          <div className="hero-meta-fade flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ucaep-ivory/82 tabular-nums pr-24 sm:pr-44 lg:pr-64">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
               <span>
                 <strong className="font-mono text-ucaep-gold mr-1.5">01</strong>La Plume (/20)
@@ -377,17 +406,28 @@ export function HomePage() {
           </div>
         </div>
 
-        <BrandPatternWave
-          variant="gold"
-          tileWidth={170}
-          opacity={0.2}
-          doubleWave
-          className="absolute bottom-0 inset-x-0 h-16 sm:h-24"
-        />
+        {/* Plan 3 : ANIMATION SIGNATURE 01 — LA PLUME DU HERO
+            Chevauche la jonction basse du hero avec marge droite sûre ; sa partie inférieure
+            passe naturellement derrière la Section 2A opaque (z-30) et glisse en diagonale au scroll. */}
+        <div
+          aria-hidden="true"
+          data-scenic-asset="plume"
+          data-scenic-plan="3"
+          className="pointer-events-none select-none absolute z-[15] right-8 sm:right-14 lg:right-20 -bottom-10 sm:-bottom-14 lg:-bottom-16 w-40 sm:w-60 lg:w-[300px] aspect-[3/2]"
+        >
+          <img
+            src={SCENIC_ASSETS.plume.src}
+            alt=""
+            loading="eager"
+            className="hero-plume-img scenic-object w-full h-full object-contain -rotate-6"
+          />
+        </div>
       </section>
 
-      {/* 2. SCANNABLE ESSENTIALS + MANIFESTO SPREAD */}
-      <section className="relative py-20 lg:py-28 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden">
+      {/* ================================================================
+          SECTION 2A · REPÈRES ESSENTIELS (Plan 4 opaque z-30 — masque la Plume)
+          ================================================================ */}
+      <section className="relative z-30 pt-20 pb-14 lg:pt-28 lg:pb-20 bg-ucaep-paper paper-fiber overflow-hidden">
         <BrandPatternSurface
           variant="gold"
           tileWidth={230}
@@ -403,15 +443,16 @@ export function HomePage() {
           className="hidden lg:block -top-24 -left-24 w-64 h-64 opacity-[0.08]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
-          {/* 4 Instant-Scan Cards Right Above the Manifesto */}
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4" data-reveal>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                   L&apos;essentiel en 10 secondes
                 </p>
-                <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown mt-1">
-                  Quatre repères <em className="italic font-normal text-ucaep-ink">pour décider tout de suite</em>
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown mt-1 overflow-hidden">
+                  <span data-mask-title className="block">
+                    Quatre repères <em className="italic font-normal text-ucaep-ink">pour décider tout de suite</em>
+                  </span>
                 </h2>
               </div>
               <Link
@@ -458,19 +499,32 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="h-px bg-ucaep-brown/12" data-hairline-reveal />
+        </div>
+      </section>
 
-          {/* Editorial Manifesto Spread */}
+      {/* ================================================================
+          SECTION 2B · PRÉSENTATION « TROIS ÉTAPES, DU CAHIER JUSQU'À LA SCÈNE »
+          + ASSET 02 (PILE DE LIVRES bas-gauche) & ASSET 03 (MONSTERA bas-droite transition)
+          ================================================================ */}
+      <section
+        data-scenic-stage="presentation"
+        className="relative z-25 pt-12 pb-36 sm:pt-16 sm:pb-44 lg:pt-20 lg:pb-56 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden"
+      >
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+          <div className="h-px bg-ucaep-brown/12 mb-14 lg:mb-16" data-hairline-reveal />
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             <div className="lg:col-span-6 space-y-6" data-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                 Pourquoi on lance ce concours
               </p>
-              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-brown leading-[1.02]">
-                Trois étapes,{' '}
-                <em className="italic font-normal text-ucaep-ink">
-                  du cahier jusqu&apos;à la scène.
-                </em>
+              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-brown leading-[1.02] overflow-hidden">
+                <span data-mask-title className="block">
+                  Trois étapes,{' '}
+                  <em className="italic font-normal text-ucaep-ink">
+                    du cahier jusqu&apos;à la scène.
+                  </em>
+                </span>
               </h2>
               <p className="text-base sm:text-lg text-ucaep-ink/80 max-w-xl leading-relaxed">
                 Les inscriptions sont ouvertes gratuitement à tous les étudiants.{' '}
@@ -525,32 +579,56 @@ export function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* ASSET 02 — PILE DE LIVRES : Partie inférieure gauche, en retrait, zéro masquage de texte */}
+        <ScenicStageAsset
+          assetKey="livres"
+          plan={2}
+          motionId="livres"
+          className="absolute bottom-5 sm:bottom-8 lg:bottom-10 left-4 sm:left-8 lg:left-12 w-28 sm:w-40 lg:w-52 opacity-90"
+        />
+
+        {/* ASSET 03 — MONSTERA : Transition vers le parcours, bas-droite orientée vers l'intérieur */}
+        <ScenicStageAsset
+          assetKey="monstera"
+          plan={3}
+          motionId="monstera"
+          flipX
+          className="absolute bottom-4 sm:bottom-6 lg:bottom-8 right-6 sm:right-12 lg:right-16 w-32 sm:w-44 lg:w-56"
+        />
       </section>
 
-      {/* 3. THREE-PHASE COLUMNS + VISIBLE PHASE 1 FOCUS */}
-      <section className="relative py-24 lg:py-32 bg-[#F4EDE1] paper-grain border-b border-ucaep-brown/12 overflow-hidden">
-        <BrandPatternBand
-          variant="brown"
-          tileWidth={145}
-          blendMultiply
-          className="h-2.5 opacity-45 border-b border-ucaep-brown/12 absolute top-0 inset-x-0"
-        />
-        <BrandPatternWave
-          variant="brown"
-          tileWidth={170}
-          opacity={0.09}
-          flip
-          doubleWave
-          className="absolute top-2 inset-x-0 h-20"
-        />
-        <BrandPatternCircle
-          variant="gold"
-          tileWidth={140}
-          blendMultiply
-          doubleRing
-          orbit
-          className="hidden lg:block -bottom-24 -right-20 w-72 h-72 opacity-[0.09]"
-        />
+      {/* ================================================================
+          SECTION 3 · TROIS ÉTAPES + ZOOM PHASE 1 + MONSTERA À LA TRANSITION BASSE
+          ================================================================ */}
+      <section className="relative z-20 py-24 lg:py-32 bg-[#F4EDE1] paper-grain border-b border-ucaep-brown/12">
+        {/* Plan 1 : Motifs contenus */}
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
+          <BrandPatternBand
+            variant="brown"
+            tileWidth={145}
+            blendMultiply
+            className="h-2.5 opacity-45 border-b border-ucaep-brown/12 absolute top-0 inset-x-0"
+          />
+          <BrandPatternWave
+            variant="brown"
+            tileWidth={170}
+            opacity={0.09}
+            flip
+            doubleWave
+            className="absolute top-2 inset-x-0 h-20"
+          />
+          <BrandPatternCircle
+            variant="gold"
+            tileWidth={140}
+            blendMultiply
+            doubleRing
+            orbit
+            className="hidden lg:block -bottom-24 -right-20 w-72 h-72 opacity-[0.09]"
+          />
+        </div>
+
+        {/* Plan 2 : Contenu éditorial des 3 phases + barème */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-20">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
@@ -558,8 +636,10 @@ export function HomePage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
                   Comment ça va se passer
                 </p>
-                <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none">
-                  Voici les <em className="italic font-normal text-ucaep-brown">trois étapes</em>
+                <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
+                  <span data-mask-title className="block">
+                    Voici les <em className="italic font-normal text-ucaep-brown">trois étapes</em>
+                  </span>
                 </h2>
               </div>
               <Link
@@ -583,7 +663,10 @@ export function HomePage() {
                     data-reveal-delay={String(idx * 0.08)}
                     className="group block space-y-5"
                   >
-                    <div className="aspect-[4/3] overflow-hidden rounded-[2px] bg-ucaep-brown/8 border border-ucaep-brown/12">
+                    <div
+                      data-clip-reveal
+                      className="aspect-[4/3] overflow-hidden rounded-[2px] bg-ucaep-brown/8 border border-ucaep-brown/12"
+                    >
                       <EditorialImage
                         assetKey={phase.imageKey}
                         className="group-hover:scale-[1.04] transition-transform duration-500 ease-out"
@@ -622,7 +705,6 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Visible Focus Deck on Phase 1 — La Plume */}
           <div className="pt-12 border-t border-ucaep-brown/15 space-y-8" data-reveal>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-2 max-w-2xl">
@@ -717,19 +799,43 @@ export function HomePage() {
                 <ul className="relative z-10 divide-y divide-ucaep-ivory/14 text-sm text-ucaep-ivory/90 tabular-nums">
                   <li className="py-1.5 flex justify-between gap-2">
                     <span>Sincérité &amp; profondeur</span>
-                    <span className="font-mono font-semibold text-ucaep-gold">6 pts</span>
+                    <span
+                      data-counter="6"
+                      data-counter-suffix=" pts"
+                      className="font-mono font-semibold text-ucaep-gold"
+                    >
+                      6 pts
+                    </span>
                   </li>
                   <li className="py-1.5 flex justify-between gap-2">
                     <span>Qualité de la langue</span>
-                    <span className="font-mono font-semibold text-ucaep-gold">6 pts</span>
+                    <span
+                      data-counter="6"
+                      data-counter-suffix=" pts"
+                      className="font-mono font-semibold text-ucaep-gold"
+                    >
+                      6 pts
+                    </span>
                   </li>
                   <li className="py-1.5 flex justify-between gap-2">
                     <span>Originalité &amp; créativité</span>
-                    <span className="font-mono font-semibold text-ucaep-gold">5 pts</span>
+                    <span
+                      data-counter="5"
+                      data-counter-suffix=" pts"
+                      className="font-mono font-semibold text-ucaep-gold"
+                    >
+                      5 pts
+                    </span>
                   </li>
                   <li className="py-1.5 flex justify-between gap-2">
                     <span>Cohérence &amp; construction</span>
-                    <span className="font-mono font-semibold text-ucaep-gold">3 pts</span>
+                    <span
+                      data-counter="3"
+                      data-counter-suffix=" pts"
+                      className="font-mono font-semibold text-ucaep-gold"
+                    >
+                      3 pts
+                    </span>
                   </li>
                 </ul>
                 <p className="relative z-10 text-xs text-ucaep-ivory/82 leading-relaxed pt-1">
@@ -750,21 +856,15 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 4. PROGRESSIVE ANNOUNCEMENTS BROADSHEET */}
-      <section className="relative py-24 lg:py-32 bg-ucaep-paper paper-grain overflow-hidden">
+      {/* ================================================================
+          SECTION 4 · ANNONCES (Section calme pour laisser respirer la Monstera & préparer la Lanterne)
+          ================================================================ */}
+      <section className="relative z-25 py-24 lg:py-32 bg-ucaep-paper paper-grain overflow-hidden">
         <BrandPatternSurface
           variant="gold"
           tileWidth={220}
           opacityClass="opacity-[0.04]"
           blendMultiply
-        />
-        <BrandPatternCircle
-          variant="green"
-          tileWidth={135}
-          blendMultiply
-          doubleRing
-          orbit
-          className="hidden lg:block -top-20 -right-16 w-60 h-60 opacity-[0.08]"
         />
         <Megaphone
           aria-hidden="true"
@@ -777,8 +877,10 @@ export function HomePage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                 En direct de l&apos;équipe
               </p>
-              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none">
-                On vous tient <em className="italic font-normal text-ucaep-brown">au courant</em>
+              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
+                <span data-mask-title className="block">
+                  On vous tient <em className="italic font-normal text-ucaep-brown">au courant</em>
+                </span>
               </h2>
             </div>
             <Link
@@ -852,6 +954,7 @@ export function HomePage() {
                   <div className="lg:col-span-4">
                     <Link
                       to={`/annonces/${item.slug}`}
+                      data-clip-reveal
                       className="block aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
                     >
                       <EditorialImage
@@ -867,86 +970,18 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 5. ESPRIT & GARANTIES (SANS DÉTAIL DES PRIX) */}
-      <section className="relative py-20 lg:py-28 bg-ucaep-linen/70 paper-fiber border-y border-ucaep-brown/12 overflow-hidden">
-        <BrandPatternSurface
-          variant="brown"
-          tileWidth={200}
-          opacityClass="opacity-[0.045]"
-          blendMultiply
-        />
-        <BrandPatternCircle
-          variant="gold"
-          tileWidth={130}
-          blendMultiply
-          doubleRing
-          orbit
-          className="hidden lg:block -top-20 -right-16 w-56 h-56 opacity-[0.1]"
-        />
-        <BrandPatternWave
-          variant="brown"
-          tileWidth={175}
-          opacity={0.1}
-          doubleWave
-          className="absolute bottom-0 inset-x-0 h-20"
-        />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6" data-reveal>
-            <div className="space-y-3 max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
-                Esprit du concours
-              </p>
-              <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-                Une aventure ouverte <em className="italic font-normal text-ucaep-brown">et bienveillante</em>
-              </h2>
-            </div>
-            <Link
-              to="/concours"
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
-            >
-              <span className="editorial-underline">Lire le dossier complet</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
-          </div>
+      {/* ================================================================
+          SECTION 5 · ANIMATION SIGNATURE 02 — LA LANTERNE & TRANSFORMATION CHROMATIQUE
+          ================================================================ */}
+      <LanterneSequence />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {JOURNEY_GUARANTEES.map((item, idx) => {
-              const Icon = item.Icon;
-              return (
-                <article
-                  key={item.number}
-                  data-reveal
-                  data-reveal-delay={String(idx * 0.06)}
-                  className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-3"
-                >
-                  <Icon
-                    aria-hidden="true"
-                    className="pointer-events-none select-none absolute -bottom-5 -right-5 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
-                    strokeWidth={1.3}
-                  />
-                  <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/10 pb-2.5">
-                    <span className="font-serif text-3xl font-semibold text-ucaep-gold tabular-nums leading-none">
-                      {item.number}
-                    </span>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
-                      {item.kicker}
-                    </span>
-                  </div>
-                  <h3 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown leading-snug">
-                    {item.title}
-                  </h3>
-                  <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
-                    {item.text}
-                  </p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* 6. DEEP EARTH BROWN INVITATION BAND */}
-      <section className="relative py-24 lg:py-28 bg-[radial-gradient(ellipse_at_top_right,#633728_0%,#4E2A1E_55%,#3B1E14_100%)] text-ucaep-ivory overflow-hidden">
+      {/* ================================================================
+          SECTION 6 · CTA FINALE BRUN TERRE + ASSET 05 : HIBISCUS ROUGE
+          ================================================================ */}
+      <section
+        data-scenic-stage="final-cta"
+        className="relative z-30 pt-24 pb-32 sm:pb-36 lg:pt-28 lg:pb-48 bg-[radial-gradient(ellipse_at_top_right,#633728_0%,#4E2A1E_55%,#3B1E14_100%)] text-ucaep-ivory overflow-hidden"
+      >
         <BrandPatternEdge
           variant="gold"
           side="left"
@@ -971,11 +1006,6 @@ export function HomePage() {
           doubleWave
           className="absolute bottom-0 inset-x-0 h-16"
         />
-        <Mic2
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute -bottom-10 right-8 w-64 h-64 text-ucaep-gold opacity-[0.07] -rotate-12"
-          strokeWidth={1}
-        />
         <div
           className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10"
           data-reveal
@@ -984,11 +1014,13 @@ export function HomePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
               Vous souhaitez participer ?
             </p>
-            <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-paper leading-[1.02]">
-              C&apos;est l&apos;occasion d&apos;essayer{' '}
-              <em className="italic font-normal text-ucaep-ivory">
-                et de partager vos idées.
-              </em>
+            <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-paper leading-[1.02] overflow-hidden">
+              <span data-mask-title className="block">
+                C&apos;est l&apos;occasion d&apos;essayer{' '}
+                <em className="italic font-normal text-ucaep-ivory">
+                  et de partager vos idées.
+                </em>
+              </span>
             </h2>
             <p className="text-sm sm:text-base text-ucaep-ivory/85 max-w-xl leading-relaxed">
               L&apos;inscription est gratuite, ouverte à tous les étudiants et prend deux minutes. Venez tenter l&apos;aventure.
@@ -1012,10 +1044,20 @@ export function HomePage() {
             </Link>
           )}
         </div>
+
+        {/* ASSET 05 — HIBISCUS ROUGE : Bord inférieur droit, taille moyenne, zéro recouvrement du CTA */}
+        <ScenicStageAsset
+          assetKey="hibiscus"
+          plan={2}
+          motionId="hibiscus"
+          className="absolute bottom-5 sm:bottom-8 right-4 sm:right-8 lg:right-12 w-28 sm:w-36 lg:w-44 opacity-95"
+        />
       </section>
 
-      {/* 7. LATEST NEWS — Magazine Cover Spread */}
-      <section className="relative py-24 lg:py-32 bg-ucaep-paper paper-fiber overflow-hidden">
+      {/* ================================================================
+          SECTION 7 · ACTUALITÉS (Section calme & éditoriale)
+          ================================================================ */}
+      <section className="relative z-30 py-24 lg:py-32 bg-ucaep-paper paper-fiber overflow-hidden">
         <BrandPatternSurface
           variant="brown"
           tileWidth={210}
@@ -1040,8 +1082,10 @@ export function HomePage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
                 Les nouvelles du concours
               </p>
-              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none">
-                Quoi de <em className="italic font-normal text-ucaep-brown">neuf ?</em>
+              <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
+                <span data-mask-title className="block">
+                  Quoi de <em className="italic font-normal text-ucaep-brown">neuf ?</em>
+                </span>
               </h2>
             </div>
             <Link
@@ -1055,13 +1099,15 @@ export function HomePage() {
 
           {leadNews && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-              {/* Lead story (7 cols) */}
               <Link
                 to={`/actualites/${leadNews.slug}`}
                 data-reveal
                 className="lg:col-span-7 group block space-y-5"
               >
-                <div className="aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
+                <div
+                  data-clip-reveal
+                  className="aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
+                >
                   <EditorialImage
                     assetKey={leadNews.imageKey}
                     className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
@@ -1086,7 +1132,6 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Secondary editorial column (5 cols) */}
               <div className="lg:col-span-5 lg:border-l border-ucaep-brown/12 lg:pl-10 divide-y divide-ucaep-brown/12">
                 {secondaryNews.map((article, idx) => (
                   <Link

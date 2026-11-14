@@ -166,9 +166,14 @@ function NewsMagazineView() {
                       <span aria-hidden="true"> · </span>
                       <span>{leadArticle.readTime}</span>
                     </div>
-                    <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors leading-[1.06]">
-                      {leadArticle.title}
-                    </h2>
+                    <div className="overflow-hidden">
+                      <h2
+                        data-mask-title
+                        className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors leading-[1.06]"
+                      >
+                        {leadArticle.title}
+                      </h2>
+                    </div>
                     <p className="text-base text-ucaep-ink/80 leading-relaxed">
                       {leadArticle.excerpt}
                     </p>
