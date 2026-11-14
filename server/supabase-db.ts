@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { getCleanDatabaseUrl } from '../src/db/index.ts';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from './supabase-admin.ts';
 import type {
   Announcement,
@@ -82,13 +83,21 @@ export interface DbSubmissionRowLike {
 
 let preferRestFlag = false;
 
+function isServerlessRuntime(): boolean {
+  return Boolean(
+    process.env.VERCEL ||
+      process.env.VERCEL_ENV ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME,
+  );
+}
+
 export function shouldUseSupabaseRestFallback(): boolean {
   if (!isSupabaseAdminConfigured()) return false;
   if (preferRestFlag) return true;
   // Sur Vercel, l'hôte direct db.<ref>.supabase.co est IPv6 uniquement (ENOTFOUND sur AWS Lambda IPv4)
-  const dbUrl = (process.env.DATABASE_URL || '').trim();
-  if (!dbUrl && isSupabaseAdminConfigured()) return true;
-  if (process.env.VERCEL && /@db\.[a-z0-9]+\.supabase\.co/i.test(dbUrl)) {
+  const dbUrl = getCleanDatabaseUrl();
+  if (!dbUrl) return true;
+  if (isServerlessRuntime() && /@db\.[a-z0-9]+\.supabase\.(co|com)/i.test(dbUrl)) {
     return true;
   }
   return false;
@@ -100,15 +109,17 @@ export function markPreferSupabaseRest(): void {
   }
 }
 
-export function isNetworkOrDnsError(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
+export function isNetworkOrDnsError(err: unknown, depth = 0): boolean {
+  if (!err || typeof err !== 'object' || depth > 4) return false;
   const e = err as {
     code?: unknown;
     message?: unknown;
-    cause?: { code?: unknown; message?: unknown };
+    cause?: unknown;
+    originalError?: unknown;
+    errors?: unknown[];
   };
-  const code = String(e.cause?.code || e.code || '').toUpperCase();
-  const msg = String(e.cause?.message || e.message || '').toLowerCase();
+  const code = String(e.code || '').toUpperCase();
+  const msg = String(e.message || '').toLowerCase();
   if (
     [
       'ENOTFOUND',
@@ -122,13 +133,22 @@ export function isNetworkOrDnsError(err: unknown): boolean {
   ) {
     return true;
   }
-  return (
+  if (
     msg.includes('getaddrinfo') ||
     msg.includes('enotfound') ||
     msg.includes('enetunreach') ||
+    msg.includes('ehostunreach') ||
     msg.includes('econnrefused') ||
     msg.includes('timeout')
-  );
+  ) {
+    return true;
+  }
+  if (e.cause && isNetworkOrDnsError(e.cause, depth + 1)) return true;
+  if (e.originalError && isNetworkOrDnsError(e.originalError, depth + 1)) return true;
+  if (Array.isArray(e.errors)) {
+    return e.errors.some((nested) => isNetworkOrDnsError(nested, depth + 1));
+  }
+  return false;
 }
 
 function mapPhaseFromRest(row: Record<string, any>): CompetitionPhase {

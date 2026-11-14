@@ -41,11 +41,17 @@ function normalizeCode(raw: string): string {
 }
 
 function getOrganizerCodes(): string[] {
-  const envVal = (process.env.ORGANIZER_ACCESS_CODE || '').trim();
+  let envVal = (process.env.ORGANIZER_ACCESS_CODE || '').trim();
+  if (
+    (envVal.startsWith('"') && envVal.endsWith('"')) ||
+    (envVal.startsWith("'") && envVal.endsWith("'"))
+  ) {
+    envVal = envVal.slice(1, -1).trim();
+  }
   if (!envVal) return [];
   return envVal
     .split(',')
-    .map((c) => c.trim())
+    .map((c) => c.trim().replace(/^["']|["']$/g, '').trim())
     .filter(Boolean);
 }
 

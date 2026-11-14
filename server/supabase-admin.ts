@@ -9,14 +9,82 @@ export const SUBMISSIONS_BUCKET = 'candidatures';
 let cachedAdminClient: SupabaseClient | null = null;
 let bucketEnsured = false;
 
+function stripEnvValue(raw: string | undefined): string {
+  let val = (raw || '').trim();
+  if (
+    (val.startsWith('"') && val.endsWith('"')) ||
+    (val.startsWith("'") && val.endsWith("'"))
+  ) {
+    val = val.slice(1, -1).trim();
+  }
+  return val;
+}
+
+function isPlaceholderValue(val: string): boolean {
+  if (!val) return true;
+  const lower = val.toLowerCase();
+  return (
+    lower.includes('[project-ref]') ||
+    lower.includes('[your-password]') ||
+    lower.includes('[votre_') ||
+    lower.includes('placeholder') ||
+    val === 'sb_secret_...' ||
+    val === 'sb_publishable_...' ||
+    lower === 'changez-moi'
+  );
+}
+
+function inferSupabaseUrlFromDatabaseUrl(): string {
+  const dbUrl = stripEnvValue(process.env.DATABASE_URL);
+  if (!dbUrl) return '';
+  const directMatch = dbUrl.match(/@db\.([a-z0-9]+)\.supabase\.co/i);
+  if (directMatch?.[1]) {
+    return `https://${directMatch[1]}.supabase.co`;
+  }
+  const poolerMatch = dbUrl.match(/\/\/postgres\.([a-z0-9]+)[:@]/i);
+  if (poolerMatch?.[1]) {
+    return `https://${poolerMatch[1]}.supabase.co`;
+  }
+  return '';
+}
+
 function readSupabaseServerCredentials(): { url: string; secretKey: string } {
-  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
-  const secretKey = (
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    ''
-  ).trim();
-  return { url, secretKey };
+  const explicitUrl =
+    stripEnvValue(process.env.SUPABASE_URL) ||
+    stripEnvValue(process.env.VITE_SUPABASE_URL) ||
+    stripEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const url = !isPlaceholderValue(explicitUrl)
+    ? explicitUrl
+    : inferSupabaseUrlFromDatabaseUrl();
+
+  const rawSecret =
+    stripEnvValue(process.env.SUPABASE_SECRET_KEY) ||
+    stripEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY) ||
+    stripEnvValue(process.env.SUPABASE_SERVICE_KEY) ||
+    stripEnvValue(process.env.SUPABASE_ADMIN_KEY);
+  const secretKey = isPlaceholderValue(rawSecret) ? '' : rawSecret;
+
+  return {
+    url: isPlaceholderValue(url) ? '' : url,
+    secretKey,
+  };
+}
+
+export function getSupabaseServerDiagnostics(): {
+  hasUrl: boolean;
+  hasSecretKey: boolean;
+  inferredUrlFromDb: boolean;
+} {
+  const explicitUrl =
+    stripEnvValue(process.env.SUPABASE_URL) ||
+    stripEnvValue(process.env.VITE_SUPABASE_URL) ||
+    stripEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const { url, secretKey } = readSupabaseServerCredentials();
+  return {
+    hasUrl: Boolean(url),
+    hasSecretKey: Boolean(secretKey),
+    inferredUrlFromDb: isPlaceholderValue(explicitUrl) && Boolean(url),
+  };
 }
 
 export function isSupabaseAdminConfigured(): boolean {

@@ -817,7 +817,7 @@ export function GestionPage() {
             </h2>
             {authError ? (
               <div className="space-y-4 text-left">
-                <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 wrap-break-word leading-relaxed font-mono">
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 wrap-break-word whitespace-pre-line leading-relaxed font-mono">
                   {authError}
                 </div>
                 <button

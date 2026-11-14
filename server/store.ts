@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { asc, desc, eq, or, sql } from 'drizzle-orm';
-import { db, isCloudSqlConfigured } from '../src/db/index.ts';
+import { db, getCleanDatabaseUrl, isCloudSqlConfigured } from '../src/db/index.ts';
 import {
   ensureDatabaseSchemaReady,
   isSchemaDriftError,
@@ -15,7 +15,10 @@ import {
   phases as phasesTable,
   registrations as registrationsTable,
 } from '../src/db/schema.ts';
-import { isSupabaseAdminConfigured } from './supabase-admin.ts';
+import {
+  getSupabaseServerDiagnostics,
+  isSupabaseAdminConfigured,
+} from './supabase-admin.ts';
 import {
   createAnnouncementViaSupabaseRest,
   createNewsViaSupabaseRest,
@@ -663,6 +666,22 @@ export async function readStore(): Promise<StoreData> {
 
   // Ne jamais écraser silencieusement avec un store JSON vide lorsque PostgreSQL est configuré
   if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    const dbUrl = getCleanDatabaseUrl();
+    const isDirectSupabaseHost = /@db\.[a-z0-9]+\.supabase\.(co|com)/i.test(dbUrl);
+    if (isNetworkOrDnsError(lastError) && isDirectSupabaseHost && !isSupabaseAdminConfigured()) {
+      const diag = getSupabaseServerDiagnostics();
+      const missing: string[] = [];
+      if (!diag.hasUrl) missing.push('SUPABASE_URL');
+      if (!diag.hasSecretKey) missing.push('SUPABASE_SECRET_KEY');
+      throw new Error(
+        `Connexion directe impossible sur Vercel (${detail}).\n\n` +
+          `Cause : l'hôte db.*.supabase.co est en IPv6 uniquement (incompatible avec Vercel), et le relais HTTPS Supabase n'a pas pu prendre le relais (${missing.join(' / ') || 'clé secrète'} manquant).\n\n` +
+          `Correctif dans Vercel → Settings → Environment Variables :\n` +
+          `1. Ajoutez SUPABASE_SECRET_KEY (clé "secret" / "service_role" de Supabase)\n` +
+          `2. Ou remplacez DATABASE_URL par l'URL Transaction Pooler (port 6543, aws-0-eu-west-1.pooler.supabase.com)\n` +
+          `3. Puis lancez un Redeploy sur Vercel.`,
+      );
+    }
     throw new Error(`Connexion à la base de données momentanément indisponible (${detail}). Les tables sont préservées.`);
   }
 
