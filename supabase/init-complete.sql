@@ -113,21 +113,45 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 );
 
 -- 8. Table des dépôts de candidatures (fichiers et textes écrits)
-CREATE TABLE IF NOT EXISTS public.submissions (
-	id text PRIMARY KEY NOT NULL,
-	registration_id text NOT NULL REFERENCES public.registrations(id) ON DELETE CASCADE,
-	phase_id text NOT NULL REFERENCES public.competition_phases(id) ON DELETE CASCADE,
-	kind text NOT NULL,
-	storage_path text,
-	file_name text,
-	mime_type text,
-	size_bytes integer,
-	text_content text,
-	status text DEFAULT 'received' NOT NULL,
-	organizer_note text DEFAULT '' NOT NULL,
-	created_at timestamp with time zone DEFAULT now() NOT NULL,
-	updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
+-- S'adapte automatiquement si registrations.id est de type uuid ou text dans votre base existante
+DO $$
+DECLARE
+	reg_id_type text;
+	phase_id_type text;
+BEGIN
+	SELECT format_type(a.atttypid, a.atttypmod) INTO reg_id_type
+	FROM pg_attribute a
+	JOIN pg_class c ON a.attrelid = c.oid
+	JOIN pg_namespace n ON c.relnamespace = n.oid
+	WHERE n.nspname = 'public' AND c.relname = 'registrations' AND a.attname = 'id' AND NOT a.attisdropped;
+
+	SELECT format_type(a.atttypid, a.atttypmod) INTO phase_id_type
+	FROM pg_attribute a
+	JOIN pg_class c ON a.attrelid = c.oid
+	JOIN pg_namespace n ON c.relnamespace = n.oid
+	WHERE n.nspname = 'public' AND c.relname = 'competition_phases' AND a.attname = 'id' AND NOT a.attisdropped;
+
+	reg_id_type := COALESCE(reg_id_type, 'text');
+	phase_id_type := COALESCE(phase_id_type, 'text');
+
+	EXECUTE format($sql$
+		CREATE TABLE IF NOT EXISTS public.submissions (
+			id text PRIMARY KEY NOT NULL,
+			registration_id %s NOT NULL REFERENCES public.registrations(id) ON DELETE CASCADE,
+			phase_id %s NOT NULL REFERENCES public.competition_phases(id) ON DELETE CASCADE,
+			kind text NOT NULL,
+			storage_path text,
+			file_name text,
+			mime_type text,
+			size_bytes integer,
+			text_content text,
+			status text DEFAULT 'received' NOT NULL,
+			organizer_note text DEFAULT '' NOT NULL,
+			created_at timestamp with time zone DEFAULT now() NOT NULL,
+			updated_at timestamp with time zone DEFAULT now() NOT NULL
+		)
+	$sql$, reg_id_type, phase_id_type);
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS submissions_registration_phase_uidx
 	ON public.submissions (registration_id, phase_id);
 
