@@ -21,42 +21,42 @@ export const MEDIA_ASSETS: Record<
   hero: {
     src: heroImg,
     alt: "Étudiante lisant à haute voix devant des étudiants à l'université",
-    caption: "Lecture à haute voix à l'ENSET",
+    caption: "Lecture à voix haute à l'ENSET de Lokossa",
   },
   portrait: {
     src: heroPortraitImg,
     alt: 'Jeune étudiante africaine lisant un texte imprimé devant un micro dans une lumière chaude',
-    caption: 'La voix dans le cadre — Lecture expressive',
+    caption: 'Interprétation orale d’un texte — ENSET de Lokossa',
   },
   plume: {
     src: plumeImg,
     alt: 'Jeune étudiante écrivant un texte dans un cahier sur une table en bois',
-    caption: 'Phase 01 · La Plume',
+    caption: 'Phase 01 · La Plume (en ligne)',
   },
   writing: {
     src: handwritingInkImg,
     alt: "Gros plan sur la main d'un étudiant écrivant au stylo dans un cahier entouré de livres",
-    caption: "Carnet d'écriture et notes préparatoires",
+    caption: "Rédaction des textes et préparation de l'interprétation",
   },
   connaissance: {
     src: connaissanceImg,
     alt: 'Deux étudiants discutant autour de livres ouverts à la bibliothèque',
-    caption: 'Phase 02 · La Connaissance',
+    caption: 'Phase 02 · La Connaissance (en ligne)',
   },
   eloquence: {
     src: eloquenceImg,
     alt: 'Étudiante prenant la parole au pupitre devant un public attentif',
-    caption: "Phase 03 · L'Éloquence",
+    caption: "Phase 03 · L'Éloquence (en présentiel)",
   },
   campus: {
     src: campusImg,
     alt: "Étudiants discutant et partageant des livres sur le campus en fin d'après-midi",
-    caption: 'Échanges sur le campus',
+    caption: 'Échanges étudiants sur le campus',
   },
   audience: {
     src: audienceListeningImg,
     alt: 'Étudiants réunis et attentifs lors d’une séance de lecture et de prise de parole',
-    caption: "L'écoute et la rencontre autour des textes",
+    caption: "Écoute collective et partage d'idées",
   },
 };
 

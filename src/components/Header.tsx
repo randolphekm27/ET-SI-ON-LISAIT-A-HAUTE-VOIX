@@ -72,29 +72,29 @@ export function Header() {
     };
   }, [mobileOpen]);
 
-  const overDarkHero = isHome && !scrolled && !mobileOpen;
+  const overIvoryHero = isHome && !scrolled && !mobileOpen;
 
   return (
     <>
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-          overDarkHero
-            ? 'h-16 lg:h-[76px] bg-gradient-to-b from-[#2B140C]/92 via-[#4E2A1E]/60 to-transparent text-ucaep-paper'
+          overIvoryHero
+            ? 'h-16 lg:h-[78px] bg-[#F7E6C8]/88 backdrop-blur-sm text-[#4E2A1E]'
             : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
         <div
-          className={`max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-8 ${
-            overDarkHero ? 'border-b border-ucaep-ivory/14' : ''
+          className={`max-w-[1380px] mx-auto h-full px-4 sm:px-8 lg:px-14 flex items-center justify-between gap-8 ${
+            overIvoryHero ? 'border-b border-[#4E2A1E]/14' : ''
           }`}
         >
-          {/* Zone 1: Brand mark */}
+          {/* Zone 1: Brand mark (brun profond sur fond ivoire comme sur toute l'interface) */}
           <Link
             to="/"
             aria-label="Accueil — Et si on lisait à haute voix ?"
             className="whitespace-nowrap shrink-0 focus-visible:rounded-sm"
           >
-            <UcaepMark light={overDarkHero} />
+            <UcaepMark light={false} />
           </Link>
 
           {/* Zone 2: 5 concise single-line nav links */}
@@ -108,10 +108,10 @@ export function Header() {
                 to={item.to}
                 className={({ isActive }) =>
                   `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
-                    overDarkHero
+                    overIvoryHero
                       ? isActive
-                        ? 'text-ucaep-ivory font-semibold'
-                        : 'text-ucaep-paper/80 hover:text-ucaep-ivory'
+                        ? 'text-[#4E2A1E] font-semibold'
+                        : 'text-[#4E2A1E]/80 hover:text-[#4E2A1E]'
                       : isActive
                         ? 'text-ucaep-brown font-semibold'
                         : 'text-ucaep-ink/75 hover:text-ucaep-brown'
@@ -141,9 +141,9 @@ export function Header() {
               <Link
                 to="/depot"
                 title={`Dossier ${candidateSession.referenceCode}`}
-                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] whitespace-nowrap shrink-0 group ${
-                  overDarkHero
-                    ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
+                  overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
                     : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
                 }`}
               >
@@ -153,9 +153,9 @@ export function Header() {
             ) : (
               <Link
                 to="/inscription"
-                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] whitespace-nowrap shrink-0 group ${
-                  overDarkHero
-                    ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
+                  overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
                     : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
                 }`}
               >
@@ -170,8 +170,8 @@ export function Header() {
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-sm transition-colors active:scale-95 ${
-                overDarkHero
-                  ? 'text-ucaep-paper hover:bg-white/10'
+                overIvoryHero
+                  ? 'text-[#4E2A1E] hover:bg-[#4E2A1E]/8'
                   : 'text-ucaep-brown hover:bg-ucaep-brown/8'
               }`}
             >
@@ -193,7 +193,7 @@ export function Header() {
           >
             <div className="space-y-6 pt-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
-                Sommaire · ENSET Lokossa
+                Sommaire · ENSET de Lokossa
               </p>
               <nav
                 aria-label="Menu mobile"
@@ -240,7 +240,7 @@ export function Header() {
               {candidateSession ? (
                 <>
                   <p className="text-xs text-ucaep-ivory/75">
-                    Inscrit(e) · Réf.{' '}
+                    Candidat enregistré · Réf.{' '}
                     <span className="font-mono font-semibold text-ucaep-gold">
                       {candidateSession.referenceCode}
                     </span>
@@ -275,7 +275,7 @@ export function Header() {
               )}
               <div className="flex items-center justify-between text-xs text-ucaep-ivory/65 pt-2">
                 <Link to="/contact" className="hover:text-ucaep-paper underline">
-                  Nous écrire
+                  Contacter l&apos;organisation
                 </Link>
                 <span className="tabular-nums">+229 01 68 62 46 00</span>
               </div>

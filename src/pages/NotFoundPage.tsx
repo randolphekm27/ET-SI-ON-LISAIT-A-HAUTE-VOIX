@@ -14,10 +14,10 @@ export function NotFoundPage() {
       <div className="max-w-2xl mx-auto px-4 text-center space-y-6">
         <EditorialMark folio="404" label="Page introuvable" tone="brown" />
         <h1 className="font-serif text-5xl sm:text-6xl font-semibold text-ucaep-brown">
-          Oups, cette page <em className="italic font-medium text-ucaep-ink">n&apos;existe pas.</em>
+          Cette page <em className="italic font-medium text-ucaep-ink">est introuvable.</em>
         </h1>
         <p className="text-base text-ucaep-ink/75 max-w-md mx-auto leading-relaxed">
-          Le lien que vous avez suivi n&apos;est plus actif ou l&apos;adresse a changé.
+          L&apos;adresse demandée n&apos;existe pas ou le contenu a été déplacé.
         </p>
         <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
           <Link
@@ -31,7 +31,7 @@ export function NotFoundPage() {
             to="/concours"
             className="editorial-underline px-4 py-3 text-sm font-medium text-ucaep-brown"
           >
-            Voir le concours
+            Présentation du concours
           </Link>
         </div>
       </div>

@@ -34,8 +34,9 @@ export function Footer() {
               />
             </div>
             <p className="text-sm text-ucaep-ivory/75 max-w-sm leading-relaxed">
-              Un concours imaginé par la Session Théâtre de l&apos;UCAEP pour les étudiants de
-              l&apos;ENSET de Lokossa. Créer · Transmettre · Rayonner.
+              Concours culturel gratuit organisé par la Session Théâtre de l&apos;UCAEP pour les
+              étudiants de l&apos;ENSET de Lokossa autour de l&apos;écriture, de la transmission des
+              connaissances et de l&apos;expression orale.
             </p>
             <p className="text-xs text-ucaep-ivory/65 tabular-nums">
               +229 01 68 62 46 00 · +229 01 96 11 80 37 · ucaeplokossa@gmail.com · @UCAEP
@@ -44,7 +45,7 @@ export function Footer() {
 
           <div className="md:col-span-4 space-y-4">
             <h2 className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-              Le site
+              Rubriques
             </h2>
             <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-ucaep-ivory/80">
               <li>
@@ -87,12 +88,12 @@ export function Footer() {
 
           <div className="md:col-span-3 space-y-4">
             <h2 className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-              En plus
+              Informations
             </h2>
             <ul className="space-y-3 text-sm text-ucaep-ivory/80">
               <li>
                 <Link to="/contact" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Nous écrire
+                  Contact
                 </Link>
               </li>
               <li>

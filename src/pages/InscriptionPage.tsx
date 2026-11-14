@@ -26,10 +26,10 @@ import { usePageSeo } from '../lib/format';
 import type { RegistrationPayload } from '../types/competition';
 
 const STEPS = [
-  { num: 1, label: 'Faire connaissance' },
-  { num: 2, label: 'Vos études' },
-  { num: 3, label: 'Votre motivation' },
-  { num: 4, label: 'Vérification' },
+  { num: 1, label: 'Identité et contact' },
+  { num: 2, label: 'Parcours académique' },
+  { num: 3, label: 'Démarche et accord' },
+  { num: 4, label: 'Validation' },
 ];
 
 const INITIAL_DATA: RegistrationPayload = {
@@ -51,7 +51,7 @@ const INITIAL_DATA: RegistrationPayload = {
 export function InscriptionPage() {
   usePageSeo(
     "S'inscrire",
-    "Inscrivez-vous gratuitement au concours UCAEP « Et si on lisait à haute voix ? » à l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026.",
+    "Inscription gratuite au concours « Et si on lisait à haute voix ? », ouvert exclusivement aux étudiants de l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026.",
   );
 
   const navigate = useNavigate();
@@ -94,10 +94,10 @@ export function InscriptionPage() {
     }
     if (currentStep === 3) {
       if (form.motivation.trim().length < 25) {
-        return 'Dites-nous en au moins 25 caractères ce qui vous donne envie de participer.';
+        return 'Précisez votre démarche en au moins 25 caractères pour valider cette étape.';
       }
       if (!form.acceptRules) {
-        return "Cochez la case d'accord ci-dessous pour valider votre inscription.";
+        return "Confirmez votre statut d'étudiant(e) à l'ENSET de Lokossa et l'acceptation du règlement.";
       }
     }
     return null;
@@ -200,7 +200,7 @@ export function InscriptionPage() {
               </div>
 
               <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
-                Vous êtes bien inscrit(e)
+                Votre candidature est enregistrée
                 {existingSession.candidateName ? `, ${existingSession.candidateName}` : ''}.
               </h2>
 
@@ -209,8 +209,8 @@ export function InscriptionPage() {
                 <span className="font-mono font-semibold text-ucaep-brown">
                   {existingSession.referenceCode}
                 </span>{' '}
-                est prêt. Vous pouvez accéder directement à votre espace candidat pour
-                consulter les phases et déposer votre production.
+                est actif. Vous pouvez accéder directement à votre espace de dépôt pour
+                consulter les consignes des phases et transmettre vos productions.
               </p>
 
               <div className="pt-2 flex flex-wrap items-center gap-4">
@@ -253,12 +253,12 @@ export function InscriptionPage() {
         section="Édition 2026 · ENSET de Lokossa"
         title="S'inscrire"
         italicWord="au concours"
-        subtitle="C'est gratuit et ouvert à tous les étudiants jusqu'au vendredi 20 novembre 2026. Cela vous prendra deux minutes."
+        subtitle="La participation est gratuite et ouverte exclusivement aux étudiants de l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026. La validation génère immédiatement votre code d'anonymat."
         quickFacts={[
-          { label: 'Durée du formulaire', value: '2 minutes' },
-          { label: 'Frais', value: '100 % gratuit' },
-          { label: 'Code anonyme', value: 'Délivré immédiatement' },
-          { label: 'Date limite', value: '20 novembre 2026' },
+          { label: 'Durée estimée', value: 'Environ 2 minutes' },
+          { label: 'Frais', value: 'Gratuit (ENSET)' },
+          { label: 'Code anonyme', value: "Attribué à l'envoi" },
+          { label: 'Clôture', value: '20 novembre 2026' },
         ]}
       />
 
@@ -330,8 +330,8 @@ export function InscriptionPage() {
             </nav>
 
             <div className="hidden lg:block text-xs text-ucaep-brown/75 space-y-1.5 leading-relaxed">
-              <p className="font-semibold text-ucaep-brown">Participation gratuite</p>
-              <p>Ouvert à tous les étudiants, quelle que soit votre filière.</p>
+              <p className="font-semibold text-ucaep-brown">Accès et gratuité</p>
+              <p>Participation gratuite, ouverte à l&apos;ensemble des étudiants de l&apos;ENSET de Lokossa, toutes filières confondues.</p>
             </div>
           </aside>
 
@@ -360,7 +360,7 @@ export function InscriptionPage() {
                       className="space-y-6"
                     >
                       <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Commençons par faire connaissance.
+                        Identité et coordonnées de suivi.
                       </h2>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <Field
@@ -444,7 +444,7 @@ export function InscriptionPage() {
                       className="space-y-6"
                     >
                       <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Parlons un peu de vos études.
+                        Filière et niveau à l&apos;ENSET de Lokossa.
                       </h2>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <Field
@@ -504,7 +504,7 @@ export function InscriptionPage() {
                       className="space-y-6"
                     >
                       <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Qu&apos;est-ce qui vous donne envie de participer ?
+                        Votre intérêt pour l&apos;écriture et la prise de parole.
                       </h2>
                       <div className="space-y-5">
                         <div className="space-y-1.5">
@@ -512,14 +512,14 @@ export function InscriptionPage() {
                             htmlFor="motivation"
                             className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
                           >
-                            Quelques mots sur votre motivation
+                            Votre démarche de participation
                           </label>
                           <textarea
                             id="motivation"
                             rows={4}
                             value={form.motivation}
                             onChange={(e) => updateField('motivation', e.target.value)}
-                            placeholder="Racontez-nous simplement ce qui vous attire dans l'écriture, la lecture ou la prise de parole."
+                            placeholder="Précisez en quelques phrases ce qui motive votre participation à ce parcours d'écriture, de vulgarisation et d'expression orale."
                             className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                             required
                           />
@@ -530,7 +530,7 @@ export function InscriptionPage() {
                             htmlFor="readingExperience"
                             className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
                           >
-                            Un livre ou un texte que vous aimez (facultatif)
+                            Référence de lecture ou d&apos;ouvrage (facultatif)
                           </label>
                           <input
                             id="readingExperience"
@@ -539,7 +539,7 @@ export function InscriptionPage() {
                             onChange={(e) =>
                               updateField('readingExperience', e.target.value)
                             }
-                            placeholder="Si un titre vous vient à l'esprit"
+                            placeholder="Un livre, essai ou texte qui a marqué votre parcours"
                             className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                           />
                         </div>
@@ -554,9 +554,9 @@ export function InscriptionPage() {
                             className="mt-1 h-4 w-4 accent-ucaep-brown"
                           />
                           <span className="text-sm text-ucaep-ink/85 leading-relaxed">
-                            Je confirme être inscrit(e) comme étudiant(e) et j&apos;accepte
-                            que l&apos;équipe de l&apos;UCAEP utilise ces informations
-                            pour organiser le concours.
+                            Je confirme être étudiant(e) régulièrement inscrit(e) à l&apos;ENSET de
+                            Lokossa et j&apos;accepte le traitement de ces informations par l&apos;UCAEP
+                            pour l&apos;organisation anonyme du concours.
                           </span>
                         </label>
                       </div>
@@ -573,11 +573,11 @@ export function InscriptionPage() {
                       className="space-y-6"
                     >
                       <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        On vérifie une dernière fois avant d&apos;envoyer.
+                        Vérification de votre dossier avant enregistrement.
                       </h2>
                       <p className="text-sm text-ucaep-ink/75">
-                        Relisez rapidement vos informations. Si tout est bon, vous pouvez
-                        envoyer votre inscription.
+                        Relisez attentivement vos coordonnées et votre matricule. La validation
+                        génère immédiatement votre code d&apos;anonymat UCAEP.
                       </p>
 
                       <dl className="divide-y divide-ucaep-brown/12 border-t border-b border-ucaep-brown/15">

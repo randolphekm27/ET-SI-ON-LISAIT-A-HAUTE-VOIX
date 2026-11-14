@@ -34,7 +34,7 @@ export function ActualitesPage() {
 function NewsMagazineView() {
   usePageSeo(
     'Actualités',
-    "Quoi de neuf autour du concours à l'ENSET de Lokossa : les coulisses, les candidats et la vie du campus.",
+    "Articles explicatifs et repères sur la démarche pédagogique du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.",
   );
 
   const [articles, setArticles] = useState<PublicNewsArticle[]>([]);
@@ -71,10 +71,10 @@ function NewsMagazineView() {
     <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Journal"
-        section="Les nouvelles du concours"
-        title="Quoi de neuf"
-        italicWord="depuis la dernière fois ?"
-        subtitle="Ce qui se prépare dans les coulisses, les nouvelles du campus et les retours sur les étapes du concours."
+        section="Démarche et repères"
+        title="Actualités"
+        italicWord="et repères"
+        subtitle="Des articles pour comprendre les objectifs pédagogiques du concours, le fonctionnement des trois phases et la préparation des épreuves à l'ENSET de Lokossa."
         aside={
           <div
             role="tablist"
@@ -129,7 +129,7 @@ function NewsMagazineView() {
           ) : filtered.length === 0 ? (
             <div className="p-12 border border-ucaep-brown/15 rounded-[2px] bg-ucaep-linen/40 text-center space-y-3">
               <p className="font-serif text-3xl text-ucaep-brown">
-                Il n&apos;y a pas encore d&apos;article dans cette rubrique.
+                Aucun article publié dans cette rubrique pour le moment.
               </p>
               <button
                 type="button"
@@ -231,7 +231,7 @@ function NewsMagazineView() {
               {/* Tier 3: Broadsheet Archive List */}
               {archiveArticles.length > 0 && (
                 <div className="space-y-6" data-reveal>
-                  <EditorialMark folio="Archives" label="Plus tôt" tone="brown" />
+                  <EditorialMark folio="Archives" label="Articles précédents" tone="brown" />
                   <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
                     {archiveArticles.map((article) => (
                       <Link
@@ -277,7 +277,9 @@ function NewsArticleView({ slug }: { slug: string }) {
 
   usePageSeo(
     article ? article.title : 'Actualité',
-    article ? article.excerpt : "Nouvelle de l'équipe UCAEP à l'ENSET de Lokossa.",
+    article
+      ? article.excerpt
+      : "Article d'information sur le concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.",
   );
 
   useEffect(() => {

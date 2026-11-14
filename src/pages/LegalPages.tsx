@@ -24,10 +24,10 @@ export function MentionsLegalesPage() {
               Éditeur du site
             </h2>
             <p>
-              Ce site est édité pour le concours culturel étudiant « Et si on lisait à
-              haute voix ? », organisé par l&apos;UCAEP (Union Culturelle et Artistique
-              des Élèves-Professeurs) à l&apos;ENSET de Lokossa, Département du Mono,
-              Bénin.
+              Ce site est édité pour le concours culturel et pédagogique « Et si on lisait à
+              haute voix ? », organisé par la Session Théâtre de l&apos;UCAEP (Union
+              Culturelle et Artistique des Élèves-Professeurs) au sein de l&apos;ENSET de
+              Lokossa, Département du Mono, Bénin.
             </p>
           </section>
 
@@ -92,9 +92,10 @@ export function PolitiqueConfidentialitePage() {
             </h2>
             <p>
               Les informations demandées dans le formulaire d&apos;inscription (identité,
-              coordonnées, filière, niveau d&apos;études, matricule et motivation) servent
-              uniquement à gérer les inscriptions et à vous tenir informé du déroulement
-              du concours « Et si on lisait à haute voix ? ».
+              coordonnées, filière, niveau d&apos;études, matricule et démarche de
+              participation) servent exclusivement à vérifier l&apos;appartenance à
+              l&apos;ENSET de Lokossa, à attribuer un code d&apos;anonymat et à assurer le
+              suivi du concours « Et si on lisait à haute voix ? ».
             </p>
           </section>
 

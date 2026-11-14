@@ -27,7 +27,7 @@ export function AnnoncesPage() {
 function AnnouncementsFeedView() {
   usePageSeo(
     'Annonces',
-    "Toutes les nouvelles et les annonces publiées par l'équipe UCAEP au fil du concours.",
+    "Communications officielles, ouvertures des phases et notes d'organisation du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.",
   );
 
   const [announcements, setAnnouncements] = useState<PublicAnnouncement[]>([]);
@@ -56,10 +56,10 @@ function AnnouncementsFeedView() {
     <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Tableau"
-        section="En direct de l'équipe"
-        title="On vous tient"
-        italicWord="au courant."
-        subtitle="Les informations officielles concernant le concours sont publiées ici, au fil du lancement de chaque étape."
+        section="Communications officielles"
+        title="Annonces et"
+        italicWord="calendrier."
+        subtitle="Les avis d'ouverture des phases, les consignes d'épreuves et les repères pratiques sont publiés ici par l'équipe organisatrice."
       />
 
       <section className="relative py-16 lg:py-24 bg-ucaep-paper paper-fiber overflow-hidden">
@@ -97,10 +97,10 @@ function AnnouncementsFeedView() {
           ) : announcements.length === 0 ? (
             <div className="p-12 border border-ucaep-brown/15 rounded-[2px] bg-ucaep-linen/40 text-center space-y-3">
               <p className="font-serif text-3xl text-ucaep-brown">
-                La prochaine annonce arrive bientôt.
+                Aucune annonce publiée pour le moment.
               </p>
               <p className="text-sm text-ucaep-ink/75">
-                On vous en dira plus prochainement.
+                Les prochaines communications de l&apos;équipe organisatrice apparaîtront dans cette rubrique.
               </p>
             </div>
           ) : (
@@ -234,10 +234,10 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center space-y-5">
         <h1 className="font-serif text-4xl font-semibold text-ucaep-brown">
-          Cette annonce n&apos;est pas encore disponible
+          Cette annonce n&apos;est pas disponible
         </h1>
         <p className="text-sm text-ucaep-ink/75">
-          On vous en dira plus prochainement si elle n&apos;a pas encore été publiée.
+          La note demandée n&apos;a pas encore été publiée ou son adresse a changé.
         </p>
         <Link
           to="/annonces"

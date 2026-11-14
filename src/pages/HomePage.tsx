@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
+  Calendar,
   Clock,
   Feather,
   Lock,
@@ -42,34 +43,34 @@ gsap.registerPlugin(ScrollTrigger);
 const MANIFESTO_CARDS = [
   {
     index: '01',
-    keyFigure: '100 % gratuit',
-    title: 'Ouvert à tous les étudiants',
+    keyFigure: 'ENSET · Gratuit',
+    title: 'Réservé aux étudiants de l’ENSET de Lokossa',
     detail:
-      'Accessible à tout étudiant, sans condition de filière ni d’expérience préalable sur scène.',
+      'La participation est entièrement gratuite et ouverte à tous les étudiants de l’ENSET de Lokossa, sans condition de filière.',
     Icon: Users,
   },
   {
     index: '02',
-    keyFigure: '5 min max',
-    title: 'Jusqu’à 5 min de présentation',
+    keyFigure: '2 en ligne · 1 scène',
+    title: 'Deux phases en ligne, une finale en présentiel',
     detail:
-      'Pour présenter vos idées ou défendre votre texte devant le jury, chacun dispose de jusqu’à 5 minutes.',
+      'La Plume et La Connaissance se préparent à distance avec des prestations vidéo ; L’Éloquence se déroule en présentiel devant le jury.',
     Icon: Clock,
   },
   {
     index: '03',
-    keyFigure: 'Sur 20 pts',
-    title: 'Chaque phase notée sur 20',
+    keyFigure: '6 épreuves · / 20 pts',
+    title: 'Trois phases progressives notées sur 20',
     detail:
-      'Les deux premières phases qualificatives sélectionnent les finalistes avant le verdict sur scène.',
+      'Chaque phase évalue deux épreuves précises (jusqu’à 5 minutes par présentation) pour passer de l’écrit à la vulgarisation puis à l’oral.',
     Icon: Scale,
   },
   {
     index: '04',
     keyFigure: 'Double lecture',
-    title: 'Anonymat & jury bienveillant',
+    title: 'Anonymat et évaluation pluridisciplinaire',
     detail:
-      'Copies corrigées à l’aveugle sous votre code candidat par un jury mixte ENSET et UCAEP.',
+      'Les productions sont corrigées sous code candidat UCAEP par un jury composé d’enseignants de l’ENSET et de membres culturels.',
     Icon: ShieldCheck,
   },
 ];
@@ -77,7 +78,7 @@ const MANIFESTO_CARDS = [
 export function HomePage() {
   usePageSeo(
     'Accueil',
-    "Un concours imaginé par la Session Théâtre de l'UCAEP, ouvert à tous les étudiants autour de l'écriture, de la connaissance et de la prise de parole.",
+    "Concours culturel gratuit organisé par la Session Théâtre de l'UCAEP pour tous les étudiants de l'ENSET de Lokossa : écriture originale, vulgarisation scientifique et éloquence en public.",
   );
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -110,7 +111,7 @@ export function HomePage() {
     };
   }, []);
 
-  // Séquence d'ouverture du Hero + Animation Signature 01 (La Plume du Hero au scroll)
+  // Séquence d'ouverture du Hero + Animations ScrollTrigger (Plume, Monstera, Portrait)
   useEffect(() => {
     const heroEl = heroRef.current;
     if (!heroEl || prefersReducedMotion()) return;
@@ -168,17 +169,16 @@ export function HomePage() {
           '-=0.5',
         );
 
-      // ANIMATION SIGNATURE 01 — LA PLUME DU HERO
-      // Déjà en place au chargement sur la jonction basse du hero ; au scroll,
-      // glisse en diagonale avec une légère rotation et disparaît derrière la section suivante opaque (Plan 4).
       const mm = gsap.matchMedia();
+
+      // ANIMATION SIGNATURE — PLUME AU SCROLL + MONSTERA + PARALLAX PORTRAIT
       mm.add('(min-width: 1024px)', () => {
         gsap.fromTo(
           '.hero-plume-img',
-          { x: 0, y: 0, rotate: -6 },
+          { x: 0, y: 0, rotate: -4 },
           {
-            x: 34,
-            y: 115,
+            x: 24,
+            y: 165,
             rotate: -13,
             ease: 'none',
             scrollTrigger: {
@@ -189,15 +189,50 @@ export function HomePage() {
             },
           },
         );
+
+        gsap.fromTo(
+          '.hero-monstera',
+          { x: 0, y: 0, rotate: 6, opacity: 1 },
+          {
+            x: -24,
+            y: -32,
+            rotate: 1,
+            opacity: 0.15,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 0.8,
+            },
+          },
+        );
+
+        gsap.fromTo(
+          '.hero-portrait-parallax',
+          { yPercent: 0, scale: 1 },
+          {
+            yPercent: -6,
+            scale: 1.035,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: true,
+            },
+          },
+        );
       });
+
       mm.add('(max-width: 1023px)', () => {
         gsap.fromTo(
           '.hero-plume-img',
-          { x: 0, y: 0, rotate: -5 },
+          { x: 0, y: 0, rotate: -3 },
           {
-            x: 12,
-            y: 50,
-            rotate: -10,
+            x: 8,
+            y: 78,
+            rotate: -9,
             ease: 'none',
             scrollTrigger: {
               trigger: heroEl,
@@ -207,13 +242,46 @@ export function HomePage() {
             },
           },
         );
+
+        gsap.fromTo(
+          '.hero-monstera',
+          { x: 0, y: 0, rotate: 5, opacity: 0.9 },
+          {
+            x: -10,
+            y: -14,
+            rotate: 1,
+            opacity: 0.2,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 0.8,
+            },
+          },
+        );
+
+        gsap.fromTo(
+          '.hero-portrait-parallax',
+          { yPercent: 0 },
+          {
+            yPercent: -2.5,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroEl,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: true,
+            },
+          },
+        );
       });
     }, heroEl);
 
     return () => ctx.revert();
   }, []);
 
-  useEditorialScrollMotion(pageRef, [phases.length, announcements.length, news.length]);
+  useEditorialScrollMotion(pageRef, [loaded, phases.length, announcements.length, news.length]);
 
   const hasOpenSubmissions = phases.some((p) => Boolean(p.submissionsOpen));
   const leadNews = news[0];
@@ -222,105 +290,132 @@ export function HomePage() {
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
       {/* ================================================================
-          SECTION 1 · HERO (Plan 2 = z-20) + SIGNATURE 01 : LA PLUME (jonction basse)
+          SECTION 1 · HERO IVOIRE ÉDITORIAL + MONSTERA + ONDE BRUNE + PLUME
           ================================================================ */}
       <section
         ref={heroRef}
-        className="relative z-20 w-full bg-[radial-gradient(ellipse_at_top_right,#6B3B2B_0%,#4E2A1E_52%,#2E160E_100%)] text-ucaep-ivory pt-[88px] pb-16 sm:pt-[96px] sm:pb-20 lg:pt-[108px] lg:pb-24 flex flex-col justify-between"
+        className="relative z-20 w-full min-h-[92vh] lg:min-h-screen bg-[radial-gradient(ellipse_at_72%_30%,#FCF5E6_0%,#F7E6C8_58%,#EDD6AF_100%)] text-[#4E2A1E] pt-[148px] sm:pt-[118px] lg:pt-[108px] flex flex-col justify-between paper-grain"
       >
-        {/* Plan 1 : Arrière-plan décoratif contenu dans son propre clip sans couper la Plume */}
+        {/* SVG clipPath réutilisable pour les angles échancrés du cadre portrait */}
+        <svg aria-hidden="true" width="0" height="0" className="absolute pointer-events-none">
+          <defs>
+            <clipPath id="hero-cartouche-clip" clipPathUnits="objectBoundingBox">
+              <path d="M 0.055 0 L 0.945 0 A 0.055 0.042 0 0 0 1 0.042 L 1 0.958 A 0.055 0.042 0 0 0 0.945 1 L 0.055 1 A 0.055 0.042 0 0 0 0 0.958 L 0 0.042 A 0.055 0.042 0 0 0 0.055 0 Z" />
+            </clipPath>
+          </defs>
+        </svg>
+
+        {/* Plan 1 : Texture papier, bordure africaine discrète à gauche & lumière d'atelier */}
         <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
           <BrandPatternEdge
-            variant="gold"
+            variant="brown"
             side="left"
-            className="w-3 sm:w-4 lg:w-6 opacity-85"
+            className="w-2.5 sm:w-3.5 lg:w-4 opacity-[0.18] mix-blend-multiply"
           />
-          <BrandPatternSurface
-            variant="gold"
-            tileWidth={210}
-            opacityClass="opacity-[0.06]"
-          />
-          <BrandPatternCircle
-            variant="gold"
-            tileWidth={135}
-            doubleRing
-            orbit
-            className="hidden lg:block -top-20 -right-16 w-72 h-72 opacity-22"
-          />
-          <BrandPatternCircle
-            variant="obsidian"
-            tileWidth={120}
-            ring={false}
-            className="hidden md:block absolute bottom-24 left-12 w-36 h-36 opacity-15"
-          />
-          <Mic2
+          <div
             aria-hidden="true"
-            className="pointer-events-none select-none absolute bottom-12 right-6 w-72 h-72 text-ucaep-gold opacity-[0.055] -rotate-12"
-            strokeWidth={1}
+            className="absolute inset-0 bg-[radial-gradient(circle_at_84%_22%,rgba(255,252,245,0.48)_0%,rgba(209,154,58,0.06)_44%,transparent_72%)]"
           />
-          <BrandPatternWave
-            variant="gold"
-            tileWidth={170}
-            opacity={0.2}
-            doubleWave
-            className="absolute bottom-0 inset-x-0 h-16 sm:h-24"
+          <BrandPatternCircle
+            variant="brown"
+            tileWidth={120}
+            blendMultiply
+            ring={false}
+            className="hidden md:block bottom-36 left-10 w-32 h-32 opacity-[0.065]"
           />
         </div>
 
-        {/* Plan 2 : Contenu éditorial principal et portrait cadré */}
-        <div className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-12 items-center">
-            <div className="lg:col-span-7 space-y-7">
-              <div className="hero-meta-fade flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-ucaep-gold">
+        {/* Plan 2 : ASSET VÉGÉTAL — MONSTERA (angle supérieur gauche, orientée vers le centre) */}
+        <div
+          aria-hidden="true"
+          data-scenic-asset="monstera"
+          data-scenic-plan="2"
+          className="hero-monstera pointer-events-none select-none absolute z-[5] top-[70px] sm:top-[76px] left-3 sm:left-5 lg:left-6 w-24 sm:w-32 lg:w-40 xl:w-44 aspect-[1392/1130]"
+        >
+          <img
+            src={SCENIC_ASSETS.monstera.src}
+            alt=""
+            loading="eager"
+            decoding="async"
+            className="scenic-object w-full h-full object-contain"
+          />
+        </div>
+
+        {/* Plan 2 : Composition principale 54% gauche / 46% droite dans un conteneur 1380px */}
+        <div className="relative z-20 max-w-[1380px] mx-auto w-full px-5 sm:px-8 lg:px-14 my-auto py-4 sm:py-6 lg:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,54fr)_minmax(0,46fr)] gap-10 lg:gap-12 xl:gap-16 items-center">
+            {/* COLONNE GAUCHE — Contenu éditorial (ordre strict & copywriting intact) */}
+            <div className="lg:pl-8 xl:pl-12 space-y-6 sm:space-y-7">
+              {/* 1. Contexte du concours */}
+              <div className="hero-meta-fade flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8C5A0D]">
                 <span>Session Théâtre · UCAEP</span>
-                <span aria-hidden="true" className="text-ucaep-ivory/40">·</span>
-                <span className="text-ucaep-ivory/85">ENSET de Lokossa — UNSTIM</span>
+                <span aria-hidden="true" className="h-3 w-px bg-[#4E2A1E]/25" />
+                <span className="text-[#4E2A1E]/85">ENSET de Lokossa — UNSTIM</span>
+                <span
+                  aria-hidden="true"
+                  className="hidden sm:block h-px flex-1 max-w-[110px] bg-[#4E2A1E]/22 ml-2"
+                />
               </div>
 
-              <h1 className="font-serif text-ucaep-paper tracking-tight">
+              {/* 2. Titre monumental (76px–100px desktop) */}
+              <h1 className="font-serif text-[#4E2A1E] tracking-tight">
                 <span className="block overflow-hidden">
-                  <span className="hero-line-inner block text-5xl sm:text-7xl lg:text-[5.2rem] xl:text-[5.8rem] font-semibold leading-[0.94]">
+                  <span className="hero-line-inner block text-[2.85rem] sm:text-[4.2rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[6rem] font-semibold leading-[0.96]">
                     Et si on lisait
                   </span>
                 </span>
                 <span className="block overflow-hidden">
-                  <span className="hero-line-inner block text-5xl sm:text-7xl lg:text-[5.45rem] xl:text-[6.05rem] italic font-normal text-ucaep-ivory leading-[1.02] pr-2">
+                  <span className="hero-line-inner block text-[2.85rem] sm:text-[4.2rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[6rem] italic font-normal text-[#4E2A1E] leading-[1.03] pr-2">
                     à haute voix ?
                   </span>
                 </span>
               </h1>
 
-              <p className="hero-meta-fade text-base sm:text-lg text-ucaep-ivory/88 max-w-lg leading-relaxed font-normal">
-                Un concours gratuit pour <strong className="text-ucaep-paper font-semibold">tous les étudiants</strong> autour de l&apos;écriture, de la lecture et de la parole — avec{' '}
-                <strong className="text-ucaep-gold font-semibold">jusqu&apos;à 5 minutes</strong> pour présenter vos idées.
+              {/* 3. Description (max 570px) */}
+              <p className="hero-meta-fade text-base sm:text-lg text-[#4E2A1E]/90 max-w-[570px] leading-relaxed font-normal">
+                Un concours gratuit ouvert à{' '}
+                <strong className="text-[#4E2A1E] font-semibold">
+                  tous les étudiants de l&apos;ENSET de Lokossa
+                </strong>{' '}
+                pour développer l&apos;écriture personnelle, la vulgarisation des savoirs et la prise de parole en public — deux phases en ligne en vidéo et une finale en présentiel.
               </p>
 
-              <dl className="hero-meta-fade grid grid-cols-3 gap-4 max-w-lg border-y border-ucaep-ivory/18 py-3.5 text-xs">
+              {/* 4. Trois informations clés avec séparateurs verticaux fins */}
+              <dl className="hero-meta-fade grid grid-cols-3 gap-3 sm:gap-6 max-w-[560px] pt-1 pb-2 text-xs">
                 <div>
-                  <dt className="uppercase tracking-[0.16em] text-ucaep-gold/85 text-[10px]">Accès</dt>
-                  <dd className="font-serif text-base sm:text-lg text-ucaep-paper font-semibold mt-0.5">
-                    Tous étudiants
+                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                    Public &amp; tarif
+                  </dt>
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1">
+                    ENSET · Gratuit
                   </dd>
                 </div>
-                <div className="border-l border-ucaep-ivory/16 pl-4">
-                  <dt className="uppercase tracking-[0.16em] text-ucaep-gold/85 text-[10px]">Présentation</dt>
-                  <dd className="font-serif text-base sm:text-lg text-ucaep-paper font-semibold mt-0.5 tabular-nums">
+                <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
+                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                    Format
+                  </dt>
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
+                    2 en ligne · 1 scène
+                  </dd>
+                </div>
+                <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
+                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                    Présentation
+                  </dt>
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
                     Jusqu&apos;à 5 min
-                  </dd>
-                </div>
-                <div className="border-l border-ucaep-ivory/16 pl-4">
-                  <dt className="uppercase tracking-[0.16em] text-ucaep-gold/85 text-[10px]">Barème</dt>
-                  <dd className="font-serif text-base sm:text-lg text-ucaep-paper font-semibold mt-0.5 tabular-nums">
-                    Sur 20 pts / phase
                   </dd>
                 </div>
               </dl>
 
-              <div className="hero-meta-fade pt-1 flex flex-wrap items-center gap-5">
+              <div className="hero-rule-draw h-px max-w-[560px] bg-[#4E2A1E]/14" />
+
+              {/* 5. CTA existants et ordre conservé */}
+              <div className="hero-meta-fade pt-1 flex flex-wrap items-center gap-4 sm:gap-5">
                 {candidateSession ? (
                   <Link
                     to="/depot"
-                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
+                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
                   >
                     <span>Mon espace dépôt ({candidateSession.referenceCode})</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -328,7 +423,7 @@ export function HomePage() {
                 ) : (
                   <Link
                     to="/inscription"
-                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
+                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
                   >
                     <span>Je m&apos;inscris</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -338,7 +433,7 @@ export function HomePage() {
                 {!candidateSession && hasOpenSubmissions && (
                   <Link
                     to="/depot"
-                    className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold rounded-[2px] border border-ucaep-gold/70 text-ucaep-gold hover:bg-ucaep-gold/10 whitespace-nowrap shrink-0"
+                    className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold rounded-[4px] border border-[#D19A3A] bg-transparent text-[#4E2A1E] hover:bg-[#D19A3A]/12 whitespace-nowrap shrink-0"
                   >
                     <span>Déposer ma production</span>
                   </Link>
@@ -346,80 +441,139 @@ export function HomePage() {
 
                 <Link
                   to="/parcours"
-                  className="editorial-underline py-2 text-sm font-medium text-ucaep-ivory hover:text-ucaep-gold transition-colors whitespace-nowrap shrink-0"
+                  className="editorial-underline py-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#8C5A0D] transition-colors whitespace-nowrap shrink-0"
                 >
-                  Découvrir la Phase 1
+                  Consulter les 3 phases et 6 épreuves
                 </Link>
               </div>
             </div>
 
-            <div className="lg:col-span-5 relative">
-              <BrandPatternCircle
-                variant="gold"
-                tileWidth={130}
-                orbit
-                className="absolute -bottom-8 -left-8 w-44 h-44 opacity-30 hidden sm:block"
-              />
-              <figure className="hero-portrait-frame relative z-10 bg-[#3B1E14]/90 border border-ucaep-gold/30 p-2.5 sm:p-3.5 rounded-[2px] shadow-[0_32px_72px_-20px_rgba(20,10,6,0.72)] transition-transform duration-500 hover:-translate-y-1">
-                <div className="relative aspect-[3/4] max-h-[540px] w-full overflow-hidden bg-[#2A150E]">
-                  <EditorialImage
-                    assetKey="portrait"
-                    priority
-                    className="hero-portrait-img object-cover object-top"
+            {/* COLONNE DROITE — Photographie principale encadrée (style cartouche brun + double filet doré) */}
+            <div className="relative z-10 flex justify-center lg:justify-end">
+              <div className="hero-portrait-frame relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[450px] xl:max-w-[480px] p-2">
+                {/* Double filet fin brun & or entourant la silhouette échancrée */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 400 540"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 w-full h-full"
+                >
+                  <path
+                    d="M 24 2 L 376 2 A 22 22 0 0 0 398 24 L 398 516 A 22 22 0 0 0 376 538 L 24 538 A 22 22 0 0 0 2 516 L 2 24 A 22 22 0 0 0 24 2 Z"
+                    fill="none"
+                    stroke="#4E2A1E"
+                    strokeOpacity="0.45"
+                    strokeWidth="1.2"
                   />
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2E160E]/55 via-transparent to-transparent"
+                  <path
+                    d="M 27 6 L 373 6 A 18 18 0 0 0 394 27 L 394 513 A 18 18 0 0 0 373 534 L 27 534 A 18 18 0 0 0 6 513 L 6 27 A 18 18 0 0 0 27 6 Z"
+                    fill="none"
+                    stroke="#D19A3A"
+                    strokeOpacity="0.7"
+                    strokeWidth="0.9"
                   />
+                </svg>
+
+                <figure
+                  style={{ clipPath: 'url(#hero-cartouche-clip)' }}
+                  className="relative bg-[#4E2A1E] p-3 sm:p-4 shadow-[0_28px_64px_-22px_rgba(78,42,30,0.4)]"
+                >
+                  <div className="relative aspect-[3/4] max-h-[490px] w-full overflow-hidden bg-[#2E160E]">
+                    <EditorialImage
+                      assetKey="portrait"
+                      priority
+                      className="hero-portrait-img hero-portrait-parallax object-cover object-top"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2E160E]/40 via-transparent to-transparent"
+                    />
+                  </div>
+                  <figcaption className="hero-meta-fade pt-3.5 pb-1 px-1.5 flex items-center justify-between text-xs text-[#F7E6C8]">
+                    <span className="font-serif italic text-sm text-[#F7E6C8]">
+                      Créer · Transmettre · Rayonner
+                    </span>
+                    <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-[#D19A3A] tabular-nums">
+                      Édition 2026
+                    </span>
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TRANSITION ORGANIQUE INFÉRIEURE BRUN PROFOND (#4E2A1E) */}
+        <div className="relative z-[12] mt-10 lg:mt-12 w-full">
+          {/* Onde organique sculptée reliant la zone ivoire au socle brun */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 1440 84"
+            preserveAspectRatio="none"
+            className="block w-full h-11 sm:h-14 lg:h-[72px] -mb-px pointer-events-none select-none"
+          >
+            {/* Ruban doré / terre cuite discret le long de la crête gauche */}
+            <path
+              d="M0,14 C240,54 520,58 840,46 C1120,35 1295,12 1440,26 L1440,84 L0,84 Z"
+              fill="#9C5B25"
+              fillOpacity="0.72"
+            />
+            {/* Onde principale brun profond #4E2A1E */}
+            <path
+              d="M0,28 C255,66 530,54 845,48 C1130,42 1300,18 1440,34 L1440,84 L0,84 Z"
+              fill="#4E2A1E"
+            />
+            <path
+              d="M0,28 C255,66 530,54 845,48 C1130,42 1300,18 1440,34"
+              fill="none"
+              stroke="#D19A3A"
+              strokeOpacity="0.45"
+              strokeWidth="1.2"
+            />
+          </svg>
+
+          {/* Socle brun profond intégrant le suivi des phases & date de clôture */}
+          <div className="relative bg-[#4E2A1E] text-[#F7E6C8] overflow-hidden">
+            <BrandPatternSurface
+              variant="gold"
+              tileWidth={190}
+              opacityClass="opacity-[0.06]"
+            />
+            <div className="relative z-10 max-w-[1380px] mx-auto w-full px-5 sm:px-8 lg:px-14 pt-2 pb-10 sm:pb-12">
+              <div className="hero-meta-fade flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs text-[#F7E6C8]/90 tabular-nums pr-24 sm:pr-44 lg:pr-64 xl:pr-72">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <span>
+                    <strong className="font-mono text-[#D19A3A] mr-1.5">01</strong>La Plume (en ligne)
+                  </span>
+                  <span>
+                    <strong className="font-mono text-[#D19A3A] mr-1.5">02</strong>La Connaissance (en ligne)
+                  </span>
+                  <span>
+                    <strong className="font-mono text-[#D19A3A] mr-1.5">03</strong>L&apos;Éloquence (en présentiel)
+                  </span>
                 </div>
-                <figcaption className="hero-meta-fade pt-3 pb-0.5 px-0.5 flex items-center justify-between text-xs text-ucaep-ivory/80">
-                  <span className="font-serif italic text-sm">
-                    Créer · Transmettre · Rayonner
-                  </span>
-                  <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-ucaep-gold tabular-nums">
-                    Édition 2026
-                  </span>
-                </figcaption>
-              </figure>
+                <div className="inline-flex items-center gap-2 text-[#F7E6C8]/90">
+                  <Calendar className="w-3.5 h-3.5 text-[#D19A3A] shrink-0" aria-hidden="true" />
+                  <span>Clôture des inscriptions · Vendredi 20 novembre 2026</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Repère de bas de Hero */}
-        <div className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10 mt-10 lg:mt-14">
-          <div className="hero-rule-draw h-px bg-ucaep-ivory/22 mb-5" />
-          <div className="hero-meta-fade flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ucaep-ivory/82 tabular-nums pr-24 sm:pr-44 lg:pr-64">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
-              <span>
-                <strong className="font-mono text-ucaep-gold mr-1.5">01</strong>La Plume (/20)
-              </span>
-              <span>
-                <strong className="font-mono text-ucaep-gold mr-1.5">02</strong>Révélée au Jour 6 (/20)
-              </span>
-              <span>
-                <strong className="font-mono text-ucaep-gold mr-1.5">03</strong>Grande Finale sur scène (/20)
-              </span>
-            </div>
-            <div className="text-ucaep-ivory/85">
-              Clôture des inscriptions · Vendredi 20 novembre 2026
-            </div>
-          </div>
-        </div>
-
-        {/* Plan 3 : ANIMATION SIGNATURE 01 — LA PLUME DU HERO
-            Chevauche la jonction basse du hero avec marge droite sûre ; sa partie inférieure
-            passe naturellement derrière la Section 2A opaque (z-30) et glisse en diagonale au scroll. */}
+        {/* Plan 3 : ASSET SIGNATURE — LA PLUME (chevauche la transition ivoire/brun, disparaît derrière Section 2A z-30) */}
         <div
           aria-hidden="true"
           data-scenic-asset="plume"
           data-scenic-plan="3"
-          className="pointer-events-none select-none absolute z-[15] right-8 sm:right-14 lg:right-20 -bottom-10 sm:-bottom-14 lg:-bottom-16 w-40 sm:w-60 lg:w-[300px] aspect-[3/2]"
+          className="pointer-events-none select-none absolute z-[25] right-4 sm:right-10 lg:right-14 bottom-2 sm:bottom-3 lg:bottom-4 w-36 sm:w-52 lg:w-[270px] xl:w-[300px] aspect-[3/2]"
         >
           <img
             src={SCENIC_ASSETS.plume.src}
             alt=""
             loading="eager"
-            className="hero-plume-img scenic-object w-full h-full object-contain -rotate-6"
+            decoding="async"
+            className="hero-plume-img scenic-object w-full h-full object-contain -rotate-[4deg]"
           />
         </div>
       </section>
@@ -447,11 +601,11 @@ export function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4" data-reveal>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                  L&apos;essentiel en 10 secondes
+                  Repères du concours
                 </p>
                 <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown mt-1 overflow-hidden">
                   <span data-mask-title className="block">
-                    Quatre repères <em className="italic font-normal text-ucaep-ink">pour décider tout de suite</em>
+                    Quatre repères <em className="italic font-normal text-ucaep-ink">pour comprendre l&apos;organisation</em>
                   </span>
                 </h2>
               </div>
@@ -459,7 +613,7 @@ export function HomePage() {
                 to="/concours"
                 className="group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
               >
-                <span className="editorial-underline">Lire le dossier complet</span>
+                <span className="editorial-underline">Consulter la présentation complète</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -504,39 +658,35 @@ export function HomePage() {
 
       {/* ================================================================
           SECTION 2B · PRÉSENTATION « TROIS ÉTAPES, DU CAHIER JUSQU'À LA SCÈNE »
-          + ASSET 02 (PILE DE LIVRES bas-gauche) & ASSET 03 (MONSTERA bas-droite transition)
           ================================================================ */}
-      <section
-        data-scenic-stage="presentation"
-        className="relative z-25 pt-12 pb-36 sm:pt-16 sm:pb-44 lg:pt-20 lg:pb-56 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden"
-      >
+      <section className="relative z-25 pt-12 pb-20 lg:pt-20 lg:pb-28 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
           <div className="h-px bg-ucaep-brown/12 mb-14 lg:mb-16" data-hairline-reveal />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             <div className="lg:col-span-6 space-y-6" data-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                Pourquoi on lance ce concours
+                Présentation &amp; démarche pédagogique
               </p>
               <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-brown leading-[1.02] overflow-hidden">
                 <span data-mask-title className="block">
-                  Trois étapes,{' '}
+                  Trois phases pour développer{' '}
                   <em className="italic font-normal text-ucaep-ink">
-                    du cahier jusqu&apos;à la scène.
+                    ses capacités d&apos;écriture, de transmission des connaissances et de prise de parole.
                   </em>
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-ucaep-ink/80 max-w-xl leading-relaxed">
-                Les inscriptions sont ouvertes gratuitement à tous les étudiants.{' '}
+                Imaginé par la Session Théâtre de l&apos;UCAEP pour les étudiants de l&apos;ENSET de Lokossa, ce concours complète la formation technique et scientifique.{' '}
                 <strong className="font-semibold text-ucaep-brown">
-                  Pas besoin d&apos;avoir déjà fait de la scène ou de la poésie
+                  Aucune expérience scénique préalable n&apos;est exigée
                 </strong>{' '}
-                : on avance pas à pas, de l&apos;écriture personnelle jusqu&apos;à la prise de parole devant le public.
+                : les deux premières phases se déroulent en ligne (textes et prestations vidéo) avant une finale en présentiel devant le jury et le campus.
               </p>
               <div className="pt-4 border-t border-ucaep-brown/14 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium text-ucaep-brown/80 tabular-nums">
-                <span>Ouvert à tous les étudiants</span>
+                <span>Gratuit · ENSET de Lokossa</span>
                 <span aria-hidden="true">·</span>
-                <span>Jusqu&apos;à 5 minutes par présentation</span>
+                <span>Phases 1 &amp; 2 en ligne · Phase 3 en présentiel</span>
                 <span aria-hidden="true">·</span>
                 <span>Session Théâtre UCAEP</span>
               </div>
@@ -548,7 +698,7 @@ export function HomePage() {
                   <EditorialImage assetKey="writing" data-parallax="-5" />
                 </div>
                 <p className="mt-3 text-xs font-serif italic text-ucaep-brown/75">
-                  Fig. 01 — Sur le papier, avant la prise de parole
+                  Fig. 01 — Rédaction des textes originaux avant l&apos;interprétation vidéo
                 </p>
               </div>
               <div
@@ -579,23 +729,6 @@ export function HomePage() {
             </div>
           </div>
         </div>
-
-        {/* ASSET 02 — PILE DE LIVRES : Partie inférieure gauche, en retrait, zéro masquage de texte */}
-        <ScenicStageAsset
-          assetKey="livres"
-          plan={2}
-          motionId="livres"
-          className="absolute bottom-5 sm:bottom-8 lg:bottom-10 left-4 sm:left-8 lg:left-12 w-28 sm:w-40 lg:w-52 opacity-90"
-        />
-
-        {/* ASSET 03 — MONSTERA : Transition vers le parcours, bas-droite orientée vers l'intérieur */}
-        <ScenicStageAsset
-          assetKey="monstera"
-          plan={3}
-          motionId="monstera"
-          flipX
-          className="absolute bottom-4 sm:bottom-6 lg:bottom-8 right-6 sm:right-12 lg:right-16 w-32 sm:w-44 lg:w-56"
-        />
       </section>
 
       {/* ================================================================
@@ -634,11 +767,11 @@ export function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
               <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
-                  Comment ça va se passer
+                  Les trois phases du concours
                 </p>
                 <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
                   <span data-mask-title className="block">
-                    Voici les <em className="italic font-normal text-ucaep-brown">trois étapes</em>
+                    Trois phases, <em className="italic font-normal text-ucaep-brown">six épreuves</em>
                   </span>
                 </h2>
               </div>
@@ -646,7 +779,7 @@ export function HomePage() {
                 to="/parcours"
                 className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
               >
-                <span className="editorial-underline">Voir le parcours complet</span>
+                <span className="editorial-underline">Consulter les 6 épreuves en détail</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -709,14 +842,14 @@ export function HomePage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-2 max-w-2xl">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                  Phase 01 · Consignes déjà affichées
+                  Phase 01 · En ligne · Textes originaux et vidéo
                 </p>
                 <h3 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
-                  Zoom sur <em className="italic font-normal text-ucaep-ink">La Plume</em> : vos deux épreuves
+                  Zoom sur <em className="italic font-normal text-ucaep-ink">La Plume</em> : les deux premières épreuves
                 </h3>
               </div>
               <p className="text-xs sm:text-sm font-medium text-ucaep-brown/80 tabular-nums">
-                Jours 1 à 3 · À domicile · Jusqu&apos;à 5 minutes par présentation
+                Phase 1 en ligne · Production écrite + interprétation vidéo · Jusqu&apos;à 5 min
               </p>
             </div>
 
@@ -729,20 +862,20 @@ export function HomePage() {
                 />
                 <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
                   <span>Épreuve 01</span>
-                  <span className="text-ucaep-green">5 min max</span>
+                  <span className="text-ucaep-green">Texte + vidéo</span>
                 </div>
                 <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
                   « Je suis… »
                 </h4>
                 <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                  Ici, vous êtes appelé(e) à vous présenter vraiment,{' '}
+                  Les candidats rédigent un texte original pour se présenter{' '}
                   <strong className="font-semibold text-ucaep-brown">
-                    au-delà de votre nom, de votre âge ou de votre filière
+                    au-delà de leur état civil ou de leur filière
                   </strong>
-                  . Racontez votre parcours, vos rêves, vos doutes et ce qui vous anime, dans la forme qui vous ressemble.
+                  , puis l&apos;interprètent en vidéo : parcours personnel, interrogations, aspirations et regard sur le monde.
                 </p>
                 <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                  Poème, prose, monologue ou récit · Jusqu&apos;à 5 minutes pour votre présentation.
+                  Poème, prose, monologue ou récit · Interprétation vidéo (jusqu&apos;à 5 min).
                 </p>
               </article>
 
@@ -754,17 +887,17 @@ export function HomePage() {
                 />
                 <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
                   <span>Épreuve 02</span>
-                  <span className="text-ucaep-green">5 min max</span>
+                  <span className="text-ucaep-green">Texte + vidéo</span>
                 </div>
                 <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
                   « Les mots que l&apos;on n&apos;ose pas dire »
                 </h4>
                 <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                  Ici, vous êtes invité(e) à confier au papier{' '}
+                  Les candidats produisent un texte original consacré à{' '}
                   <strong className="font-semibold text-ucaep-brown">
-                    une pensée, une émotion ou une vérité gardée pour vous
+                    une pensée, une gratitude ou une vérité retenue par pudeur
                   </strong>
-                  {' '}: lettre jamais envoyée, merci, regret ou confession adressée à quelqu&apos;un de réel ou d&apos;imaginaire.
+                  , puis en livrent une interprétation filmée en vidéo.
                 </p>
                 <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
                   Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
@@ -794,7 +927,7 @@ export function HomePage() {
                   <span>/ 20 points</span>
                 </div>
                 <h4 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-paper leading-snug">
-                  Notes &amp; qualification
+                  Critères d&apos;évaluation
                 </h4>
                 <ul className="relative z-10 divide-y divide-ucaep-ivory/14 text-sm text-ucaep-ivory/90 tabular-nums">
                   <li className="py-1.5 flex justify-between gap-2">
@@ -839,14 +972,14 @@ export function HomePage() {
                   </li>
                 </ul>
                 <p className="relative z-10 text-xs text-ucaep-ivory/82 leading-relaxed pt-1">
-                  Phase qualificative : les meilleures copies passent à la Phase 2.
+                  Les retenus accèdent à La Connaissance (en ligne), puis les finalistes à L&apos;Éloquence (en présentiel).
                 </p>
                 <div className="relative z-10 pt-1">
                   <Link
                     to="/parcours"
                     className="group/link inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-gold hover:text-ucaep-paper transition-colors"
                   >
-                    <span>Voir tout le détail Phase 1</span>
+                    <span>Voir les 6 épreuves du parcours</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/link:translate-x-1" />
                   </Link>
                 </div>
@@ -875,11 +1008,11 @@ export function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                En direct de l&apos;équipe
+                Informations officielles
               </p>
               <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
                 <span data-mask-title className="block">
-                  On vous tient <em className="italic font-normal text-ucaep-brown">au courant</em>
+                  Annonces et <em className="italic font-normal text-ucaep-brown">calendrier</em>
                 </span>
               </h2>
             </div>
@@ -903,7 +1036,7 @@ export function HomePage() {
             </div>
           ) : announcements.length === 0 ? (
             <div className="p-10 border border-ucaep-brown/14 rounded-[2px] bg-[#F4EDE1]/60 text-sm text-ucaep-ink/75">
-              Il n&apos;y a pas encore d&apos;annonce publiée. La prochaine annonce arrive bientôt.
+              Aucune annonce n&apos;est encore publiée. Les avis officiels relatifs au calendrier et aux résultats paraîtront dans cette rubrique.
             </div>
           ) : (
             <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
@@ -1012,18 +1145,18 @@ export function HomePage() {
         >
           <div className="space-y-4 max-w-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
-              Vous souhaitez participer ?
+              Participation étudiante · ENSET de Lokossa
             </p>
-            <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-paper leading-[1.02] overflow-hidden">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-ucaep-paper leading-[1.08] overflow-hidden">
               <span data-mask-title className="block">
-                C&apos;est l&apos;occasion d&apos;essayer{' '}
+                Un concours ouvert aux étudiants de l&apos;ENSET{' '}
                 <em className="italic font-normal text-ucaep-ivory">
-                  et de partager vos idées.
+                  pour mettre en pratique leurs compétences en écriture, en vulgarisation scientifique et en expression orale.
                 </em>
               </span>
             </h2>
             <p className="text-sm sm:text-base text-ucaep-ivory/85 max-w-xl leading-relaxed">
-              L&apos;inscription est gratuite, ouverte à tous les étudiants et prend deux minutes. Venez tenter l&apos;aventure.
+              L&apos;inscription est gratuite et ouverte à tous les étudiants de l&apos;ENSET de Lokossa jusqu&apos;au vendredi 20 novembre 2026. Chaque candidat reçoit un code d&apos;anonymat dès validation du formulaire.
             </p>
           </div>
           {candidateSession ? (
@@ -1080,11 +1213,11 @@ export function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
-                Les nouvelles du concours
+                Journal du concours
               </p>
               <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
                 <span data-mask-title className="block">
-                  Quoi de <em className="italic font-normal text-ucaep-brown">neuf ?</em>
+                  Actualités et <em className="italic font-normal text-ucaep-brown">repères</em>
                 </span>
               </h2>
             </div>
@@ -1092,7 +1225,7 @@ export function HomePage() {
               to="/actualites"
               className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
             >
-              <span className="editorial-underline">Voir toutes les actualités</span>
+              <span className="editorial-underline">Consulter toutes les actualités</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </div>

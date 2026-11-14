@@ -83,7 +83,7 @@ function formatDeadline(iso: string | null): string | null {
 export function DepotPage() {
   usePageSeo(
     'Déposer ma production',
-    'Espace de dépôt des textes, enregistrements audio, vidéos ou documents pour les candidats inscrits au concours UCAEP.',
+    'Espace de dépôt des textes, contenus explicatifs, fichiers audio ou vidéos pour les phases en ligne du concours UCAEP à l’ENSET de Lokossa.',
   );
 
   const [searchParams] = useSearchParams();
@@ -399,16 +399,16 @@ export function DepotPage() {
     <div className="bg-ucaep-paper min-h-screen">
       <PageFolioHeader
         folio="Dépôt"
-        section="Espace candidat · Production"
+        section="Espace candidat · Phases en ligne"
         title="Déposer votre"
         italicWord="production"
-        subtitle="Retrouvez votre dossier à l’aide de votre code de référence et de votre adresse e-mail, puis envoyez votre texte, votre audio, votre vidéo ou votre document."
+        subtitle="Accédez à votre dossier à l’aide de votre code d’anonymat UCAEP et de votre adresse e-mail afin de transmettre vos travaux pour les phases en ligne (La Plume et La Connaissance)."
         patternVariant="green"
         quickFacts={[
-          { label: 'Identifiant', value: 'Code UCAEP + E-mail' },
-          { label: 'Durée max', value: "Jusqu'à 5 minutes" },
+          { label: 'Phases en ligne', value: 'La Plume · La Connaissance' },
+          { label: 'Présentation', value: "Jusqu'à 5 minutes" },
           { label: 'Formats', value: 'PDF · Word · Audio · Vidéo · Texte' },
-          { label: 'Taille limite', value: '50 Mo max' },
+          { label: 'Taille limite', value: '50 Mo par envoi' },
         ]}
       />
 
@@ -446,12 +446,12 @@ export function DepotPage() {
                   Étape 01 · Vérification
                 </p>
                 <h2 className="font-serif text-3xl font-semibold text-ucaep-brown">
-                  Accéder à votre dossier
+                  Accéder à votre espace candidat
                 </h2>
                 <p className="text-sm text-ucaep-ink/75">
-                  Pas besoin de créer de compte : utilisez simplement le code reçu lors de
-                  votre inscription (ex. <span className="font-mono font-semibold">UCAEP-2026-0001</span>)
-                  et votre adresse e-mail.
+                  Identifiez-vous à l’aide du code d’anonymat reçu lors de votre inscription
+                  (ex. <span className="font-mono font-semibold">UCAEP-2026-0001</span>) et
+                  de l’adresse e-mail associée à votre dossier.
                 </p>
               </div>
 
@@ -514,12 +514,12 @@ export function DepotPage() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <p className="text-xs text-ucaep-ink/65">
-                  Pas encore inscrit ?{' '}
+                  Étudiant(e) à l&apos;ENSET de Lokossa pas encore inscrit(e) ?{' '}
                   <Link
                     to="/inscription"
                     className="text-ucaep-brown font-semibold underline hover:text-ucaep-gold"
                   >
-                    Remplir le formulaire
+                    Accéder au formulaire d&apos;inscription
                   </Link>
                 </p>
               </div>

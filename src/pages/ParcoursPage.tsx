@@ -76,33 +76,33 @@ const CALENDAR_WEEKS = [
   {
     step: 'Semaine 0',
     span: 'Jours -7 à -1',
-    title: 'Communication & inscriptions',
+    title: 'Inscriptions et information sur le campus',
     items: [
-      'Affiches sur le campus, passage dans les amphithéâtres et relais par les délégués.',
-      'Inscription gratuite ouverte à tous les étudiants en ligne ou auprès des relais.',
-      'Remise de votre code d’anonymat personnel et publication de la liste des inscrits.',
+      'Présentation du concours sur le campus de l’ENSET de Lokossa et dans les amphithéâtres.',
+      'Inscription gratuite en ligne ouverte à tous les étudiants de l’ENSET de Lokossa.',
+      'Attribution du code d’anonymat UCAEP et publication de la liste des participants.',
     ],
     Icon: Calendar,
   },
   {
     step: 'Semaine 1',
     span: 'Jours 1 à 6',
-    title: 'Phase 01 « La Plume » & lancement Phase 02',
+    title: 'Phase 01 « La Plume » (en ligne) & ouverture Phase 02',
     items: [
-      'Jours 1 à 3 : rédaction des épreuves 1 et 2 chez vous (jusqu’à 5 min de présentation) et dépôt anonyme.',
-      'Jours 4 à 5 : double correction par le jury et annonce des candidats qualifiés pour la suite.',
-      'Jour 6 : ouverture de la Phase 2 et dévoilement progressif des sujets aux candidats qualifiés.',
+      'Jours 1 à 3 : rédaction des textes originaux (« Je suis… » et « Les mots que l’on n’ose pas dire ») et dépôt avec interprétation vidéo.',
+      'Jours 4 à 5 : double correction anonyme par le jury et publication de la liste des qualifiés.',
+      'Jour 6 : lancement en ligne de la Phase 02 « La Connaissance » pour les candidats retenus.',
     ],
     Icon: Feather,
   },
   {
     step: 'Semaine 2',
     span: 'Jours 7 à 14',
-    title: 'Phase 02, ateliers & Grande Finale',
+    title: 'Phase 02 « La Connaissance », ateliers & Finale en présentiel',
     items: [
-      'Jours 7 à 9 : rédaction Phase 2 et dépôt limite en fin de Jour 9.',
-      'Jours 10 à 11 : sélection et annonce des finalistes puis dévoilement progressif de la suite.',
-      'Jours 12 à 13 : ateliers de diction & répétitions · Jour 14 : Grande Finale publique.',
+      'Jours 7 à 9 : préparation des contenus explicatifs et prestations vidéo (« La science dans notre quotidien » et « L’école, le savoir et l’avenir »).',
+      'Jours 10 à 11 : évaluation et désignation des finalistes de la Phase 03.',
+      'Jours 12 à 13 : ateliers de diction et répétitions · Jour 14 : Phase 03 « L’Éloquence » en présentiel.',
     ],
     Icon: Mic2,
   },
@@ -111,7 +111,7 @@ const CALENDAR_WEEKS = [
 export function ParcoursPage() {
   usePageSeo(
     'Le parcours',
-    "Les 3 phases du concours UCAEP : toutes les consignes de la Phase 1 (La Plume), le dévoilement progressif des phases 2 et 3 et le calendrier en 3 semaines.",
+    "Les 3 phases et les 6 épreuves du concours UCAEP à l'ENSET de Lokossa : La Plume (en ligne), La Connaissance (en ligne) et L'Éloquence (en présentiel).",
   );
 
   const candidateSession = useCandidateSession();
@@ -147,14 +147,14 @@ export function ParcoursPage() {
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
-        folio="Itinéraire"
+        folio="Parcours"
         section="3 semaines · 3 phases · 6 épreuves"
-        title="Voici comment"
-        italicWord="on va avancer."
-        subtitle="Toutes les consignes et le barème de la Phase 1 (La Plume) sont déjà visibles ici pour vous préparer sereinement. Chaque candidat dispose de jusqu'à 5 minutes pour sa présentation."
+        title="Trois phases et six épreuves"
+        italicWord="de l'écrit au présentiel."
+        subtitle="Les deux premières phases (La Plume et La Connaissance) se déroulent en ligne avec dépôt de textes, contenus explicatifs et prestations vidéo ; la troisième (L'Éloquence) réunit les finalistes en présentiel."
         quickFacts={[
-          { label: 'Phase 1', value: 'Visible dès maintenant' },
-          { label: 'Phases 2 & 3', value: 'Révélées en cours de route' },
+          { label: 'Phases 1 & 2', value: 'En ligne · Vidéo' },
+          { label: 'Phase 3', value: 'En présentiel' },
           { label: 'Présentation', value: "Jusqu'à 5 minutes" },
           { label: 'Notation', value: 'Sur 20 points / phase' },
         ]}
@@ -380,7 +380,7 @@ export function ParcoursPage() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6" data-reveal>
             <div className="space-y-3 max-w-2xl">
               <EditorialMark
-                folio="Dossier complet · Phase 01"
+                folio="Phase 01 · En ligne"
                 label="La Plume · Notée sur 20 points"
                 tone="green"
               />
@@ -389,13 +389,13 @@ export function ParcoursPage() {
                   data-mask-title
                   className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
                 >
-                  Tout savoir sur <em className="italic font-normal text-ucaep-brown">la Phase 1 : La Plume</em>
+                  Phase 1 — <em className="italic font-normal text-ucaep-brown">La Plume : textes originaux et vidéo</em>
                 </h2>
               </div>
             </div>
             <div className="text-xs sm:text-sm text-ucaep-brown/80 space-y-1 tabular-nums">
               <p className="font-semibold text-ucaep-brown">
-                Jours 1 à 3 · À domicile · Jusqu&apos;à 5 minutes par présentation
+                En ligne (Jours 1 à 3) · Textes + interprétation vidéo · Jusqu&apos;à 5 min
               </p>
               <p>Phase qualificative · Double lecture anonyme en Jours 4–5</p>
             </div>
@@ -413,7 +413,7 @@ export function ParcoursPage() {
               />
               <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Épreuve 01 · Autoportrait littéraire
+                  Épreuve 01 · Texte original + vidéo
                 </span>
                 <span className="text-xs font-semibold text-ucaep-green tabular-nums">
                   Jusqu&apos;à 5 min de présentation
@@ -423,22 +423,22 @@ export function ParcoursPage() {
                 « Je suis… »
               </h3>
               <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/82 leading-relaxed">
-                Ici, vous êtes appelé(e) à vous présenter vraiment,{' '}
+                Les candidats produisent un texte original pour se présenter{' '}
                 <strong className="font-semibold text-ucaep-brown">
-                  au-delà de votre nom, de votre âge ou de votre filière
+                  au-delà de leur nom, de leur âge ou de leur filière
                 </strong>
-                . Racontez qui vous êtes au fond : votre parcours, vos rêves, vos contradictions, vos difficultés et la façon dont vous regardez le monde.
+                , puis l&apos;interprètent en vidéo : parcours, questions, aspirations et regard sur le monde.
               </p>
               <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                  Question pour vous guider
+                  Axe de réflexion
                 </p>
                 <p className="font-serif italic text-lg text-ucaep-ink">
-                  « Qui suis-je réellement, au-delà de ce que les autres voient de moi ? »
+                  « Qui suis-je réellement, au-delà de ce que l&apos;on perçoit au premier abord ? »
                 </p>
               </div>
               <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
-                <strong>Formes possibles :</strong> poème, prose poétique, monologue intérieur, récit autobiographique ou portrait littéraire.
+                <strong>Formes acceptées :</strong> poème, prose poétique, monologue intérieur, récit autobiographique ou portrait littéraire, interprété en vidéo.
               </p>
             </article>
 
@@ -454,7 +454,7 @@ export function ParcoursPage() {
               />
               <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Épreuve 02 · Expression intérieure
+                  Épreuve 02 · Texte original + vidéo
                 </span>
                 <span className="text-xs font-semibold text-ucaep-green tabular-nums">
                   Jusqu&apos;à 5 min de présentation
@@ -464,22 +464,22 @@ export function ParcoursPage() {
                 « Les mots que l&apos;on n&apos;ose pas dire »
               </h3>
               <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/82 leading-relaxed">
-                Ici, vous êtes invité(e) à poser sur papier{' '}
+                Les candidats rédigent un texte original consacré à{' '}
                 <strong className="font-semibold text-ucaep-brown">
-                  une pensée, une émotion ou une vérité gardée pour vous
+                  une pensée, une gratitude ou une vérité longtemps tue
                 </strong>{' '}
-                par pudeur, peur, fierté ou respect : un regret, une gratitude jamais dite, une blessure ou une question restée sans réponse.
+                par pudeur ou retenue, puis en présentent l&apos;interprétation en vidéo.
               </p>
               <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                  Ce que le jury regarde
+                  Attentes du jury
                 </p>
                 <p className="font-serif italic text-lg text-ucaep-ink">
-                  Pas de phrases compliquées à tout prix : juste un texte vrai, sincère et bien construit.
+                  Justesse de l&apos;écriture, sincérité du propos, articulation claire et maîtrise du rythme.
                 </p>
               </div>
               <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
-                <strong>Formes possibles :</strong> lettre jamais envoyée, monologue, confession, poème, récit ou message adressé à une personne réelle ou imaginaire.
+                <strong>Formes acceptées :</strong> lettre non envoyée, monologue, poème ou récit en français (touches de langues nationales possibles).
               </p>
             </article>
           </div>
@@ -548,24 +548,24 @@ export function ParcoursPage() {
                   Temps de parole, règles &amp; qualification
                 </p>
                 <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-paper">
-                  Ce qu&apos;il faut retenir pour la suite
+                  Modalités pratiques de la Phase 1
                 </h3>
               </div>
               <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
                 <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
                   <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
-                    Votre présentation
+                    Production &amp; vidéo
                   </p>
                   <p>
-                    Chaque candidat dispose de <strong>jusqu&apos;à 5 minutes</strong> pour sa présentation. Rédigez en français (touches de langues nationales béninoises possibles), de façon 100 % personnelle.
+                    Les textes originaux sont rédigés en français (touches de langues nationales possibles) et interprétés en vidéo dans la limite de <strong>jusqu&apos;à 5 minutes</strong> par épreuve.
                   </p>
                 </div>
                 <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
                   <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
-                    Suite &amp; attestation
+                    Qualification &amp; attestation
                   </p>
                   <p>
-                    La Phase 1 est <strong>qualificative</strong> : les candidats retenus poursuivent en Phase 2. Chaque inscrit reçoit son attestation de participation et son invitation à la Finale.
+                    La Phase 1 est <strong>qualificative</strong> : les candidats retenus accèdent à La Connaissance (en ligne). Chaque étudiant de l&apos;ENSET inscrit reçoit une attestation officielle.
                   </p>
                 </div>
               </div>
@@ -604,7 +604,7 @@ export function ParcoursPage() {
         </div>
       </section>
 
-      {/* OVERVIEW OF PHASES 2 & 3 (PROGRESSIVELY REVEALED) */}
+      {/* OVERVIEW OF PHASES 2 & 3 */}
       <section className="relative py-20 lg:py-24 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/14 overflow-hidden">
         <BrandPatternSurface
           variant="brown"
@@ -622,13 +622,13 @@ export function ParcoursPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
-            <EditorialMark folio="La suite du parcours" label="Phases 02 & 03" tone="brown" />
+            <EditorialMark folio="Phases 02 & 03" label="Épreuves 03 à 06" tone="brown" />
             <div className="overflow-hidden">
               <h2
                 data-mask-title
                 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
               >
-                Ce qui vous attend <em className="italic font-normal text-ucaep-brown">après La Plume</em>
+                Vulgarisation et scène : <em className="italic font-normal text-ucaep-brown">les quatre épreuves suivantes</em>
               </h2>
             </div>
           </div>
@@ -646,9 +646,9 @@ export function ParcoursPage() {
               />
               <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Phase 02 · {phase2?.title || 'La Connaissance'} · Notée / 20
+                  Phase 02 · {phase2?.title || 'La Connaissance'} · En ligne
                 </span>
-                <span className="text-xs text-ucaep-brown/70 tabular-nums">Qualificative · Jours 6 à 9</span>
+                <span className="text-xs text-ucaep-brown/70 tabular-nums">Qualificative · / 20 pts</span>
               </div>
 
               {phase2?.isRevealed && phase2.testDetails ? (
@@ -673,22 +673,22 @@ export function ParcoursPage() {
               ) : (
                 <>
                   <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    Deux épreuves dévoilées au Jour 6
+                    Contenus explicatifs et prestations vidéo
                   </h3>
                   <ul className="relative z-10 space-y-2.5 text-sm text-ucaep-ink/80 leading-relaxed">
                     <li>
-                      · <strong className="text-ucaep-brown">Format en ligne à domicile (Jours 6 à 9) :</strong>{' '}
-                      deux productions écrites à réaliser par les candidats qualifiés après la Phase 1, avec jusqu&apos;à 5 minutes pour votre présentation.
+                      · <strong className="text-ucaep-brown">Épreuve 03 — « La science dans notre quotidien » :</strong>{' '}
+                      expliquer un phénomène ou une application scientifique courante avec rigueur et clarté.
                     </li>
                     <li>
-                      · <strong className="text-ucaep-brown">Égalité des chances :</strong>{' '}
-                      afin que tout le monde démarre en même temps, les titres et sujets exacts des deux épreuves restent scellés jusqu&apos;à l&apos;ouverture de la phase.
+                      · <strong className="text-ucaep-brown">Épreuve 04 — « L&apos;école, le savoir et l&apos;avenir » :</strong>{' '}
+                      construire un exposé structuré et une prestation vidéo (jusqu&apos;à 5 minutes) sur le rôle de la transmission des savoirs.
                     </li>
                   </ul>
                   <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/80 pt-3 border-t border-ucaep-brown/10 leading-relaxed">
                     <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
                     <span>
-                      Phase notée sur 20 points et qualificative : les meilleures notes accèdent à la Grande Finale.
+                      Phase en ligne notée sur 20 points : les modalités de dépôt s&apos;ouvrent au Jour 6 pour les qualifiés de La Plume.
                     </span>
                   </div>
                 </>
@@ -708,9 +708,9 @@ export function ParcoursPage() {
               />
               <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Phase 03 · {phase3?.title || "L'Éloquence"} · Notée / 20
+                  Phase 03 · {phase3?.title || "L'Éloquence"} · En présentiel
                 </span>
-                <span className="text-xs text-ucaep-brown/70 tabular-nums">Sans élimination · Finale J14</span>
+                <span className="text-xs text-ucaep-brown/70 tabular-nums">Finale J14 · / 20 pts</span>
               </div>
 
               {phase3?.isRevealed && phase3.testDetails ? (
@@ -735,22 +735,22 @@ export function ParcoursPage() {
               ) : (
                 <>
                   <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    La Grande Finale sur scène
+                    Prestations finales en présentiel
                   </h3>
                   <ul className="relative z-10 space-y-2.5 text-sm text-ucaep-ink/80 leading-relaxed">
                     <li>
-                      · <strong className="text-ucaep-brown">Ateliers de préparation (Jours 12 et 13) :</strong>{' '}
-                      les finalistes bénéficient de deux jours d&apos;ateliers de diction, de souffle et de mise en scène avant de monter sur scène.
+                      · <strong className="text-ucaep-brown">Épreuve 05 — « La parole que le monde doit entendre » :</strong>{' '}
+                      les finalistes présentent une prise de parole préparée devant le jury et le public (jusqu&apos;à 5 minutes), précédée de deux jours d&apos;ateliers de diction (J12–13).
                     </li>
                     <li>
-                      · <strong className="text-ucaep-brown">Jour 14 devant le jury et le public :</strong>{' '}
-                      deux passages sur scène en présentiel (jusqu&apos;à 5 minutes par présentation). Les intitulés et modalités seront communiqués progressivement aux finalistes.
+                      · <strong className="text-ucaep-brown">Épreuve 06 — « Le défi de l&apos;inattendu » :</strong>{' '}
+                      prestation en présentiel évaluant l&apos;écoute, la réactivité d&apos;argumentation et la présence scénique.
                     </li>
                   </ul>
                   <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/80 pt-3 border-t border-ucaep-brown/10 leading-relaxed">
                     <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
                     <span>
-                      Phase notée sur 20 points, sans élimination en cours de soirée · Épreuves dévoilées après la Phase 2.
+                      Phase en présentiel à l&apos;ENSET de Lokossa, notée sur 20 points sans élimination en cours de soirée.
                     </span>
                   </div>
                 </>
@@ -834,10 +834,10 @@ export function ParcoursPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="space-y-1.5">
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-              Envie de suivre la suite ?
+              Suivre les échéances ou déposer votre candidature
             </h2>
             <p className="text-sm text-ucaep-ink/75">
-              Revenez sur les annonces de temps en temps ou inscrivez-vous dès maintenant.
+              Consultez les annonces officielles ou finalisez votre inscription en ligne avant le 20 novembre 2026.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -901,7 +901,7 @@ function PhaseDetailsBlock({
   const title =
     phase.testDetails?.instructionsTitle ||
     (isPhaseOne
-      ? 'Phase 01 — La Plume : deux textes personnels (jusqu’à 5 min de présentation)'
+      ? 'Phase 01 — La Plume : textes originaux et interprétation vidéo'
       : phase.title);
   const theme =
     phase.testDetails?.theme && !phase.testDetails.theme.includes('communiqué uniquement')
@@ -914,12 +914,12 @@ function PhaseDetailsBlock({
     !phase.testDetails.instructions.includes('seront publiés sur la page Annonces')
       ? phase.testDetails.instructions
       : isPhaseOne
-        ? "Épreuve 1 : ici, vous êtes appelé(e) à vous présenter vraiment, au-delà de votre nom ou de votre filière. Épreuve 2 : ici, vous êtes invité(e) à confier au papier ce que l'on n'ose pas dire d'habitude. Chaque épreuve est notée sur 20 points avec jusqu'à 5 minutes pour votre présentation."
+        ? "Épreuve 1 (« Je suis… ») et Épreuve 2 (« Les mots que l'on n'ose pas dire ») : les candidats rédigent des textes originaux puis les interprètent en vidéo. Chaque épreuve est notée sur 20 points dans la limite de 5 minutes par présentation."
         : '';
   const note =
     phase.testDetails?.submissionNote ||
     (isPhaseOne
-      ? 'Phase qualificative · Dépôt sous code anonyme UCAEP · Jusqu’à 5 minutes par présentation.'
+      ? 'Phase en ligne qualificative · Dépôt sous code anonyme UCAEP · Jusqu’à 5 minutes par prestation.'
       : '');
 
   return (
@@ -934,7 +934,7 @@ function PhaseDetailsBlock({
             </p>
             {phase.submissionDeadline && (
               <p className={`text-xs ${mutedColor}`}>
-                À envoyer avant le {formatFrenchDate(phase.submissionDeadline)}
+                À déposer avant le {formatFrenchDate(phase.submissionDeadline)}
               </p>
             )}
           </div>
@@ -952,7 +952,7 @@ function PhaseDetailsBlock({
         <div className={`p-6 ${sealBg} border border-ucaep-gold/60 rounded-[2px] space-y-2.5`}>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ucaep-gold">
             <Unlock className="w-3.5 h-3.5" />
-            <span>Consignes disponibles</span>
+            <span>Consignes ouvertes</span>
           </div>
           <h3 className={`font-serif text-2xl font-semibold ${headingColor}`}>{title}</h3>
           {theme && <p className="text-sm font-medium">{theme}</p>}
@@ -964,10 +964,10 @@ function PhaseDetailsBlock({
           <Lock className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
           <div className="space-y-1">
             <p className={`text-sm font-semibold ${headingColor}`}>
-              Chapitre scellé · Sujets dévoilés au moment du lancement
+              Ouverture progressive des dépôts et consignes pratiques
             </p>
             <p className={`text-xs leading-relaxed ${mutedColor}`}>
-              Les intitulés des épreuves et les sujets de cette étape restent confidentiels et seront publiés progressivement sur la page Annonces, afin que tout le monde démarre en même temps.
+              Les thématiques sont connues dès maintenant pour comprendre la progression du concours ; les consignes opérationnelles d&apos;ouverture et les liens de dépôt sont activés sur la page Annonces au lancement de la phase.
             </p>
           </div>
         </div>

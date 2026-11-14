@@ -8,7 +8,7 @@ import { usePageSeo } from '../lib/format';
 export function ContactPage() {
   usePageSeo(
     'Contact',
-    "Écrire à la Session Théâtre de l'UCAEP pour toute question sur le concours à l'ENSET de Lokossa.",
+    "Contacter la Session Théâtre de l'UCAEP pour toute question sur l'inscription, les épreuves ou l'organisation à l'ENSET de Lokossa.",
   );
 
   const [name, setName] = useState('');
@@ -52,9 +52,9 @@ export function ContactPage() {
       <PageFolioHeader
         folio="Correspondance"
         section="Session Théâtre · UCAEP"
-        title="Une question ?"
-        italicWord="On peut en discuter."
-        subtitle="Vous souhaitez obtenir une précision sur la Phase 1, votre code candidat ou l'organisation à l'ENSET de Lokossa ? Écrivez-nous directement."
+        title="Contacter"
+        italicWord="l'organisation."
+        subtitle="Une question sur l'inscription, votre code d'anonymat, le dépôt des productions en ligne ou le déroulement du concours à l'ENSET de Lokossa ? Adressez votre message à l'équipe organisatrice."
         quickFacts={[
           { label: 'Équipe', value: 'Session Théâtre UCAEP' },
           { label: 'Campus', value: 'ENSET Lokossa' },
@@ -78,8 +78,9 @@ export function ContactPage() {
                 Nos coordonnées
               </h2>
               <p className="text-sm sm:text-base text-ucaep-ink/75 leading-relaxed">
-                Vous pouvez passer par le formulaire ci-contre ou joindre directement
-                l&apos;équipe organisatrice par téléphone, par e-mail ou via nos pages @UCAEP.
+                Vous pouvez transmettre votre demande via le formulaire ci-contre ou joindre
+                directement les responsables de la Session Théâtre UCAEP par téléphone, par
+                courrier électronique ou sur nos comptes officiels @UCAEP.
               </p>
             </div>
 
@@ -157,11 +158,11 @@ export function ContactPage() {
                 <div className="relative z-10 py-12 text-center space-y-4">
                   <CheckCircle2 className="w-8 h-8 text-ucaep-green mx-auto" />
                   <h2 className="font-serif text-4xl font-semibold text-ucaep-brown">
-                    C&apos;est envoyé !
+                    Message transmis
                   </h2>
                   <p className="text-sm sm:text-base text-ucaep-ink/75 max-w-md mx-auto">
-                    Nous avons bien reçu votre message. L&apos;équipe de l&apos;UCAEP vous
-                    répondra dès que possible.
+                    Votre message a bien été enregistré. Un membre de l&apos;équipe UCAEP vous
+                    répondra dans les meilleurs délais.
                   </p>
                   <button
                     type="button"

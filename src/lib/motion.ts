@@ -241,7 +241,26 @@ export function useEditorialScrollMotion(
       );
     }, scope);
 
-    return () => ctx.revert();
+    let cancelled = false;
+    const rafId = window.requestAnimationFrame(() => {
+      if (!cancelled) {
+        ScrollTrigger.refresh();
+      }
+    });
+
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(() => {
+        if (!cancelled) {
+          ScrollTrigger.refresh();
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(rafId);
+      ctx.revert();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }

@@ -29,76 +29,76 @@ const PILLARS = [
   {
     index: 'I',
     number: '01',
-    keyPoint: 'À domicile · Qualificative · / 20 pts',
+    keyPoint: 'En ligne · Qualificative · / 20 pts',
     noteInfo: 'Notée sur 20 points · Phase qualificative',
-    title: 'La Plume — Écriture personnelle',
+    title: 'La Plume — Écriture originale et interprétation vidéo',
     imageKey: 'writing' as const,
-    caption: 'Fig. 01 — Mettre ses idées et sa sincérité sur le papier',
-    text: "À travers deux épreuves personnelles (« Je suis… » et « Les mots que l'on n'ose pas dire »), vous êtes appelé(e) à écrire avec sincérité, sans chercher de phrases compliquées. Les meilleurs textes ouvrent la porte de la Phase 2.",
+    caption: 'Fig. 01 — Rédaction des deux textes personnels avant l’interprétation vidéo',
+    text: "À travers deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — les candidats produisent des textes originaux et les interprètent en vidéo (jusqu'à 5 minutes par présentation). Cette phase évalue la sincérité, la maîtrise de la langue, l'originalité et la cohérence.",
   },
   {
     index: 'II',
     number: '02',
-    keyPoint: 'Révélée au Jour 6 · Qualificative · / 20 pts',
+    keyPoint: 'En ligne · Qualificative · / 20 pts',
     noteInfo: 'Notée sur 20 points · Sélection des finalistes',
-    title: 'La Connaissance — Sujets dévoilés au Jour 6',
+    title: 'La Connaissance — Contenus explicatifs et vulgarisation',
     imageKey: 'connaissance' as const,
-    caption: 'Fig. 02 — Une deuxième étape ouverte aux qualifiés de La Plume',
-    text: "Une fois les résultats de La Plume proclamés, les candidats retenus découvrent progressivement deux nouvelles épreuves écrites à réaliser à domicile (Jours 6 à 9), avec jusqu'à 5 minutes pour leur présentation.",
+    caption: 'Fig. 02 — Vulgariser des sujets scientifiques et éducatifs en vidéo',
+    text: "Les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'objectif est de rendre des notions techniques ou éducatives claires, structurées et accessibles.",
   },
   {
     index: 'III',
     number: '03',
-    keyPoint: 'Sur scène (Jour 14) · Sans élimination · / 20 pts',
-    noteInfo: 'Notée sur 20 points · Finale sans élimination',
-    title: "L'Éloquence — Finale sur scène",
+    keyPoint: 'En présentiel (Jour 14) · Finale · / 20 pts',
+    noteInfo: 'Notée sur 20 points · Prestations en présentiel',
+    title: "L'Éloquence — Prise de parole en présentiel",
     imageKey: 'eloquence' as const,
-    caption: 'Fig. 03 — Porter sa voix devant le jury et le campus',
-    text: "Après deux jours d'ateliers de diction et de répétitions (Jours 12 et 13), les finalistes montent sur scène devant le jury et le public. Les intitulés et modalités des épreuves finales sont communiqués progressivement après la Phase 2.",
+    caption: 'Fig. 03 — Prestations finales devant le jury et la communauté universitaire',
+    text: "Après deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), les finalistes présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu ».",
   },
 ];
 
 const PRACTICAL_RULES = [
   {
     number: '01',
-    takeaway: 'Gratuit · Toute filière',
-    title: 'Ouvert à tous les étudiants',
-    text: "L'inscription est gratuite et ouverte à tous les étudiants, quelle que soit votre filière, votre niveau d'études ou votre expérience en prise de parole.",
+    takeaway: 'Gratuit · ENSET de Lokossa',
+    title: 'Ouvert à tous les étudiants de l’ENSET',
+    text: "La participation est gratuite et ouverte à tous les étudiants de l'ENSET de Lokossa, quelle que soit la filière ou l'année d'études, sans expérience scénique préalable.",
     Icon: GraduationCap,
   },
   {
     number: '02',
-    takeaway: '5 min max · Multi-format',
-    title: "Jusqu'à 5 minutes pour présenter",
-    text: 'Pour défendre son travail ou présenter son texte, chaque candidat dispose de jusqu’à 5 minutes. Déposez vos productions au format PDF, Word, audio, vidéo ou texte en ligne.',
+    takeaway: 'En ligne (1 & 2) · Présentiel (3)',
+    title: 'Deux phases en vidéo, une finale en présentiel',
+    text: 'Les deux premières phases se déroulent en ligne (textes et prestations vidéo dans la limite de 5 minutes par présentation). La troisième phase réunit les finalistes en présentiel sur le campus.',
     Icon: Clock,
   },
   {
     number: '03',
     takeaway: 'Français + langues locales',
-    title: 'Français & langues nationales',
-    text: "Les textes sont rédigés en français, mais vous pouvez tout à fait glisser des mots, proverbes ou expressions en langues nationales béninoises s'ils servent votre texte.",
+    title: 'Français et apports en langues nationales',
+    text: "Les productions sont rédigées et présentées en français, avec la possibilité d'intégrer des mots, proverbes ou expressions en langues nationales béninoises lorsqu'ils éclairent le propos.",
     Icon: Languages,
   },
   {
     number: '04',
     takeaway: 'Original · Zéro plagiat / IA',
-    title: '100 % personnel, sans plagiat ni IA',
-    text: "Ce qui touche le jury, c'est votre propre voix. Tout texte copié ou généré par intelligence artificielle entraîne la disqualification — le jury peut aussi en vérifier la maîtrise à l'oral.",
+    title: 'Production personnelle, sans plagiat ni IA',
+    text: "Chaque texte et chaque contenu explicatif doivent être entièrement originaux. Tout plagiat ou recours à une intelligence artificielle entraîne la disqualification ; le jury peut vérifier la maîtrise à l'oral.",
     Icon: ShieldCheck,
   },
   {
     number: '05',
     takeaway: '6 à 8 jurés · Double lecture',
-    title: 'Jury mixte & copies anonymes',
-    text: 'Six à huit membres (enseignants littéraires et scientifiques de l’ENSET, Session Théâtre UCAEP, personnalité culturelle) corrigent vos copies à l’aveugle, deux lecteurs par texte.',
+    title: 'Jury pluridisciplinaire et anonymat',
+    text: 'Six à huit membres (enseignants littéraires et scientifiques de l’ENSET, Session Théâtre UCAEP, personnalité culturelle) évaluent les productions en double lecture sous code candidat UCAEP.',
     Icon: Scale,
   },
   {
     number: '06',
     takeaway: 'Anonymat · Recours 24 h',
-    title: 'Transparence & recours sous 24 h',
-    text: 'Les résultats paraissent d’abord sous votre numéro de référence UCAEP pour garantir l’anonymat, avec un délai écrit de 24 heures pour signaler toute erreur matérielle.',
+    title: 'Publication transparente et recours sous 24 h',
+    text: 'Les résultats sont publiés d’abord sous code de référence UCAEP pour garantir l’impartialité, avec un délai écrit de 24 heures permettant de signaler toute erreur matérielle.',
     Icon: Compass,
   },
 ];
@@ -106,7 +106,7 @@ const PRACTICAL_RULES = [
 export function ConcoursPage() {
   usePageSeo(
     'Le concours',
-    "Tout comprendre sur le concours « Et si on lisait à haute voix ? » organisé par la Session Théâtre de l'UCAEP, ouvert à tous les étudiants.",
+    "Présentation pédagogique et règlement complet du concours « Et si on lisait à haute voix ? » organisé gratuitement par l'UCAEP pour les étudiants de l'ENSET de Lokossa.",
   );
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -116,17 +116,17 @@ export function ConcoursPage() {
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
-        folio="Dossier"
-        section="Session Théâtre UCAEP · ENSET — UNSTIM"
-        title="Pourquoi on a eu envie de lancer"
-        italicWord="ce concours"
-        subtitle="À côté des cours techniques, on avait envie d'ouvrir un espace simple, gratuit et ouvert à tous les étudiants où l'on prend le temps d'écrire, de partager et d'oser parler à voix haute."
+        folio="Présentation"
+        section="Session Théâtre UCAEP · ENSET de Lokossa — UNSTIM"
+        title="Comprendre le concours"
+        italicWord="et sa démarche"
+        subtitle="À côté des enseignements scientifiques et techniques de l'ENSET de Lokossa, ce concours gratuit vise à exercer les étudiants à l'écriture personnelle, à la vulgarisation des connaissances et à la prise de parole en public."
         patternVariant="brown"
         quickFacts={[
-          { label: 'Accès', value: 'Tous étudiants · Gratuit' },
-          { label: 'Présentation', value: "Jusqu'à 5 minutes" },
+          { label: 'Public & tarif', value: 'ENSET · Gratuit' },
+          { label: 'Format', value: '2 en ligne · 1 présentiel' },
           { label: 'Évaluation', value: 'Chaque phase sur 20 pts' },
-          { label: 'Correction', value: '100 % anonyme' },
+          { label: 'Correction', value: 'Double lecture anonyme' },
         ]}
         aside={
           <div className="relative flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3">
@@ -157,7 +157,7 @@ export function ConcoursPage() {
               <EditorialImage assetKey="audience" data-parallax="-5" />
             </div>
             <p className="mt-3 text-xs font-serif italic text-ucaep-brown/75">
-              Fig. 00 — Un rendez-vous culturel pensé pour tous les étudiants
+              Fig. 00 — Un dispositif pédagogique conçu pour les étudiants de l&apos;ENSET de Lokossa
             </p>
           </div>
           <div className="lg:col-span-4 space-y-5 pb-2" data-reveal>
@@ -168,17 +168,17 @@ export function ConcoursPage() {
                 strokeWidth={1.3}
               />
               <p className="relative z-10 font-serif italic text-2xl text-ucaep-brown leading-snug">
-                « Écrire pour clarifier, lire pour comprendre, parler pour transmettre. »
+                « Écrire avec justesse, expliquer avec clarté, convaincre à l&apos;oral. »
               </p>
               <p className="relative z-10 text-xs text-ucaep-ink/80 leading-relaxed">
-                Un parcours complet sur <strong className="text-ucaep-brown">3 semaines en 3 phases progressives</strong>, avec jusqu&apos;à{' '}
-                <strong className="text-ucaep-brown">5 minutes</strong> pour la présentation de chaque candidat.
+                Un parcours complet en <strong className="text-ucaep-brown">3 phases et 6 épreuves</strong> (deux phases en ligne en vidéo suivies d&apos;une finale en présentiel), avec jusqu&apos;à{' '}
+                <strong className="text-ucaep-brown">5 minutes</strong> par prestation.
               </p>
               <Link
                 to="/parcours"
                 className="relative z-10 group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
               >
-                <span className="editorial-underline">Voir la Phase 1 &amp; les 3 étapes</span>
+                <span className="editorial-underline">Consulter les 3 phases &amp; 6 épreuves</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -190,13 +190,13 @@ export function ConcoursPage() {
       <section className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
           <div className="space-y-3 max-w-2xl" data-reveal>
-            <EditorialMark folio="Trois volets" label="Points & progression" tone="brown" />
+            <EditorialMark folio="Architecture du concours" label="3 phases · 6 épreuves" tone="brown" />
             <div className="overflow-hidden">
               <h2
                 data-mask-title
                 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]"
               >
-                Trois façons de <em className="italic font-normal text-ucaep-brown">faire entendre sa voix</em>
+                Trois phases pour exercer <em className="italic font-normal text-ucaep-brown">l&apos;écrit, la pédagogie et l&apos;éloquence</em>
               </h2>
             </div>
           </div>
@@ -290,13 +290,13 @@ export function ConcoursPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
           <div className="space-y-2 max-w-2xl" data-reveal>
-            <EditorialMark folio="Règlement simple" label="Équité & modalités" tone="green" />
+            <EditorialMark folio="Cadre réglementaire" label="Équité & modalités" tone="green" />
             <div className="overflow-hidden">
               <h2
                 data-mask-title
                 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
               >
-                Des règles claires <em className="italic font-normal text-ucaep-brown">pour que chacun parte à égalité</em>
+                Des règles précises <em className="italic font-normal text-ucaep-brown">pour garantir l&apos;équité d&apos;évaluation</em>
               </h2>
             </div>
           </div>
@@ -356,20 +356,20 @@ export function ConcoursPage() {
             />
             <div className="lg:col-span-8 relative z-10 space-y-2.5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                Pour tous les participants
+                Valorisation du parcours
               </p>
               <div className="overflow-hidden">
                 <h2
                   data-mask-title
                   className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown"
                 >
-                  Une attestation pour chacun et une Grande Finale ouverte à tous
+                  Une attestation pour chaque inscrit et une finale publique à l&apos;ENSET
                 </h2>
               </div>
               <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed max-w-2xl">
-                Chaque étudiant participant reçoit une attestation de la Session Théâtre de
-                l&apos;UCAEP et est chaleureusement invité à la Grande Finale sur le campus.
-                Les meilleurs candidats sont distingués sur scène à l&apos;issue de la soirée.
+                Tout étudiant de l&apos;ENSET de Lokossa inscrit au concours reçoit une attestation
+                de participation délivrée par la Session Théâtre de l&apos;UCAEP ainsi qu&apos;une
+                invitation à la Grande Finale en présentiel, où les finalistes et lauréats sont distingués.
               </p>
             </div>
             <div className="lg:col-span-4 relative z-10 flex lg:justify-end">
@@ -377,7 +377,7 @@ export function ConcoursPage() {
                 to="/parcours"
                 className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] whitespace-nowrap shrink-0"
               >
-                <span>Voir la Phase 1 &amp; le parcours</span>
+                <span>Consulter le parcours et le calendrier</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -408,13 +408,12 @@ export function ConcoursPage() {
           data-reveal
         >
           <div className="space-y-3 max-w-xl">
-            <EditorialMark folio="Invitation" label="Édition 2026" tone="ivory" />
-            <h2 className="font-serif text-4xl sm:text-5xl font-semibold leading-tight">
-              Vous souhaitez <em className="italic font-normal text-ucaep-ivory">participer ?</em>
+            <EditorialMark folio="Inscription" label="Édition 2026" tone="ivory" />
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold leading-tight">
+              Participer à <em className="italic font-normal text-ucaep-ivory">l&apos;édition 2026</em>
             </h2>
             <p className="text-sm sm:text-base text-ucaep-ivory/90">
-              L&apos;inscription est gratuite et ouverte à tous les étudiants. Remplissez votre
-              fiche avant le vendredi 20 novembre 2026 pour recevoir votre code anonyme.
+              L&apos;inscription est gratuite et ouverte à tous les étudiants de l&apos;ENSET de Lokossa. Remplissez le formulaire avant le vendredi 20 novembre 2026 pour obtenir votre code candidat anonyme.
             </p>
           </div>
           {candidateSession ? (

@@ -15,8 +15,8 @@ interface ReceiptState {
 
 export function ConfirmationInscriptionPage() {
   usePageSeo(
-    'Inscription reçue',
-    "Votre inscription au concours UCAEP à l'ENSET de Lokossa a bien été enregistrée.",
+    'Inscription enregistrée',
+    "Votre candidature au concours UCAEP « Et si on lisait à haute voix ? » à l'ENSET de Lokossa est enregistrée.",
   );
 
   const location = useLocation();
@@ -29,11 +29,11 @@ export function ConfirmationInscriptionPage() {
         <div className="max-w-xl mx-auto px-4 text-center space-y-6">
           <EditorialMark folio="Reçu" label="Inscription" tone="brown" />
           <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-brown">
-            Aucune inscription trouvée ici
+            Aucune inscription enregistrée sur cette session
           </h1>
           <p className="text-sm sm:text-base text-ucaep-ink/75 leading-relaxed">
-            Cette page s&apos;affiche juste après avoir envoyé votre inscription depuis
-            le formulaire.
+            Ce récapitulatif s&apos;affiche immédiatement après la validation du
+            formulaire d&apos;inscription.
           </p>
           <Link
             to="/inscription"
@@ -57,19 +57,19 @@ export function ConfirmationInscriptionPage() {
           </div>
 
           <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-brown leading-tight">
-            C&apos;est bon,{' '}
+            Inscription enregistrée,{' '}
             <em className="italic font-normal text-ucaep-ink">{state.candidateName}.</em>
           </h1>
 
           <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
-            C&apos;est envoyé ! Nous avons bien reçu votre inscription pour « Et si on
-            lisait à haute voix ? ». Gardez votre numéro de référence ci-dessous, il
-            pourra vous servir pour la suite.
+            Votre candidature au concours « Et si on lisait à haute voix ? » est confirmée.
+            Conservez le code d&apos;anonymat ci-dessous : il identifie vos dépôts en ligne
+            sans révéler votre identité aux membres du jury.
           </p>
 
           <dl className="divide-y divide-ucaep-brown/12 border-t border-b border-ucaep-brown/12 text-sm">
             <div className="py-3.5 flex justify-between gap-4">
-              <dt className="text-ucaep-brown/75">Référence</dt>
+              <dt className="text-ucaep-brown/75">Code d&apos;anonymat</dt>
               <dd className="font-mono font-semibold text-ucaep-ink tabular-nums">
                 {state.referenceCode}
               </dd>
@@ -92,11 +92,11 @@ export function ConfirmationInscriptionPage() {
           <div className="p-6 sm:p-7 rounded-[2px] bg-[#25D366]/10 border border-[#25D366]/30 space-y-3.5">
             <div className="flex items-center gap-2.5 text-[#128C7E] font-semibold text-sm">
               <MessageCircle className="w-5 h-5 shrink-0" />
-              <span>Étape suivante : Canal WhatsApp officiel</span>
+              <span>Étape suivante : Canal d&apos;information officiel</span>
             </div>
             <p className="text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
-              Rejoignez dès maintenant le canal officiel du concours pour ne manquer aucune consigne,
-              suivre le calendrier des révélations et recevoir les annonces de l&apos;équipe organisatrice.
+              Rejoignez le canal officiel du concours pour recevoir les dates d&apos;ouverture
+              des phases en ligne, les rappels de consignes et les avis de l&apos;équipe organisatrice.
             </p>
             <a
               href="https://chat.whatsapp.com/D2RVspXf4Sp1OfllUCskoE?s=cl&p=a&iam=2"

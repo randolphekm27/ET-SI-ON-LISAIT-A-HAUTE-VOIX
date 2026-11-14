@@ -4,48 +4,48 @@
       "id": "phase-1",
       "number": "01",
       "title": "La Plume",
-      "shortDescription": "À domicile (Jours 1 à 3) · Notée sur 20 points (phase qualificative). Deux épreuves personnelles sous anonymat : « Je suis… » et « Les mots que l'on n'ose pas dire ». Jusqu'à 5 minutes pour votre présentation.",
+      "shortDescription": "En ligne (Jours 1 à 3) · Notée sur 20 points (phase qualificative). Deux épreuves sous anonymat : « Je suis… » et « Les mots que l'on n'ose pas dire » (textes originaux + interprétation vidéo). Jusqu'à 5 minutes par présentation.",
       "format": "En ligne",
       "statusLabel": "Ouverte",
       "isRevealed": true,
       "imageKey": "plume",
       "testDetails": {
         "theme": "Épreuve 1 : « Je suis… » · Épreuve 2 : « Les mots que l’on n’ose pas dire »",
-        "instructions": "Épreuve 1 (« Je suis… ») : ici, vous êtes appelé(e) à vous présenter vraiment, au-delà de votre nom ou de votre filière — racontez votre parcours, vos doutes, vos rêves et ce qui vous anime, dans la forme littéraire qui vous ressemble. Épreuve 2 (« Les mots que l’on n’ose pas dire ») : ici, vous êtes invité(e) à poser sur papier une pensée, une gratitude ou une vérité gardée pour vous, adressée à quelqu’un de réel ou d’imaginaire. Chaque épreuve est notée sur 20 points (Sincérité 6, Qualité de la langue 6, Originalité 5, Cohérence 3). Chaque candidat dispose de jusqu’à 5 minutes pour sa présentation.",
-        "submissionNote": "Phase qualificative · Dépôt anonyme sous votre code UCAEP · Jusqu’à 5 minutes par présentation.",
-        "instructionsTitle": "Phase 01 — La Plume : deux textes personnels (jusqu’à 5 min de présentation)"
+        "instructions": "Dans cette première phase en ligne, les candidats rédigent deux textes originaux et les interprètent en vidéo sous code d’anonymat UCAEP. Épreuve 1 (« Je suis… ») : une présentation personnelle et littéraire de votre parcours, de vos questions et de ce qui vous construit. Épreuve 2 (« Les mots que l’on n’ose pas dire ») : un texte adressé pour formuler une idée essentielle, une reconnaissance ou une réflexion souvent tue. Chaque épreuve est notée sur 20 points (Sincérité 6, Qualité de la langue 6, Originalité 5, Cohérence 3), dans une limite de 5 minutes par présentation.",
+        "submissionNote": "Phase qualificative en ligne · Texte original et interprétation vidéo sous code UCAEP · Jusqu’à 5 minutes.",
+        "instructionsTitle": "Phase 01 — La Plume : écriture originale et interprétation vidéo (jusqu’à 5 min)"
       }
     },
     {
       "id": "phase-2",
       "number": "02",
       "title": "La Connaissance",
-      "shortDescription": "À domicile (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves écrites dont les intitulés et sujets seront dévoilés au lancement de cette étape. Jusqu'à 5 minutes pour votre présentation.",
+      "shortDescription": "En ligne (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves de vulgarisation et de réflexion : « La science dans notre quotidien » et « L'école, le savoir et l'avenir » (contenus explicatifs + vidéo). Jusqu'à 5 minutes.",
       "format": "En ligne",
       "statusLabel": "Verrouillée",
       "isRevealed": false,
       "imageKey": "connaissance",
       "testDetails": {
-        "theme": "La science dans notre quotidien · L'enseignant que je veux devenir",
-        "instructions": "Les consignes détaillées des épreuves 3 et 4 seront débloquées au Jour 6 pour les candidats qualifiés après la Phase 1. Jusqu’à 5 minutes pour votre présentation.",
-        "submissionNote": "Dépôt anonyme · Sélection des finalistes pour la scène.",
-        "instructionsTitle": "Consigne — Phase 02 : La Connaissance (phase qualificative)"
+        "theme": "Épreuve 3 : « La science dans notre quotidien » · Épreuve 4 : « L'école, le savoir et l'avenir »",
+        "instructions": "Débloquée au Jour 6 pour les candidats qualifiés après La Plume. Les participants préparent deux contenus explicatifs accompagnés de leur présentation vidéo en ligne autour de « La science dans notre quotidien » et « L'école, le savoir et l'avenir », évalués sur la précision du propos, la clarté pédagogique et la maîtrise de l'oral (jusqu'à 5 minutes par présentation).",
+        "submissionNote": "Phase qualificative en ligne · Contenus explicatifs et vidéo sous code UCAEP · Sélection des finalistes.",
+        "instructionsTitle": "Phase 02 — La Connaissance : vulgarisation et contenus explicatifs en vidéo"
       }
     },
     {
       "id": "phase-3",
       "number": "03",
       "title": "L'Éloquence",
-      "shortDescription": "Grande Finale sur scène (Jour 14) · Notée sur 20 points (sans élimination). Deux jours d'ateliers de diction (J12–13) puis deux passages sur scène devant le public. Jusqu'à 5 minutes par présentation.",
+      "shortDescription": "En présentiel (Jour 14 à l'ENSET de Lokossa) · Notée sur 20 points. Ateliers préparatoires (J12–13) puis finale devant le jury et le public : « La parole que le monde doit entendre » et « Le défi de l'inattendu ».",
       "format": "En présentiel",
       "statusLabel": "Verrouillée",
       "isRevealed": false,
       "imageKey": "eloquence",
       "testDetails": {
-        "theme": "Épreuve 5 : « Un thème, une voix » · Épreuve 6 : « La parole à l'instant »",
-        "instructions": "Ateliers de diction et de présence scénique les Jours 12 et 13 avec les finalistes avant le passage devant le jury et le public au Jour 14. Jusqu’à 5 minutes par passage.",
-        "submissionNote": "Finale en personne à Lokossa · Remise des attestations.",
-        "instructionsTitle": "Consigne — Phase 03 : Grande Finale sur scène"
+        "theme": "Épreuve 5 : « La parole que le monde doit entendre » · Épreuve 6 : « Le défi de l'inattendu »",
+        "instructions": "Les finalistes participent à deux journées d'ateliers de diction et de présence scénique (Jours 12 et 13) avant de présenter en présentiel, au Jour 14 devant le jury et le public, une prise de parole préparée (« La parole que le monde doit entendre ») suivie d'un exercice d'argumentation spontanée (« Le défi de l'inattendu »).",
+        "submissionNote": "Finale en présentiel à l'ENSET de Lokossa · Remise des attestations de participation.",
+        "instructionsTitle": "Phase 03 — L'Éloquence : Grande Finale en présentiel à l'ENSET de Lokossa"
       }
     }
   ],
@@ -54,8 +54,8 @@
       "id": "ea080182-7c66-450e-b5d6-99717646aef1",
       "slug": "revelation-phase-1-la-plume",
       "title": "Lancement de la Phase 01 : La Plume",
-      "excerpt": "Publication programmée pour démarrer la première étape.",
-      "content": "Cette annonce présentera les consignes de la Phase 01 dès sa mise en ligne par l'équipe.",
+      "excerpt": "Publication programmée pour ouvrir la première phase en ligne dédiée aux épreuves « Je suis… » et « Les mots que l'on n'ose pas dire ».",
+      "content": "Cette note présentera les consignes complètes et l'ouverture officielle de l'espace de dépôt pour la Phase 01 (La Plume) dès sa mise en ligne par l'équipe organisatrice.",
       "publishedAt": "2026-12-01T08:00:00.000Z",
       "scheduledAt": "2026-12-01T08:00:00.000Z",
       "status": "scheduled",
@@ -65,9 +65,9 @@
     {
       "id": "2e016288-5d5f-40fc-83a8-12c3357b1f7f",
       "slug": "note-interne-jury-preparation",
-      "title": "Brouillon — Organisation de la finale",
-      "excerpt": "Note interne de l'équipe UCAEP.",
-      "content": "Document de travail interne en attente de validation par l'équipe.",
+      "title": "Brouillon — Organisation de la finale en présentiel",
+      "excerpt": "Note de préparation interne de la Session Théâtre UCAEP.",
+      "content": "Document de coordination interne en attente de validation avant publication.",
       "publishedAt": "2026-11-12T12:00:00.000Z",
       "status": "draft",
       "category": "Interne",
@@ -76,9 +76,9 @@
     {
       "id": "4913e731-a51c-442e-b53f-1031991801aa",
       "slug": "calendrier-progressif-des-revelations",
-      "title": "Comment nous allons annoncer les épreuves",
-      "excerpt": "Chaque étape sera dévoilée ici au fur et à mesure, pour que tout le monde parte sur un pied d'égalité.",
-      "content": "Pour que personne n'ait d'avance sur les autres, nous ne publions pas les sujets et consignes des trois phases dès aujourd'hui.\n\nNous dévoilerons chaque étape ici même, une annonce après l'autre. Pensez à repasser sur cette page de temps en temps pour suivre le fil du concours.",
+      "title": "Calendrier progressif des phases et modalités de dépôt",
+      "excerpt": "Chaque phase est ouverte selon un calendrier commun afin que l'ensemble des candidats préparent leurs épreuves dans les mêmes conditions.",
+      "content": "Le concours se déploie en trois phases complémentaires : deux phases en ligne (La Plume, puis La Connaissance) évaluées sous anonymat, suivies d'une finale en présentiel à l'ENSET de Lokossa (L'Éloquence).\n\nAfin de garantir l'équité entre tous les candidats, les consignes détaillées et les fenêtres de dépôt de chaque phase sont activées progressivement selon le calendrier officiel publié sur cette page et sur le canal d'information des inscrits.",
       "publishedAt": "2026-11-12T10:00:00.000Z",
       "status": "published",
       "category": "Organisation",
@@ -87,9 +87,9 @@
     {
       "id": "634eb1ee-8ae8-4d1a-a1ba-42760315542d",
       "slug": "ouverture-des-inscriptions-edition-2026",
-      "title": "Les inscriptions sont ouvertes à l'ENSET",
-      "excerpt": "Vous pouvez dès maintenant remplir votre fiche d'inscription en ligne pour participer.",
-      "content": "Nous ouvrons les inscriptions pour l'édition 2026 du concours « Et si on lisait à haute voix ? » à l'ENSET de Lokossa.\n\nLa participation est gratuite et ouverte à tous les étudiants de l'école, quelle que soit votre filière ou votre année d'étude.\n\nSi vous avez envie d'essayer, remplissez simplement le formulaire en ligne avant le vendredi 20 novembre 2026. Nous publierons ici toutes les informations pour la suite.",
+      "title": "Ouverture des inscriptions pour l'édition 2026 à l'ENSET de Lokossa",
+      "excerpt": "Les étudiants de l'ENSET de Lokossa peuvent enregistrer gratuitement leur candidature en ligne jusqu'au vendredi 20 novembre 2026.",
+      "content": "La Session Théâtre de l'UCAEP ouvre officiellement les inscriptions pour l'édition 2026 du concours « Et si on lisait à haute voix ? » au sein de l'ENSET de Lokossa.\n\nLa participation est entièrement gratuite et ouverte à tous les étudiants régulièrement inscrits à l'ENSET de Lokossa, quels que soient leur département technique ou scientifique et leur année d'étude.\n\nL'inscription en ligne attribue immédiatement un code d'anonymat UCAEP qui servira à déposer les productions des deux phases en ligne (La Plume et La Connaissance) avant la clôture des dossiers fixée au vendredi 20 novembre 2026.",
       "publishedAt": "2026-11-10T09:00:00.000Z",
       "status": "published",
       "category": "Inscription",
@@ -100,15 +100,15 @@
     {
       "id": "57e0cd60-369c-4fd1-8249-f50f37d5196c",
       "slug": "lancement-culturel-enset-lokossa",
-      "title": "Pourquoi on lance ce concours à l'ENSET de Lokossa",
+      "title": "Pourquoi ce concours pédagogique et culturel à l'ENSET de Lokossa",
       "category": "Vie du concours",
       "publishedAt": "2026-11-08T14:00:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Entre les cours et les ateliers, on avait envie de créer un moment pour écrire, lire et parler ensemble.",
+      "excerpt": "Développer l'écriture claire, la vulgarisation des savoirs et la prise de parole chez de futurs enseignants et techniciens.",
       "content": [
-        "À l'ENSET de Lokossa, nos journées tournent beaucoup autour des matières techniques et scientifiques. Mais savoir expliquer une idée, écrire clairement et parler devant un groupe sert dans toutes les filières.",
-        "Avec « Et si on lisait à haute voix ? », notre équipe UCAEP veut simplement ouvrir un espace ouvert à tout le monde, sans pression ni jargon.",
-        "Que vous écriviez déjà dans vos cahiers ou que ce soit votre toute première fois, vous avez votre place."
+        "À l'ENSET de Lokossa, la formation repose sur l'acquisition de compétences techniques, scientifiques et didactiques exigeantes. Pourtant, transmettre un savoir ou défendre un projet demande tout autant de savoir structurer un texte, vulgariser une notion complexe et parler avec justesse devant un auditoire.",
+        "À travers « Et si on lisait à haute voix ? », la Session Théâtre de l'UCAEP propose un exercice structuré en trois temps : l'écriture personnelle, l'explication pédagogique et l'expression orale en public.",
+        "Ce cadre permet à chaque étudiant de l'établissement de s'exercer à formuler sa pensée, quelle que soit sa spécialité, dans une progression accompagnée et évaluée selon des critères transparents."
       ],
       "imageKey": "campus",
       "featured": true,
@@ -117,14 +117,14 @@
     {
       "id": "5e484b25-07c3-48db-8105-71b59f79c1ca",
       "slug": "trois-etapes-pour-reveler-les-voix",
-      "title": "De votre cahier jusqu'à la scène : comment tout s'enchaîne",
+      "title": "Comprendre les trois phases : deux étapes en ligne, une finale en présentiel",
       "category": "Coulisses",
       "publishedAt": "2026-11-05T11:30:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Écrire d'abord au calme, partager ensuite ce qu'on sait, puis prendre la parole devant le campus.",
+      "excerpt": "Comment s'articulent La Plume, La Connaissance et L'Éloquence autour de six épreuves complémentaires.",
       "content": [
-        "On a voulu un parcours progressif. On commence calmement par l'écrit avec La Plume, avant de passer à la lecture et à la culture générale dans La Connaissance.",
-        "Pour la dernière phase, L'Éloquence, on se retrouve en personne devant le public pour écouter les finalistes à voix haute."
+        "Le parcours débute en ligne avec La Plume : les candidats produisent des textes originaux sur « Je suis… » et « Les mots que l'on n'ose pas dire » avant de les interpréter en vidéo. La seconde étape en ligne, La Connaissance, met l'accent sur la clarté d'explication à travers « La science dans notre quotidien » et « L'école, le savoir et l'avenir ».",
+        "À l'issue de ces deux phases qualificatives évaluées sous anonymat, les finalistes sont accompagnés en ateliers avant L'Éloquence, disputée en présentiel à l'ENSET de Lokossa autour de « La parole que le monde doit entendre » et « Le défi de l'inattendu »."
       ],
       "imageKey": "plume",
       "featured": false,
@@ -133,14 +133,14 @@
     {
       "id": "d40ad7d6-b3b8-453b-b493-d1605c201b75",
       "slug": "preparer-sa-candidature-etudiant",
-      "title": "Avant de vous inscrire, prenez une minute",
+      "title": "Préparer son dossier d’inscription à l’ENSET de Lokossa",
       "category": "Candidats",
       "publishedAt": "2026-11-03T09:15:00.000Z",
       "readTime": "1 min",
-      "excerpt": "Ce qu'il vous faut sous la main pour remplir votre formulaire sans stress.",
+      "excerpt": "Les éléments pratiques à réunir pour obtenir votre code d'anonymat UCAEP en deux minutes.",
       "content": [
-        "L'inscription est gratuite et ouverte aux étudiants de l'ENSET de Lokossa.",
-        "Ayez simplement votre numéro matricule, une adresse e-mail que vous consultez régulièrement et deux ou trois phrases pour expliquer ce qui vous donne envie de participer."
+        "L'inscription est gratuite et réservée aux étudiants régulièrement inscrits à l'ENSET de Lokossa.",
+        "Avant de compléter le formulaire, munissez-vous de votre numéro matricule étudiant, d'une adresse e-mail consultée régulièrement et d'un court texte expliquant votre démarche. Un code d'anonymat vous est délivré dès la validation pour accéder à l'espace de dépôt."
       ],
       "imageKey": "connaissance",
       "featured": false,
@@ -149,14 +149,14 @@
     {
       "id": "b934b049-75dd-4798-a6f1-48e0045ee7f1",
       "slug": "atelier-preparation-prise-de-parole",
-      "title": "Lire à haute voix, ça change quoi ?",
+      "title": "Ce que travaille la lecture à haute voix face à un texte",
       "category": "Coulisses",
       "publishedAt": "2026-10-29T16:00:00.000Z",
       "readTime": "2 min",
-      "excerpt": "Quand on passe de la lecture silencieuse à la voix haute, le texte prend un autre rythme.",
+      "excerpt": "Passer de la rédaction écrite à l’interprétation orale aide à vérifier la précision du sens, du souffle et du rythme.",
       "content": [
-        "Lire un texte à voix haute oblige à ralentir, à respirer aux bons endroits et à faire attention à ce qu'on veut vraiment transmettre.",
-        "C'est ce goût du partage et de l'écoute qu'on veut faire vivre sur le campus cette année."
+        "Lire un texte à voix haute met immédiatement en évidence la structure des phrases, les silences nécessaires et la clarté d'une argumentation. C'est un outil précieux tant pour l'expression littéraire que pour la future pratique enseignante.",
+        "En associant dans ses phases en ligne l'écriture d'un contenu et sa présentation face caméra (jusqu'à 5 minutes), le concours invite chaque participant à soigner à la fois le fond du propos et sa transmission orale."
       ],
       "imageKey": "eloquence",
       "featured": false,
