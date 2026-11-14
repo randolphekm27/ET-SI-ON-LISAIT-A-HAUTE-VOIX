@@ -17,7 +17,10 @@ app.use((req, _res, next) => {
 
   const rawUrl = req.url || '/';
   const [rawPathOnly, rawQuery] = rawUrl.split('?');
-  const rawPathParam = (req.query as Record<string, string | string[]> | undefined)?.path;
+  const searchParams = new URLSearchParams(rawQuery || '');
+  const queryPath = req.query?.path;
+  const rawPathParam =
+    queryPath !== undefined ? queryPath : searchParams.get('path') || '';
   const paramSegments = Array.isArray(rawPathParam)
     ? rawPathParam.join('/')
     : typeof rawPathParam === 'string'
@@ -25,25 +28,22 @@ app.use((req, _res, next) => {
       : '';
 
   let normalizedPath = rawPathOnly || '/';
-  if (
-    paramSegments &&
-    (!normalizedPath.startsWith('/api/') ||
-      normalizedPath === '/api' ||
-      normalizedPath === '/api/')
-  ) {
+  const isBaseApiHandlerPath =
+    !normalizedPath.startsWith('/api/') ||
+    normalizedPath === '/api' ||
+    normalizedPath === '/api/' ||
+    normalizedPath === '/api/index' ||
+    normalizedPath === '/api/index/';
+
+  if (paramSegments && isBaseApiHandlerPath) {
     normalizedPath = `/api/${paramSegments.replace(/^\/+/, '')}`;
   } else if (!normalizedPath.startsWith('/api')) {
     normalizedPath = `/api/${normalizedPath.replace(/^\/+/, '')}`;
   }
 
-  if (rawQuery) {
-    const searchParams = new URLSearchParams(rawQuery);
-    searchParams.delete('path');
-    const remaining = searchParams.toString();
-    req.url = remaining ? `${normalizedPath}?${remaining}` : normalizedPath;
-  } else {
-    req.url = normalizedPath;
-  }
+  searchParams.delete('path');
+  const remaining = searchParams.toString();
+  req.url = remaining ? `${normalizedPath}?${remaining}` : normalizedPath;
   next();
 });
 
