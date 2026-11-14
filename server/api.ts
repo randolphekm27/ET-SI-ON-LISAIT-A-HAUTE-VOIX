@@ -36,9 +36,7 @@ import type {
   SubmissionStatus,
 } from '../src/types/competition';
 
-function normalizeCode(raw: string): string {
-  return raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-}
+const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000; // la session organisateur dure 8 heures
 
 function getOrganizerCodes(): string[] {
   let envVal = (process.env.ORGANIZER_ACCESS_CODE || '').trim();
@@ -55,24 +53,20 @@ function getOrganizerCodes(): string[] {
     .filter(Boolean);
 }
 
+function safeEqual(a: string, b: string): boolean {
+  const ha = crypto.createHash('sha256').update(a).digest();
+  const hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
 function isOrganizerCodeValid(inputCode: string): boolean {
   const codes = getOrganizerCodes();
   if (codes.length === 0) return false;
   if (!inputCode || typeof inputCode !== 'string') return false;
   const trimmed = inputCode.trim();
   if (!trimmed) return false;
-  const inputUpper = trimmed.toUpperCase();
-  const inputNorm = normalizeCode(trimmed);
-
-  for (const expected of codes) {
-    const expectedTrimmed = expected.trim();
-    const expectedUpper = expectedTrimmed.toUpperCase();
-    const expectedNorm = normalizeCode(expectedTrimmed);
-
-    if (inputUpper === expectedUpper) return true;
-    if (inputNorm && expectedNorm && inputNorm === expectedNorm) return true;
-  }
-  return false;
+  // Comparaison exacte (sensible à la casse), en temps constant
+  return codes.some((expected) => safeEqual(trimmed, expected));
 }
 
 function getTokenSecret(): string | null {
@@ -89,8 +83,13 @@ function createAdminToken(): string {
   if (!secret) {
     throw new Error('ORGANIZER_ACCESS_CODE non configuré.');
   }
+  const now = Date.now();
   const payload = Buffer.from(
-    JSON.stringify({ iat: Date.now(), nonce: crypto.randomBytes(8).toString('hex') }),
+    JSON.stringify({
+      iat: now,
+      exp: now + ADMIN_SESSION_MS,
+      nonce: crypto.randomBytes(8).toString('hex'),
+    }),
   ).toString('base64url');
   const sig = crypto
     .createHmac('sha256', secret)
@@ -110,7 +109,15 @@ function verifyAdminToken(token: string): boolean {
     .update(payload)
     .digest('base64url');
   if (sig.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  try {
+    const { exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      exp?: unknown;
+    };
+    return typeof exp === 'number' && exp > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 function requireAdmin(
