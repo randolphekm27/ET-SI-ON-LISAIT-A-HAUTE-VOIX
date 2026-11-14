@@ -24,6 +24,7 @@ import {
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
+import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { useEditorialScrollMotion } from '../lib/motion';
 import type { CompetitionPhase } from '../types/competition';
@@ -113,6 +114,7 @@ export function ParcoursPage() {
     "Les 3 phases du concours UCAEP : toutes les consignes de la Phase 1 (La Plume), le dévoilement progressif des phases 2 et 3 et le calendrier en 3 semaines.",
   );
 
+  const candidateSession = useCandidateSession();
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -553,21 +555,33 @@ export function ParcoursPage() {
                 </div>
               </div>
               <div className="relative z-10 pt-1 flex flex-wrap items-center gap-4">
-                <Link
-                  to="/inscription"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors"
-                >
-                  <span>M&apos;inscrire pour recevoir mon code</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-                {hasOpenDeposits && (
+                {candidateSession ? (
                   <Link
                     to="/depot"
-                    className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors"
                   >
-                    <span className="editorial-underline">Déposer mes productions</span>
+                    <span>Accéder à mon dossier ({candidateSession.referenceCode})</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/inscription"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#e1ae52] transition-colors"
+                    >
+                      <span>M&apos;inscrire pour recevoir mon code</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                    {hasOpenDeposits && (
+                      <Link
+                        to="/depot"
+                        className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
+                      >
+                        <span className="editorial-underline">Déposer mes productions</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </article>
@@ -805,27 +819,39 @@ export function ParcoursPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {hasOpenDeposits && (
+            {candidateSession ? (
               <Link
                 to="/depot"
                 className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors whitespace-nowrap shrink-0"
               >
-                <span>Déposer ma production</span>
+                <span>Mon espace dépôt</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
+            ) : (
+              <>
+                {hasOpenDeposits && (
+                  <Link
+                    to="/depot"
+                    className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors whitespace-nowrap shrink-0"
+                  >
+                    <span>Déposer ma production</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                )}
+                <Link
+                  to="/inscription"
+                  className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+                >
+                  <span>Je m&apos;inscris</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </>
             )}
             <Link
               to="/annonces"
               className="px-5 py-3 text-sm font-medium rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors whitespace-nowrap shrink-0"
             >
               Voir les annonces
-            </Link>
-            <Link
-              to="/inscription"
-              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
-            >
-              <span>Je m&apos;inscris</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </div>
         </div>

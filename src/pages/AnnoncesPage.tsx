@@ -9,6 +9,7 @@ import {
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
+import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { useEditorialScrollMotion } from '../lib/motion';
 import type { PublicAnnouncement } from '../types/competition';
@@ -187,6 +188,7 @@ function AnnouncementsFeedView() {
 }
 
 function AnnouncementDetailView({ slug }: { slug: string }) {
+  const candidateSession = useCandidateSession();
   const [announcement, setAnnouncement] = useState<PublicAnnouncement | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -300,13 +302,23 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
           >
             Voir les trois phases du concours
           </Link>
-          <Link
-            to="/inscription"
-            className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
-          >
-            <span>Je m&apos;inscris</span>
-            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-          </Link>
+          {candidateSession ? (
+            <Link
+              to="/depot"
+              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors"
+            >
+              <span>Mon espace dépôt</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          ) : (
+            <Link
+              to="/inscription"
+              className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+            >
+              <span>Je m&apos;inscris</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          )}
         </div>
       </div>
     </article>

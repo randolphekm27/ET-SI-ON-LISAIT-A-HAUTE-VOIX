@@ -510,6 +510,8 @@ export async function updateAnnouncementViaSupabaseRest(
 export async function updatePhaseViaSupabaseRest(
   id: string,
   patch: {
+    title?: string;
+    shortDescription?: string;
     statusLabel?: CompetitionPhase['statusLabel'];
     isRevealed?: boolean;
     submissionsOpen?: boolean;
@@ -518,25 +520,36 @@ export async function updatePhaseViaSupabaseRest(
   },
 ): Promise<CompetitionPhase | null> {
   const admin = getSupabaseAdmin();
-  const { data: current } = await admin
+  const { data: current, error: fetchErr } = await admin
     .from('competition_phases')
     .select('*')
     .eq('id', id)
     .maybeSingle();
+
+  if (fetchErr) {
+    throw new Error(`Lecture Supabase (competition_phases) impossible : ${fetchErr.message}`);
+  }
   if (!current) return null;
 
   const existingDetails = (current.test_details || null) as PhaseTestDetails | null;
   const nextDetails: PhaseTestDetails | null = patch.testDetails
     ? {
         instructionsTitle:
-          patch.testDetails.instructionsTitle ||
-          existingDetails?.instructionsTitle ||
-          '',
-        theme: patch.testDetails.theme || existingDetails?.theme || '',
+          patch.testDetails.instructionsTitle !== undefined
+            ? patch.testDetails.instructionsTitle
+            : existingDetails?.instructionsTitle || '',
+        theme:
+          patch.testDetails.theme !== undefined
+            ? patch.testDetails.theme
+            : existingDetails?.theme || '',
         instructions:
-          patch.testDetails.instructions || existingDetails?.instructions || '',
+          patch.testDetails.instructions !== undefined
+            ? patch.testDetails.instructions
+            : existingDetails?.instructions || '',
         submissionNote:
-          patch.testDetails.submissionNote || existingDetails?.submissionNote || '',
+          patch.testDetails.submissionNote !== undefined
+            ? patch.testDetails.submissionNote
+            : existingDetails?.submissionNote || '',
       }
     : existingDetails;
 
@@ -547,27 +560,62 @@ export async function updatePhaseViaSupabaseRest(
         ? patch.submissionsOpen
         : Boolean(current.submissions_open);
 
-  const { data, error } = await admin
+  const fullPayload: Record<string, unknown> = {
+    title: patch.title?.trim() || current.title,
+    short_description:
+      patch.shortDescription?.trim() || current.short_description,
+    status_label: patch.statusLabel || current.status_label,
+    is_revealed:
+      typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.is_revealed,
+    submissions_open: nextOpen,
+    submission_deadline:
+      patch.submissionDeadline === undefined
+        ? current.submission_deadline ?? null
+        : patch.submissionDeadline
+          ? patch.submissionDeadline.toISOString()
+          : null,
+    test_details: nextDetails,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { data, error } = await admin
     .from('competition_phases')
-    .update({
-      status_label: patch.statusLabel || current.status_label,
-      is_revealed:
-        typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.is_revealed,
-      submissions_open: nextOpen,
-      submission_deadline:
-        patch.submissionDeadline === undefined
-          ? current.submission_deadline
-          : patch.submissionDeadline
-            ? patch.submissionDeadline.toISOString()
-            : null,
-      test_details: nextDetails,
-      updated_at: new Date().toISOString(),
-    })
+    .update(fullPayload)
     .eq('id', id)
     .select('*')
     .single();
 
-  if (error || !data) return null;
+  if (
+    error &&
+    (error.message.includes('submissions_open') ||
+      error.message.includes('submission_deadline'))
+  ) {
+    if (patch.submissionsOpen !== undefined || patch.submissionDeadline !== undefined) {
+      throw new Error(
+        "Les colonnes d'ouverture des dépôts (submissions_open / submission_deadline) manquent dans Supabase. Exécutez supabase/init-complete.sql dans SQL Editor.",
+      );
+    }
+    const corePayload: Record<string, unknown> = {
+      title: fullPayload.title,
+      short_description: fullPayload.short_description,
+      status_label: fullPayload.status_label,
+      is_revealed: fullPayload.is_revealed,
+      test_details: fullPayload.test_details,
+      updated_at: fullPayload.updated_at,
+    };
+    const retry = await admin
+      .from('competition_phases')
+      .update(corePayload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error || !data) {
+    throw new Error(error?.message || `Impossible de mettre à jour la phase ${id}.`);
+  }
   return mapPhaseFromRest(data);
 }
 
@@ -812,21 +860,56 @@ export async function saveContactViaSupabaseRest(
   return record;
 }
 
+export function normalizeCandidateRefCode(raw: string): string {
+  return (raw || '')
+    .trim()
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase();
+}
+
 export async function verifyCandidateViaSupabaseRest(
   cleanRef: string,
   cleanEmail: string,
-): Promise<DbRegistrationRowLike | null> {
+): Promise<{ candidate: DbRegistrationRowLike | null; emailFound: boolean }> {
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
+  const normRef = normalizeCandidateRefCode(cleanRef);
+  const targetEmail = cleanEmail.trim().toLowerCase();
+
+  // Recherche par e-mail d'abord (tolère les variations d'espaces/tirets sur le code)
+  const { data: byEmail, error: emailErr } = await admin
     .from('registrations')
     .select('*')
-    .ilike('reference_code', cleanRef)
-    .ilike('email', cleanEmail)
-    .limit(1);
+    .ilike('email', targetEmail)
+    .limit(5);
 
-  if (error) throw new Error(error.message);
-  if (!data || !data[0]) return null;
-  return mapRegistrationFromRest(data[0]);
+  if (emailErr) throw new Error(emailErr.message);
+
+  let candidates = byEmail || [];
+  if (candidates.length === 0) {
+    // Secours si l'e-mail en base comporte un espace superflu
+    const { data: allRows, error: allErr } = await admin
+      .from('registrations')
+      .select('*')
+      .limit(500);
+    if (allErr) throw new Error(allErr.message);
+    candidates = (allRows || []).filter(
+      (r) => String(r.email || '').trim().toLowerCase() === targetEmail,
+    );
+  }
+
+  if (candidates.length === 0) {
+    return { candidate: null, emailFound: false };
+  }
+
+  const matched = candidates.find(
+    (r) => normalizeCandidateRefCode(String(r.reference_code || '')) === normRef,
+  );
+
+  return {
+    candidate: matched ? mapRegistrationFromRest(matched) : null,
+    emailFound: true,
+  };
 }
 
 export async function listPhasesViaSupabaseRest(): Promise<DbPhaseRowLike[]> {
@@ -852,6 +935,17 @@ export async function getPhaseByIdViaSupabaseRest(
   return data ? mapPhaseRowLikeFromRest(data) : null;
 }
 
+function isMissingSubmissionsTableError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const code = String(error.code || '').toUpperCase();
+  const msg = String(error.message || '').toLowerCase();
+  return (
+    code === 'PGRST205' ||
+    code === '42P01' ||
+    msg.includes('submissions') && (msg.includes('schema cache') || msg.includes('does not exist'))
+  );
+}
+
 export async function getCandidateSubmissionsViaSupabaseRest(
   registrationId: string,
 ): Promise<DbSubmissionRowLike[]> {
@@ -860,7 +954,12 @@ export async function getCandidateSubmissionsViaSupabaseRest(
     .from('submissions')
     .select('*')
     .eq('registration_id', registrationId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingSubmissionsTableError(error)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
   return (data || []).map(mapSubmissionFromRest);
 }
 
@@ -875,7 +974,12 @@ export async function getSubmissionForCandidatePhaseViaSupabaseRest(
     .eq('registration_id', registrationId)
     .eq('phase_id', phaseId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingSubmissionsTableError(error)) {
+      return null;
+    }
+    throw new Error(error.message);
+  }
   return data ? mapSubmissionFromRest(data) : null;
 }
 
@@ -918,6 +1022,11 @@ export async function upsertSubmissionViaSupabaseRest(values: {
     .single();
 
   if (error || !data) {
+    if (isMissingSubmissionsTableError(error)) {
+      throw new Error(
+        "La table 'submissions' n'est pas encore créée dans Supabase. Exécutez le script supabase/init-complete.sql dans SQL Editor.",
+      );
+    }
     throw new Error(error?.message || "Impossible d'enregistrer le dépôt.");
   }
   return mapSubmissionFromRest(data);
@@ -952,7 +1061,12 @@ export async function listAdminSubmissionsViaSupabaseRest(filters?: {
     admin.from('competition_phases').select('*'),
   ]);
 
-  if (subRes.error) throw new Error(subRes.error.message);
+  if (subRes.error) {
+    if (isMissingSubmissionsTableError(subRes.error)) {
+      return [];
+    }
+    throw new Error(subRes.error.message);
+  }
   if (regRes.error) throw new Error(regRes.error.message);
   if (phRes.error) throw new Error(phRes.error.message);
 

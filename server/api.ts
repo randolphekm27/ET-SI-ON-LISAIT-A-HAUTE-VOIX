@@ -1,4 +1,4 @@
-import type express from 'express';
+import express from 'express';
 import crypto from 'node:crypto';
 import { isCloudSqlConfigured } from '../src/db/index.ts';
 import { isSupabaseAdminConfigured } from './supabase-admin.ts';
@@ -22,9 +22,12 @@ import {
   enforceSubmissionRateLimit,
   getAdminSubmissionAccess,
   getCandidateSubmissionStatus,
+  getSubmissionsPublicConfig,
+  handleLocalFileUpload,
   initCandidateSubmission,
   isSubmissionHttpError,
   listAdminSubmissions,
+  resolveLocalSubmissionFile,
   updateAdminSubmissionReview,
 } from './submissions.ts';
 import type {
@@ -415,6 +418,53 @@ export function registerApiRoutes(app: express.Express) {
     return req.ip || 'unknown';
   };
 
+  app.get('/api/submissions/config', (_req, res) => {
+    res.json(getSubmissionsPublicConfig());
+  });
+
+  app.post(
+    '/api/submissions/local-upload',
+    express.raw({ type: '*/*', limit: '52mb' }),
+    async (req, res) => {
+      try {
+        const headerToken = req.headers['x-upload-token'];
+        const token = Array.isArray(headerToken)
+          ? headerToken[0] || ''
+          : headerToken || '';
+        const bodyBuffer = Buffer.isBuffer(req.body)
+          ? req.body
+          : Buffer.from(req.body || '');
+        const result = await handleLocalFileUpload(token, bodyBuffer);
+        res.status(200).json(result);
+      } catch (error) {
+        if (isSubmissionHttpError(error)) {
+          res.status(error.statusCode).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({ error: 'Échec de réception du fichier sur le serveur.' });
+      }
+    },
+  );
+
+  app.get('/api/submissions/local-file', async (req, res) => {
+    try {
+      const token = typeof req.query.token === 'string' ? req.query.token : '';
+      const file = await resolveLocalSubmissionFile(token);
+      res.setHeader('Content-Type', file.mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${file.fileName.replace(/"/g, '')}"`,
+      );
+      res.send(file.buffer);
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Impossible de charger ce fichier.' });
+    }
+  });
+
   app.post('/api/submissions/status', async (req, res) => {
     try {
       const { referenceCode, email } = (req.body || {}) as {
@@ -432,7 +482,11 @@ export function registerApiRoutes(app: express.Express) {
         res.status(error.statusCode).json({ error: error.message });
         return;
       }
-      res.status(500).json({ error: 'Impossible de vérifier votre dossier pour le moment.' });
+      const err = error as Error;
+      console.error('[POST /api/submissions/status]', err?.message || error);
+      res.status(500).json({
+        error: err?.message || 'Impossible de vérifier votre dossier pour le moment.',
+      });
     }
   });
 
@@ -463,7 +517,11 @@ export function registerApiRoutes(app: express.Express) {
         res.status(error.statusCode).json({ error: error.message });
         return;
       }
-      res.status(500).json({ error: 'Impossible de préparer votre dépôt pour le moment.' });
+      const err = error as Error;
+      console.error('[POST /api/submissions/init]', err?.message || error);
+      res.status(500).json({
+        error: err?.message || 'Impossible de préparer votre dépôt pour le moment.',
+      });
     }
   });
 
@@ -498,7 +556,11 @@ export function registerApiRoutes(app: express.Express) {
         res.status(error.statusCode).json({ error: error.message });
         return;
       }
-      res.status(500).json({ error: "Impossible d'enregistrer votre dépôt pour le moment." });
+      const err = error as Error;
+      console.error('[POST /api/submissions/complete]', err?.message || error);
+      res.status(500).json({
+        error: err?.message || "Impossible d'enregistrer votre dépôt pour le moment.",
+      });
     }
   });
 
@@ -600,10 +662,12 @@ export function registerApiRoutes(app: express.Express) {
     }
   });
 
-  // Organizer CMS: Update Phase Reveal, Status & Submissions Settings
+  // Organizer CMS: Update Phase Reveal, Information & Submissions Settings
   app.patch('/api/admin/phases/:id', requireAdmin, async (req, res) => {
     try {
       const updated = await updatePhaseRecord(String(req.params.id), {
+        title: req.body.title,
+        shortDescription: req.body.shortDescription,
         statusLabel: req.body.statusLabel,
         isRevealed: req.body.isRevealed,
         submissionsOpen: req.body.submissionsOpen,

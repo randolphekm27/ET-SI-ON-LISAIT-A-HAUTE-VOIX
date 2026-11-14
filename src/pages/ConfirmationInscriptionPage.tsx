@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 import { EditorialMark } from '../components/EditorialMark';
+import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 
 interface ReceiptState {
@@ -9,7 +10,7 @@ interface ReceiptState {
   department: string;
   studyLevel: string;
   createdAt: string;
-  syncedToGoogleSheets: boolean;
+  syncedToGoogleSheets?: boolean;
 }
 
 export function ConfirmationInscriptionPage() {
@@ -19,7 +20,8 @@ export function ConfirmationInscriptionPage() {
   );
 
   const location = useLocation();
-  const state = location.state as ReceiptState | null;
+  const storedSession = useCandidateSession();
+  const state = (location.state as ReceiptState | null) || storedSession;
 
   if (!state || !state.referenceCode) {
     return (

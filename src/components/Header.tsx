@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { fetchApiJson } from '../lib/api';
+import { useCandidateSession } from '../lib/candidate-session';
 import type { CompetitionPhase } from '../types/competition';
 
 const NAV_ITEMS = [
@@ -33,6 +34,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hasOpenSubmissions, setHasOpenSubmissions] = useState(false);
+  const candidateSession = useCandidateSession();
   const location = useLocation();
   const isHome = location.pathname === '/';
 
@@ -133,31 +135,48 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Zone 3: Primary CTA (+ Deposit link when a phase is open) + mobile drawer button */}
+          {/* Zone 3: Primary CTA (Switches to Mon espace dépôt once registered) + mobile drawer button */}
           <div className="flex items-center gap-3 shrink-0">
-            {hasOpenSubmissions && (
+            {candidateSession ? (
               <Link
                 to="/depot"
-                className={`hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-semibold tracking-wider uppercase rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
+                title={`Dossier ${candidateSession.referenceCode}`}
+                className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
                   overDarkHero
-                    ? 'border-ucaep-gold/60 text-ucaep-gold hover:bg-ucaep-gold/10'
-                    : 'border-ucaep-green/40 text-ucaep-green hover:bg-ucaep-green/8'
+                    ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                    : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
                 }`}
               >
-                Déposer ma production
+                <span>Mon espace dépôt</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
+            ) : (
+              <>
+                {hasOpenSubmissions && (
+                  <Link
+                    to="/depot"
+                    className={`hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-semibold tracking-wider uppercase rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
+                      overDarkHero
+                        ? 'border-ucaep-gold/60 text-ucaep-gold hover:bg-ucaep-gold/10'
+                        : 'border-ucaep-green/40 text-ucaep-green hover:bg-ucaep-green/8'
+                    }`}
+                  >
+                    Déposer ma production
+                  </Link>
+                )}
+                <Link
+                  to="/inscription"
+                  className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
+                    overDarkHero
+                      ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
+                      : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
+                  }`}
+                >
+                  <span>S&apos;inscrire</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
+              </>
             )}
-            <Link
-              to="/inscription"
-              className={`hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[2px] transition-colors duration-150 whitespace-nowrap shrink-0 group ${
-                overDarkHero
-                  ? 'bg-ucaep-gold text-[#14100E] hover:bg-[#e1ae52]'
-                  : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
-              }`}
-            >
-              <span>S&apos;inscrire</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </Link>
 
             <button
               type="button"
@@ -232,22 +251,42 @@ export function Header() {
             </div>
 
             <div className="pt-8 space-y-3">
-              {hasOpenSubmissions && (
-                <Link
-                  to="/depot"
-                  className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10 transition-colors"
-                >
-                  <span>Déposer ma production</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+              {candidateSession ? (
+                <>
+                  <p className="text-xs text-ucaep-ivory/75">
+                    Inscrit(e) · Réf.{' '}
+                    <span className="font-mono font-semibold text-ucaep-gold">
+                      {candidateSession.referenceCode}
+                    </span>
+                  </p>
+                  <Link
+                    to="/depot"
+                    className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                  >
+                    <span>Mon espace dépôt</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {hasOpenSubmissions && (
+                    <Link
+                      to="/depot"
+                      className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10 transition-colors"
+                    >
+                      <span>Déposer ma production</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                  <Link
+                    to="/inscription"
+                    className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                  >
+                    <span>Je m&apos;inscris au concours</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </>
               )}
-              <Link
-                to="/inscription"
-                className="w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
-              >
-                <span>Je m&apos;inscris au concours</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
               <div className="flex items-center justify-between text-xs text-ucaep-ivory/65 pt-2">
                 <Link to="/contact" className="hover:text-ucaep-paper underline">
                   Nous écrire

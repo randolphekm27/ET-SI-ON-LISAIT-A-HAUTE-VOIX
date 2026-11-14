@@ -20,6 +20,7 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { useCandidateSession } from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
 import { useEditorialScrollMotion } from '../lib/motion';
 
@@ -99,6 +100,7 @@ export function ConcoursPage() {
   );
 
   const pageRef = useRef<HTMLDivElement>(null);
+  const candidateSession = useCandidateSession();
   useEditorialScrollMotion(pageRef);
 
   return (
@@ -359,13 +361,23 @@ export function ConcoursPage() {
               fiche avant le vendredi 20 novembre 2026 pour recevoir votre code anonyme.
             </p>
           </div>
-          <Link
-            to="/inscription"
-            className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
-          >
-            <span>Je m&apos;inscris</span>
-            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-          </Link>
+          {candidateSession ? (
+            <Link
+              to="/depot"
+              className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Accéder à mon dossier</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          ) : (
+            <Link
+              to="/inscription"
+              className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Je m&apos;inscris</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          )}
         </div>
       </section>
     </div>

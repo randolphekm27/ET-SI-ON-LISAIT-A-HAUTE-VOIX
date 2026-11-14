@@ -19,6 +19,10 @@ import {
 } from '../components/BrandPattern';
 import { PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
+import {
+  getCandidateSession,
+  saveCandidateSession,
+} from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import {
   ACCEPT_ATTRIBUTE,
@@ -26,10 +30,7 @@ import {
   formatFileSize,
   validateSubmissionFileClient,
 } from '../lib/submissions-config';
-import {
-  isSupabaseConfigured,
-  uploadFileToSignedStorageUrl,
-} from '../lib/supabase';
+import { uploadFileToSignedStorageUrl } from '../lib/supabase';
 import type {
   CandidateSubmissionSummary,
   SubmissionKind,
@@ -86,12 +87,18 @@ export function DepotPage() {
   );
 
   const [searchParams] = useSearchParams();
+  const initialStored = useMemo(() => getCandidateSession(), []);
   const [referenceCode, setReferenceCode] = useState(
-    () => (searchParams.get('ref') || '').trim().toUpperCase(),
+    () =>
+      (searchParams.get('ref') || initialStored?.referenceCode || '')
+        .trim()
+        .toUpperCase(),
   );
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => (initialStored?.email || '').trim());
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [uploadReady, setUploadReady] = useState(true);
+  const autoCheckedRef = useRef(false);
 
   const [sessionData, setSessionData] = useState<StatusResponse | null>(null);
   const [selectedPhaseId, setSelectedPhaseId] = useState('');
@@ -120,6 +127,20 @@ export function DepotPage() {
   );
 
   useEffect(() => {
+    let active = true;
+    fetchApiJson<{ fileUploadReady?: boolean }>('/api/submissions/config')
+      .then((cfg) => {
+        if (active && typeof cfg.fileUploadReady === 'boolean') {
+          setUploadReady(cfg.fileUploadReady);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!selectedPhase) return;
     setSubmitError('');
     setFileError('');
@@ -140,21 +161,47 @@ export function DepotPage() {
   }, [selectedPhaseId]);
 
   async function refreshCandidateStatus(refVal: string, emailVal: string) {
+    const cleanRef = refVal.trim().toUpperCase();
+    const cleanEmail = emailVal.trim();
     const res = await fetchApiJson<StatusResponse>('/api/submissions/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        referenceCode: refVal.trim().toUpperCase(),
-        email: emailVal.trim(),
+        referenceCode: cleanRef,
+        email: cleanEmail,
       }),
     });
     setSessionData(res);
+    setReferenceCode(res.candidate.referenceCode);
+    setEmail(cleanEmail);
+    saveCandidateSession({
+      referenceCode: res.candidate.referenceCode,
+      candidateName: `${res.candidate.firstName} ${res.candidate.lastName}`.trim(),
+      email: cleanEmail,
+      department: res.candidate.department,
+      studyLevel: res.candidate.studyLevel,
+      createdAt: initialStored?.createdAt || new Date().toISOString(),
+      syncedToGoogleSheets: initialStored?.syncedToGoogleSheets,
+    });
     if (!selectedPhaseId || !res.phases.some((p) => p.id === selectedPhaseId)) {
       const firstOpen = res.phases.find((p) => p.acceptingNow) || res.phases[0];
       if (firstOpen) setSelectedPhaseId(firstOpen.id);
     }
     return res;
   }
+
+  useEffect(() => {
+    if (autoCheckedRef.current) return;
+    if (referenceCode && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      autoCheckedRef.current = true;
+      setAuthLoading(true);
+      refreshCandidateStatus(referenceCode, email)
+        .catch(() => {
+          // L'utilisateur peut corriger manuellement ses identifiants si nécessaire
+        })
+        .finally(() => setAuthLoading(false));
+    }
+  }, []);
 
   async function handleVerifyCandidate(e: FormEvent) {
     e.preventDefault();
@@ -214,13 +261,6 @@ export function DepotPage() {
       return;
     }
 
-    if (!isSupabaseConfigured) {
-      setSubmitError(
-        'Le téléversement direct de fichiers est momentanément indisponible sur cet environnement (configuration stockage manquante).',
-      );
-      return;
-    }
-
     setSubmitLoading(true);
     setSubmitError('');
     setUploadProgress(2);
@@ -228,8 +268,10 @@ export function DepotPage() {
     try {
       const init = await fetchApiJson<{
         kind: 'file';
+        uploadMode?: 'supabase_signed' | 'local_server';
         storagePath: string;
         token: string;
+        signedUrl?: string;
         normalizedMimeType: string;
       }>('/api/submissions/init', {
         method: 'POST',
@@ -248,6 +290,8 @@ export function DepotPage() {
       await uploadFileToSignedStorageUrl({
         path: init.storagePath,
         token: init.token,
+        signedUrl: init.signedUrl,
+        uploadMode: init.uploadMode,
         file: selectedFile,
         contentType: init.normalizedMimeType || validatedMime || check.mimeType,
         onProgress: (pct) => setUploadProgress(pct),
@@ -383,16 +427,6 @@ export function DepotPage() {
           className="absolute bottom-0 inset-x-0 h-16"
         />
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          {!isSupabaseConfigured && (
-            <div
-              role="status"
-              className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 leading-relaxed"
-            >
-              Le stockage de fichiers Supabase n’est pas encore activé sur cet environnement.
-              Vous pouvez néanmoins consulter l’état de votre dossier ou préparer un dépôt texte.
-            </div>
-          )}
-
           {/* ÉTAPE 1 : IDENTIFICATION */}
           {!sessionData ? (
             <form
@@ -893,7 +927,7 @@ export function DepotPage() {
 
                           <button
                             type="button"
-                            disabled={!selectedFile || submitLoading || !isSupabaseConfigured}
+                            disabled={!selectedFile || submitLoading || !uploadReady}
                             onClick={handleSubmitFile}
                             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
                           >

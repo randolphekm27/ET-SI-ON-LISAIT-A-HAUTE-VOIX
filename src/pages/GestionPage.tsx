@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, type FormEvent, useMemo } from 'react';
 import {
+  AlertCircle,
   CheckCircle2,
   Download,
+  Edit3,
   Eye,
   FileText,
   Lock,
@@ -147,6 +149,24 @@ export function GestionPage() {
   const [reviewNoteDraft, setReviewNoteDraft] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
   const [phaseDeadlines, setPhaseDeadlines] = useState<Record<string, string>>({});
+  const [phaseSavingId, setPhaseSavingId] = useState<string | null>(null);
+  const [phaseActionError, setPhaseActionError] = useState('');
+  const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
+  const [phaseDraft, setPhaseDraft] = useState<{
+    title: string;
+    shortDescription: string;
+    instructionsTitle: string;
+    theme: string;
+    instructions: string;
+    submissionNote: string;
+  }>({
+    title: '',
+    shortDescription: '',
+    instructionsTitle: '',
+    theme: '',
+    instructions: '',
+    submissionNote: '',
+  });
 
   function selectTab(newTab: GestionTab) {
     setTab(newTab);
@@ -240,6 +260,7 @@ export function GestionPage() {
       setLastSyncedAt(new Date());
       setAuthError('');
     } catch (err) {
+      if (requestId !== requestSeqRef.current) return;
       const msg = err instanceof Error ? err.message : 'Erreur de chargement.';
       if (!silent) setAuthError(msg);
       if (msg.includes('401') || msg.includes('Connexion organisateur requise')) {
@@ -253,8 +274,10 @@ export function GestionPage() {
         }
       }
     } finally {
-      isFetchingRef.current = false;
-      if (!silent) setIsRefreshing(false);
+      if (requestId === requestSeqRef.current) {
+        isFetchingRef.current = false;
+        if (!silent) setIsRefreshing(false);
+      }
     }
   }
 
@@ -395,19 +418,43 @@ export function GestionPage() {
   }
 
   async function handleTogglePhaseReveal(phase: CompetitionPhase) {
+    setPhaseActionError('');
+    setNotice('');
+    setPhaseSavingId(phase.id);
     try {
-      await fetchApiJson(`/api/admin/phases/${phase.id}`, {
-        method: 'PATCH',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          isRevealed: !phase.isRevealed,
-          statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
-        }),
-      });
+      const res = await fetchApiJson<{ phase: CompetitionPhase }>(
+        `/api/admin/phases/${phase.id}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            isRevealed: !phase.isRevealed,
+            statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
+          }),
+        },
+      );
+      if (res?.phase) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                phases: prev.phases.map((p) => (p.id === phase.id ? res.phase : p)),
+              }
+            : prev,
+        );
+      }
       await loadOverview();
-      setNotice(`Phase ${phase.number} mise à jour avec succès.`);
+      setNotice(
+        !phase.isRevealed
+          ? `Consignes de la Phase ${phase.number} rendues visibles.`
+          : `Consignes de la Phase ${phase.number} masquées.`,
+      );
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setPhaseActionError(msg);
+      setNotice(msg);
+    } finally {
+      setPhaseSavingId(null);
     }
   }
 
@@ -415,26 +462,62 @@ export function GestionPage() {
     phaseId: string,
     statusLabel: CompetitionPhase['statusLabel'],
   ) {
+    setPhaseActionError('');
+    setNotice('');
+    setPhaseSavingId(phaseId);
     try {
-      await fetchApiJson(`/api/admin/phases/${phaseId}`, {
-        method: 'PATCH',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ statusLabel }),
-      });
+      const res = await fetchApiJson<{ phase: CompetitionPhase }>(
+        `/api/admin/phases/${phaseId}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ statusLabel }),
+        },
+      );
+      if (res?.phase) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                phases: prev.phases.map((p) => (p.id === phaseId ? res.phase : p)),
+              }
+            : prev,
+        );
+      }
       await loadOverview();
       setNotice('Statut de la phase mis à jour avec succès.');
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setPhaseActionError(msg);
+      setNotice(msg);
+    } finally {
+      setPhaseSavingId(null);
     }
   }
 
   async function handleToggleSubmissionsOpen(phase: CompetitionPhase) {
+    setPhaseActionError('');
+    setNotice('');
+    setPhaseSavingId(phase.id);
     try {
-      await fetchApiJson(`/api/admin/phases/${phase.id}`, {
-        method: 'PATCH',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ submissionsOpen: !phase.submissionsOpen }),
-      });
+      const res = await fetchApiJson<{ phase: CompetitionPhase }>(
+        `/api/admin/phases/${phase.id}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ submissionsOpen: !phase.submissionsOpen }),
+        },
+      );
+      if (res?.phase) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                phases: prev.phases.map((p) => (p.id === phase.id ? res.phase : p)),
+              }
+            : prev,
+        );
+      }
       await loadOverview();
       setNotice(
         !phase.submissionsOpen
@@ -442,23 +525,43 @@ export function GestionPage() {
           : `Dépôts fermés pour la Phase ${phase.number}.`,
       );
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setPhaseActionError(msg);
+      setNotice(msg);
+    } finally {
+      setPhaseSavingId(null);
     }
   }
 
   async function handleSavePhaseDeadline(phaseId: string, rawValue: string | null) {
+    setPhaseActionError('');
+    setNotice('');
+    setPhaseSavingId(phaseId);
     try {
       const isoDeadline =
         rawValue && rawValue.trim() ? new Date(rawValue).toISOString() : null;
-      await fetchApiJson(`/api/admin/phases/${phaseId}`, {
-        method: 'PATCH',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ submissionDeadline: isoDeadline }),
-      });
+      const res = await fetchApiJson<{ phase: CompetitionPhase }>(
+        `/api/admin/phases/${phaseId}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ submissionDeadline: isoDeadline }),
+        },
+      );
       setPhaseDeadlines((prev) => ({
         ...prev,
         [phaseId]: rawValue || '',
       }));
+      if (res?.phase) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                phases: prev.phases.map((p) => (p.id === phaseId ? res.phase : p)),
+              }
+            : prev,
+        );
+      }
       await loadOverview();
       setNotice(
         isoDeadline
@@ -466,7 +569,76 @@ export function GestionPage() {
           : 'Date limite de dépôt effacée.',
       );
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setPhaseActionError(msg);
+      setNotice(msg);
+    } finally {
+      setPhaseSavingId(null);
+    }
+  }
+
+  function openPhaseEditor(phase: CompetitionPhase) {
+    if (editingPhaseId === phase.id) {
+      setEditingPhaseId(null);
+      return;
+    }
+    setPhaseActionError('');
+    setEditingPhaseId(phase.id);
+    setPhaseDraft({
+      title: phase.title || '',
+      shortDescription: phase.shortDescription || '',
+      instructionsTitle: phase.testDetails?.instructionsTitle || '',
+      theme: phase.testDetails?.theme || '',
+      instructions: phase.testDetails?.instructions || '',
+      submissionNote: phase.testDetails?.submissionNote || '',
+    });
+  }
+
+  async function handleSavePhaseInfo(phaseId: string) {
+    if (!phaseDraft.title.trim() || !phaseDraft.shortDescription.trim()) {
+      setPhaseActionError('Le titre et la description de la phase sont obligatoires.');
+      return;
+    }
+    setPhaseActionError('');
+    setNotice('');
+    setPhaseSavingId(phaseId);
+    try {
+      const res = await fetchApiJson<{ phase: CompetitionPhase }>(
+        `/api/admin/phases/${phaseId}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            title: phaseDraft.title.trim(),
+            shortDescription: phaseDraft.shortDescription.trim(),
+            testDetails: {
+              instructionsTitle: phaseDraft.instructionsTitle.trim(),
+              theme: phaseDraft.theme.trim(),
+              instructions: phaseDraft.instructions.trim(),
+              submissionNote: phaseDraft.submissionNote.trim(),
+            },
+          }),
+        },
+      );
+      if (res?.phase) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                phases: prev.phases.map((p) => (p.id === phaseId ? res.phase : p)),
+              }
+            : prev,
+        );
+      }
+      await loadOverview();
+      setEditingPhaseId(null);
+      setNotice('Informations et consignes de la phase enregistrées.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setPhaseActionError(msg);
+      setNotice(msg);
+    } finally {
+      setPhaseSavingId(null);
     }
   }
 
@@ -1209,141 +1381,299 @@ export function GestionPage() {
 
         {/* ONGLET PARCOURS */}
         {tab === 'parcours' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {data.phases.map((phase) => (
+          <div className="space-y-6">
+            {phaseActionError && (
               <div
-                key={phase.id}
-                className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4"
+                role="alert"
+                className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
               >
-                <div className="flex items-center justify-between text-xs text-ucaep-brown/75 tabular-nums">
-                  <span>Phase {phase.number}</span>
-                  <span>{phase.format}</span>
-                </div>
-                <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                  {phase.title}
-                </h2>
-                <p className="text-xs text-ucaep-ink/75 leading-relaxed">
-                  {phase.shortDescription}
-                </p>
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{phaseActionError}</span>
+              </div>
+            )}
 
-                <div className="pt-2 space-y-3 border-t border-ucaep-brown/10">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-ucaep-brown">
-                      Statut affiché aux étudiants
-                    </label>
-                    <select
-                      value={phase.statusLabel}
-                      onChange={(e) =>
-                        handlePhaseStatusLabel(
-                          phase.id,
-                          e.target.value as CompetitionPhase['statusLabel'],
-                        )
-                      }
-                      className="w-full px-3 py-2 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper"
-                    >
-                      <option value="À venir">À venir</option>
-                      <option value="Ouverte">Ouverte</option>
-                      <option value="En cours">En cours</option>
-                      <option value="Verrouillée">Verrouillée</option>
-                      <option value="Clôturée">Clôturée</option>
-                    </select>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {data.phases.map((phase) => {
+                const isBusy = phaseSavingId === phase.id;
+                const isEditing = editingPhaseId === phase.id;
 
-                  <button
-                    type="button"
-                    onClick={() => handleTogglePhaseReveal(phase)}
-                    className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 transition-colors ${
-                      phase.isRevealed
-                        ? 'bg-ucaep-green text-ucaep-paper'
-                        : 'bg-ucaep-ivory text-ucaep-brown'
-                    }`}
+                return (
+                  <div
+                    key={phase.id}
+                    className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4"
                   >
-                    {phase.isRevealed ? (
-                      <>
-                        <Unlock className="w-3.5 h-3.5" />
-                        <span>Consignes visibles par tous</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Rendre les consignes visibles</span>
-                      </>
-                    )}
-                  </button>
+                    <div className="flex items-center justify-between text-xs text-ucaep-brown/75 tabular-nums">
+                      <span>Phase {phase.number}</span>
+                      <span>{phase.format}</span>
+                    </div>
+                    <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                      {phase.title}
+                    </h2>
+                    <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                      {phase.shortDescription}
+                    </p>
 
-                  {phase.format !== 'En présentiel' && phase.id !== 'phase-3' ? (
-                    <div className="pt-3 border-t border-ucaep-brown/10 space-y-3">
+                    <div className="pt-2 space-y-3 border-t border-ucaep-brown/10">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium text-ucaep-brown">
+                          Statut affiché aux étudiants
+                        </label>
+                        <select
+                          disabled={isBusy}
+                          value={phase.statusLabel}
+                          onChange={(e) =>
+                            handlePhaseStatusLabel(
+                              phase.id,
+                              e.target.value as CompetitionPhase['statusLabel'],
+                            )
+                          }
+                          className="w-full px-3 py-2 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper disabled:opacity-50"
+                        >
+                          <option value="À venir">À venir</option>
+                          <option value="Ouverte">Ouverte</option>
+                          <option value="En cours">En cours</option>
+                          <option value="Verrouillée">Verrouillée</option>
+                          <option value="Clôturée">Clôturée</option>
+                        </select>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => handleToggleSubmissionsOpen(phase)}
-                        className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 border transition-colors ${
-                          phase.submissionsOpen
-                            ? 'bg-ucaep-gold text-ucaep-ink border-ucaep-gold'
-                            : 'bg-white text-ucaep-brown border-ucaep-brown/25 hover:bg-ucaep-paper'
+                        disabled={isBusy}
+                        onClick={() => handleTogglePhaseReveal(phase)}
+                        className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
+                          phase.isRevealed
+                            ? 'bg-ucaep-green text-ucaep-paper'
+                            : 'bg-ucaep-ivory text-ucaep-brown hover:bg-ucaep-gold/30'
                         }`}
                       >
-                        <span>
-                          {phase.submissionsOpen
-                            ? 'Dépôts ouverts (cliquer pour fermer)'
-                            : 'Ouvrir les dépôts en ligne'}
-                        </span>
+                        {phase.isRevealed ? (
+                          <>
+                            <Unlock className="w-3.5 h-3.5" />
+                            <span>
+                              {isBusy ? 'Mise à jour...' : 'Consignes visibles par tous'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>
+                              {isBusy ? 'Activation...' : 'Rendre les consignes visibles'}
+                            </span>
+                          </>
+                        )}
                       </button>
 
-                      <div className="space-y-1.5">
-                        <label
-                          htmlFor={`deadline-${phase.id}`}
-                          className="block text-[11px] font-medium text-ucaep-brown"
-                        >
-                          Date limite de dépôt
-                        </label>
-                        <input
-                          id={`deadline-${phase.id}`}
-                          type="datetime-local"
-                          value={
-                            phaseDeadlines[phase.id] ??
-                            toDateTimeLocalValue(phase.submissionDeadline)
-                          }
-                          onChange={(e) =>
-                            setPhaseDeadlines((prev) => ({
-                              ...prev,
-                              [phase.id]: e.target.value,
-                            }))
-                          }
-                          className="w-full px-3 py-1.5 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper"
-                        />
-                        <div className="flex items-center gap-2">
+                      {phase.format !== 'En présentiel' && phase.id !== 'phase-3' ? (
+                        <div className="pt-3 border-t border-ucaep-brown/10 space-y-3">
                           <button
                             type="button"
-                            onClick={() =>
-                              handleSavePhaseDeadline(
-                                phase.id,
-                                phaseDeadlines[phase.id] ?? '',
-                              )
-                            }
-                            className="flex-1 py-1.5 px-2.5 text-[11px] font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
+                            disabled={isBusy}
+                            onClick={() => handleToggleSubmissionsOpen(phase)}
+                            className={`w-full py-2.5 px-4 text-xs font-semibold rounded-sm inline-flex items-center justify-center gap-2 border transition-colors disabled:opacity-50 ${
+                              phase.submissionsOpen
+                                ? 'bg-ucaep-gold text-ucaep-ink border-ucaep-gold'
+                                : 'bg-white text-ucaep-brown border-ucaep-brown/25 hover:bg-ucaep-paper'
+                            }`}
                           >
-                            Enregistrer la date
+                            <span>
+                              {isBusy
+                                ? 'Enregistrement...'
+                                : phase.submissionsOpen
+                                  ? 'Dépôts ouverts (cliquer pour fermer)'
+                                  : 'Ouvrir les dépôts en ligne'}
+                            </span>
                           </button>
-                          {(phase.submissionDeadline || phaseDeadlines[phase.id]) && (
-                            <button
-                              type="button"
-                              onClick={() => handleSavePhaseDeadline(phase.id, null)}
-                              className="py-1.5 px-2.5 text-[11px] font-medium rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-ucaep-paper"
+
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`deadline-${phase.id}`}
+                              className="block text-[11px] font-medium text-ucaep-brown"
                             >
-                              Effacer
-                            </button>
-                          )}
+                              Date limite de dépôt
+                            </label>
+                            <input
+                              id={`deadline-${phase.id}`}
+                              type="datetime-local"
+                              disabled={isBusy}
+                              value={
+                                phaseDeadlines[phase.id] ??
+                                toDateTimeLocalValue(phase.submissionDeadline)
+                              }
+                              onChange={(e) =>
+                                setPhaseDeadlines((prev) => ({
+                                  ...prev,
+                                  [phase.id]: e.target.value,
+                                }))
+                              }
+                              className="w-full px-3 py-1.5 text-xs border border-ucaep-brown/25 rounded-sm bg-ucaep-paper"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  handleSavePhaseDeadline(
+                                    phase.id,
+                                    phaseDeadlines[phase.id] ?? '',
+                                  )
+                                }
+                                className="flex-1 py-1.5 px-2.5 text-[11px] font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] disabled:opacity-50"
+                              >
+                                Enregistrer la date
+                              </button>
+                              {(phase.submissionDeadline || phaseDeadlines[phase.id]) && (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleSavePhaseDeadline(phase.id, null)}
+                                  className="py-1.5 px-2.5 text-[11px] font-medium rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                                >
+                                  Effacer
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="pt-3 border-t border-ucaep-brown/10 text-[11px] text-ucaep-ink/65">
+                          Épreuve en présentiel sur le campus : aucun dépôt de fichier en ligne.
+                        </div>
+                      )}
+
+                      {/* Bouton et formulaire d'édition des informations & consignes */}
+                      <div className="pt-3 border-t border-ucaep-brown/10 space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => openPhaseEditor(phase)}
+                          className="w-full py-2 px-3 text-xs font-semibold rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper inline-flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>
+                            {isEditing
+                              ? 'Fermer l’éditeur'
+                              : 'Modifier les informations et consignes'}
+                          </span>
+                        </button>
+
+                        {isEditing && (
+                          <div className="p-3.5 bg-ucaep-paper/75 border border-ucaep-brown/15 rounded-sm space-y-3">
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Titre de la phase *
+                              </label>
+                              <input
+                                type="text"
+                                value={phaseDraft.title}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({ ...d, title: e.target.value }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Description résumée *
+                              </label>
+                              <textarea
+                                rows={3}
+                                value={phaseDraft.shortDescription}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({
+                                    ...d,
+                                    shortDescription: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Intitulé complet des consignes
+                              </label>
+                              <input
+                                type="text"
+                                value={phaseDraft.instructionsTitle}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({
+                                    ...d,
+                                    instructionsTitle: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Thème / Épreuves
+                              </label>
+                              <input
+                                type="text"
+                                value={phaseDraft.theme}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({ ...d, theme: e.target.value }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Consignes détaillées aux candidats
+                              </label>
+                              <textarea
+                                rows={4}
+                                value={phaseDraft.instructions}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({
+                                    ...d,
+                                    instructions: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[11px] font-semibold text-ucaep-brown">
+                                Note pratique de dépôt / notation
+                              </label>
+                              <input
+                                type="text"
+                                value={phaseDraft.submissionNote}
+                                onChange={(e) =>
+                                  setPhaseDraft((d) => ({
+                                    ...d,
+                                    submissionNote: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1.5 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleSavePhaseInfo(phase.id)}
+                                className="flex-1 py-2 px-3 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
+                              >
+                                {isBusy ? 'Enregistrement...' : 'Enregistrer les infos'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => setEditingPhaseId(null)}
+                                className="py-2 px-3 text-xs font-medium rounded-sm border border-ucaep-brown/20 text-ucaep-brown bg-white hover:bg-ucaep-paper"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="pt-3 border-t border-ucaep-brown/10 text-[11px] text-ucaep-ink/65">
-                      Épreuve en présentiel sur le campus : aucun dépôt de fichier en ligne.
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

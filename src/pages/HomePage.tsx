@@ -25,6 +25,7 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { fetchApiJson } from '../lib/api';
+import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { prefersReducedMotion, useEditorialScrollMotion } from '../lib/motion';
 import type {
@@ -93,6 +94,7 @@ export function HomePage() {
 
   const pageRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
+  const candidateSession = useCandidateSession();
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
   const [announcements, setAnnouncements] = useState<PublicAnnouncement[]>([]);
   const [news, setNews] = useState<PublicNewsArticle[]>([]);
@@ -245,13 +247,23 @@ export function HomePage() {
               </p>
 
               <div className="hero-meta-fade pt-1 flex flex-wrap items-center gap-6">
-                <Link
-                  to="/inscription"
-                  className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
-                >
-                  <span>Je m&apos;inscris</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </Link>
+                {candidateSession ? (
+                  <Link
+                    to="/depot"
+                    className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
+                  >
+                    <span>Mon espace dépôt ({candidateSession.referenceCode})</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/inscription"
+                    className="group inline-flex items-center justify-center gap-2.5 px-7 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
+                  >
+                    <span>Je m&apos;inscris</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                )}
                 <Link
                   to="/parcours"
                   className="editorial-underline py-2 text-sm font-medium text-ucaep-ivory hover:text-ucaep-gold transition-colors whitespace-nowrap shrink-0"
@@ -880,13 +892,23 @@ export function HomePage() {
               deux minutes. Venez tenter l&apos;aventure.
             </p>
           </div>
-          <Link
-            to="/inscription"
-            className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
-          >
-            <span>Je m&apos;inscris</span>
-            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-          </Link>
+          {candidateSession ? (
+            <Link
+              to="/depot"
+              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Accéder à mon dossier</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          ) : (
+            <Link
+              to="/inscription"
+              className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-semibold rounded-sm bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Je m&apos;inscris</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          )}
         </div>
       </section>
 

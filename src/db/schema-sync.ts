@@ -156,7 +156,12 @@ export async function ensureDatabaseSchemaReady(force = false): Promise<void> {
   if (!schemaPromise || force) {
     schemaPromise = (async () => {
       try {
-        await pool.query(SCHEMA_SYNC_SQL);
+        const statements = SCHEMA_SYNC_SQL.split(/;\s*\n/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const stmt of statements) {
+          await pool.query(stmt);
+        }
         isSchemaReady = true;
       } catch (err) {
         schemaPromise = null;

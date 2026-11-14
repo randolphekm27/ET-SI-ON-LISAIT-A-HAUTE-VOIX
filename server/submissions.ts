@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db, isCloudSqlConfigured } from '../src/db/index.ts';
-import { ensureDatabaseSchemaReady } from '../src/db/schema-sync.ts';
+import { ensureDatabaseSchemaReady, isSchemaDriftError } from '../src/db/schema-sync.ts';
 import {
   phases as phasesTable,
   registrations as registrationsTable,
@@ -13,6 +15,12 @@ import {
   normalizeSubmissionMimeType,
 } from '../src/lib/submissions-config.ts';
 import {
+  getLocalDataDir,
+  readJsonStore,
+  withJsonStoreLock,
+  type LocalSubmissionRecord,
+} from './store.ts';
+import {
   SUBMISSIONS_BUCKET,
   ensureSubmissionsBucket,
   getSupabaseAdmin,
@@ -20,6 +28,7 @@ import {
 } from './supabase-admin.ts';
 import {
   type DbPhaseRowLike,
+  type DbRegistrationRowLike,
   type DbSubmissionRowLike,
   getCandidateSubmissionsViaSupabaseRest,
   getPhaseByIdViaSupabaseRest,
@@ -29,6 +38,7 @@ import {
   listAdminSubmissionsViaSupabaseRest,
   listPhasesViaSupabaseRest,
   markPreferSupabaseRest,
+  normalizeCandidateRefCode,
   shouldUseSupabaseRestFallback,
   updateSubmissionReviewViaSupabaseRest,
   upsertSubmissionViaSupabaseRest,
@@ -43,6 +53,8 @@ import type {
   SubmissionStatus,
 } from '../src/types/competition';
 
+export type SubmissionUploadMode = 'supabase_signed' | 'local_server';
+
 class SubmissionHttpError extends Error {
   statusCode: number;
 
@@ -52,15 +64,15 @@ class SubmissionHttpError extends Error {
   }
 }
 
-// Rate limit léger en mémoire : max 10 requêtes par minute par IP et par référence
+// Rate limit léger en mémoire : max 25 requêtes par minute par IP et par référence
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX_REQUESTS = 10;
+const RATE_MAX_REQUESTS = 25;
 const rateBucket = new Map<string, number[]>();
 
 export function enforceSubmissionRateLimit(ip: string, referenceCode?: string): void {
   const now = Date.now();
   const keys = [`ip:${ip || 'unknown'}`];
-  const refNorm = (referenceCode || '').trim().toUpperCase();
+  const refNorm = normalizeCandidateRefCode(referenceCode || '');
   if (refNorm) {
     keys.push(`ref:${refNorm}`);
   }
@@ -77,7 +89,6 @@ export function enforceSubmissionRateLimit(ip: string, referenceCode?: string): 
     rateBucket.set(key, timestamps);
   }
 
-  // Nettoyage opportuniste pour éviter la croissance infinie en mémoire
   if (rateBucket.size > 2000) {
     for (const [key, list] of rateBucket.entries()) {
       const fresh = list.filter((ts) => now - ts < RATE_WINDOW_MS);
@@ -97,33 +108,116 @@ function useRestDb(): boolean {
   );
 }
 
-async function withDbFallback<T>(
-  pgFn: () => Promise<T>,
-  restFn: () => Promise<T>,
-): Promise<T> {
+function useLocalJsonDb(): boolean {
+  return !useRestDb() && !isCloudSqlConfigured();
+}
+
+function getUploadMode(): SubmissionUploadMode {
+  return isSupabaseAdminConfigured() ? 'supabase_signed' : 'local_server';
+}
+
+export function getSubmissionsPublicConfig(): {
+  fileUploadReady: boolean;
+  uploadMode: SubmissionUploadMode;
+  maxBytes: number;
+  maxTextLength: number;
+} {
+  return {
+    fileUploadReady: true,
+    uploadMode: getUploadMode(),
+    maxBytes: MAX_UPLOAD_BYTES,
+    maxTextLength: MAX_TEXT_SUBMISSION_LENGTH,
+  };
+}
+
+function getLocalSigningSecret(): string {
+  const raw =
+    (process.env.ORGANIZER_ACCESS_CODE || '').trim() ||
+    (process.env.SUPABASE_SECRET_KEY || '').trim() ||
+    'ucaep-local-upload-secret-2026';
+  return crypto.createHash('sha256').update(`ucaep-uploads:${raw}`).digest('hex');
+}
+
+function signTokenPayload(payload: Record<string, unknown>): string {
+  const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const sig = crypto
+    .createHmac('sha256', getLocalSigningSecret())
+    .update(encoded)
+    .digest('base64url');
+  return `${encoded}.${sig}`;
+}
+
+function verifyTokenPayload<T extends { exp?: number }>(token: string): T | null {
+  const parts = (token || '').trim().split('.');
+  if (parts.length !== 2) return null;
+  const [encoded, sig] = parts;
+  const expected = crypto
+    .createHmac('sha256', getLocalSigningSecret())
+    .update(encoded)
+    .digest('base64url');
+  if (sig.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as T;
+    if (!parsed || typeof parsed.exp !== 'number' || parsed.exp < Date.now()) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function getLocalUploadsRoot(): string {
+  return path.resolve(getLocalDataDir(), 'uploads');
+}
+
+function resolveSafeUploadDiskPath(storagePath: string): string {
+  const root = getLocalUploadsRoot();
+  const cleanRel = storagePath.replace(/^\/+/, '');
+  if (!cleanRel || cleanRel.includes('..') || path.isAbsolute(cleanRel)) {
+    throw new SubmissionHttpError(400, 'Chemin de fichier invalide.');
+  }
+  const target = path.resolve(root, cleanRel);
+  if (!target.startsWith(`${root}${path.sep}`)) {
+    throw new SubmissionHttpError(400, 'Chemin de fichier hors périmètre.');
+  }
+  return target;
+}
+
+async function withDbMode<T>(handlers: {
+  pg: () => Promise<T>;
+  rest: () => Promise<T>;
+  local: () => Promise<T>;
+}): Promise<T> {
   if (useRestDb()) {
-    return restFn();
+    return handlers.rest();
+  }
+  if (useLocalJsonDb()) {
+    return handlers.local();
   }
   try {
-    return await pgFn();
+    return await handlers.pg();
   } catch (err) {
+    if (isSchemaDriftError(err)) {
+      try {
+        await ensureDatabaseSchemaReady(true);
+        return await handlers.pg();
+      } catch (retryErr) {
+        err = retryErr;
+      }
+    }
     if (isNetworkOrDnsError(err) && isSupabaseAdminConfigured()) {
       markPreferSupabaseRest();
-      return restFn();
+      return handlers.rest();
     }
     throw err;
   }
 }
 
 async function assertDatabaseReady(): Promise<void> {
-  if (useRestDb()) {
+  if (useRestDb() || useLocalJsonDb()) {
     return;
-  }
-  if (!isCloudSqlConfigured()) {
-    throw new SubmissionHttpError(
-      503,
-      "Le service de dépôt n'est pas disponible sans base de données PostgreSQL configurée (DATABASE_URL manquant).",
-    );
   }
   try {
     await ensureDatabaseSchemaReady();
@@ -133,15 +227,6 @@ async function assertDatabaseReady(): Promise<void> {
       return;
     }
     throw err;
-  }
-}
-
-function assertStorageConfigured(): void {
-  if (!isSupabaseAdminConfigured()) {
-    throw new SubmissionHttpError(
-      503,
-      'Le stockage des dépôts Supabase est indisponible sur le serveur (SUPABASE_URL ou SUPABASE_SECRET_KEY manquant).',
-    );
   }
 }
 
@@ -165,42 +250,78 @@ export function sanitizeFileName(rawName: string): string {
   return `${safeBase}${cleanExt}`;
 }
 
-async function verifyCandidateCredentials(referenceCode: string, email: string) {
+async function verifyCandidateCredentials(
+  referenceCode: string,
+  email: string,
+): Promise<DbRegistrationRowLike> {
   const cleanRef = (referenceCode || '').trim().toUpperCase();
+  const normRef = normalizeCandidateRefCode(referenceCode || '');
   const cleanEmail = (email || '').trim().toLowerCase();
 
-  if (!cleanRef || !cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+  if (!normRef || !cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     throw new SubmissionHttpError(
       400,
       'Indiquez votre code de référence (ex. UCAEP-2026-0001) et l’adresse e-mail utilisée à l’inscription.',
     );
   }
 
-  const candidate = await withDbFallback(
-    async () => {
-      const rows = await db
+  const lookup = await withDbMode<{
+    candidate: DbRegistrationRowLike | null;
+    emailFound: boolean;
+  }>({
+    pg: async () => {
+      const byEmail = await db
         .select()
         .from(registrationsTable)
-        .where(
-          and(
-            sql`upper(trim(${registrationsTable.referenceCode})) = ${cleanRef}`,
-            sql`lower(trim(${registrationsTable.email})) = ${cleanEmail}`,
-          ),
-        )
-        .limit(1);
-      return rows[0] || null;
-    },
-    () => verifyCandidateViaSupabaseRest(cleanRef, cleanEmail),
-  );
+        .where(sql`lower(trim(${registrationsTable.email})) = ${cleanEmail}`)
+        .limit(10);
 
-  if (!candidate) {
+      if (byEmail.length === 0) {
+        return { candidate: null, emailFound: false };
+      }
+      const matched = byEmail.find(
+        (r) => normalizeCandidateRefCode(r.referenceCode) === normRef,
+      );
+      return { candidate: matched || null, emailFound: true };
+    },
+    rest: () => verifyCandidateViaSupabaseRest(cleanRef, cleanEmail),
+    local: async () => {
+      const store = await readJsonStore();
+      const byEmail = store.registrations.filter(
+        (r) => (r.email || '').trim().toLowerCase() === cleanEmail,
+      );
+      if (byEmail.length === 0) {
+        return { candidate: null, emailFound: false };
+      }
+      const matched = byEmail.find(
+        (r) => normalizeCandidateRefCode(r.referenceCode) === normRef,
+      );
+      return {
+        candidate: matched
+          ? {
+              ...matched,
+              readingExperience: matched.readingExperience || '',
+            }
+          : null,
+        emailFound: true,
+      };
+    },
+  });
+
+  if (!lookup.candidate) {
+    if (lookup.emailFound) {
+      throw new SubmissionHttpError(
+        401,
+        'Cette adresse e-mail est bien inscrite, mais le code de référence ne correspond pas. Vérifiez le code reçu lors de votre inscription (ex. UCAEP-2026-0001).',
+      );
+    }
     throw new SubmissionHttpError(
       401,
       "Aucune inscription trouvée avec ce code de référence et cette adresse e-mail.",
     );
   }
 
-  return candidate;
+  return lookup.candidate;
 }
 
 function evaluatePhaseAcceptance(phase: DbPhaseRowLike): {
@@ -238,7 +359,7 @@ function evaluatePhaseAcceptance(phase: DbPhaseRowLike): {
 }
 
 function mapCandidateSubmissionSummary(
-  row: DbSubmissionRowLike,
+  row: DbSubmissionRowLike | LocalSubmissionRecord,
 ): CandidateSubmissionSummary {
   const excerpt =
     row.kind === 'text' && row.textContent
@@ -265,6 +386,35 @@ function mapCandidateSubmissionSummary(
   };
 }
 
+function toDbPhaseLikeFromLocal(p: {
+  id: string;
+  number: string;
+  title: string;
+  shortDescription: string;
+  format: 'En ligne' | 'En présentiel';
+  statusLabel: DbPhaseRowLike['statusLabel'];
+  isRevealed: boolean;
+  submissionsOpen?: boolean;
+  submissionDeadline?: string | null;
+  imageKey: DbPhaseRowLike['imageKey'];
+  testDetails?: DbPhaseRowLike['testDetails'];
+}, index: number): DbPhaseRowLike {
+  return {
+    id: p.id,
+    number: parseInt(p.number, 10) || index + 1,
+    title: p.title,
+    shortDescription: p.shortDescription,
+    format: p.format,
+    statusLabel: p.statusLabel,
+    isRevealed: p.isRevealed,
+    submissionsOpen: Boolean(p.submissionsOpen),
+    submissionDeadline: p.submissionDeadline ?? null,
+    imageKey: p.imageKey,
+    testDetails: p.testDetails || null,
+    sortOrder: index + 1,
+  };
+}
+
 export async function getCandidateSubmissionStatus(input: {
   referenceCode: string;
   email: string;
@@ -281,10 +431,10 @@ export async function getCandidateSubmissionStatus(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const [phaseRows, submissionRows] = await withDbFallback<
+  const [phaseRows, submissionRows] = await withDbMode<
     [DbPhaseRowLike[], DbSubmissionRowLike[]]
-  >(
-    () =>
+  >({
+    pg: () =>
       Promise.all([
         db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
         db
@@ -292,12 +442,19 @@ export async function getCandidateSubmissionStatus(input: {
           .from(submissionsTable)
           .where(eq(submissionsTable.registrationId, candidate.id)),
       ]),
-    () =>
+    rest: () =>
       Promise.all([
         listPhasesViaSupabaseRest(),
         getCandidateSubmissionsViaSupabaseRest(candidate.id),
       ]),
-  );
+    local: async () => {
+      const store = await readJsonStore();
+      return [
+        store.phases.map((p, idx) => toDbPhaseLikeFromLocal(p, idx)),
+        (store.submissions || []).filter((s) => s.registrationId === candidate.id),
+      ];
+    },
+  });
 
   const byPhase = new Map<string, DbSubmissionRowLike>(
     submissionRows.map((s) => [s.phaseId, s]),
@@ -339,6 +496,27 @@ export async function getCandidateSubmissionStatus(input: {
   };
 }
 
+async function getPhaseForSubmission(phaseId: string): Promise<DbPhaseRowLike | null> {
+  const cleanPhaseId = (phaseId || '').trim();
+  return withDbMode<DbPhaseRowLike | null>({
+    pg: async () => {
+      const phaseRows = await db
+        .select()
+        .from(phasesTable)
+        .where(eq(phasesTable.id, cleanPhaseId))
+        .limit(1);
+      return phaseRows[0] || null;
+    },
+    rest: () => getPhaseByIdViaSupabaseRest(cleanPhaseId),
+    local: async () => {
+      const store = await readJsonStore();
+      const idx = store.phases.findIndex((p) => p.id === cleanPhaseId);
+      if (idx === -1) return null;
+      return toDbPhaseLikeFromLocal(store.phases[idx], idx);
+    },
+  });
+}
+
 export async function initCandidateSubmission(input: {
   referenceCode: string;
   email: string;
@@ -349,6 +527,7 @@ export async function initCandidateSubmission(input: {
   sizeBytes?: number;
 }): Promise<{
   kind: SubmissionKind;
+  uploadMode?: SubmissionUploadMode;
   storagePath?: string;
   token?: string;
   signedUrl?: string;
@@ -359,18 +538,7 @@ export async function initCandidateSubmission(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const cleanPhaseId = (input.phaseId || '').trim();
-  const phase = await withDbFallback(
-    async () => {
-      const phaseRows = await db
-        .select()
-        .from(phasesTable)
-        .where(eq(phasesTable.id, cleanPhaseId))
-        .limit(1);
-      return phaseRows[0] || null;
-    },
-    () => getPhaseByIdViaSupabaseRest(cleanPhaseId),
-  );
+  const phase = await getPhaseForSubmission(input.phaseId);
   if (!phase) {
     throw new SubmissionHttpError(404, 'Phase du concours introuvable.');
   }
@@ -394,8 +562,6 @@ export async function initCandidateSubmission(input: {
   if (input.kind !== 'file') {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide (fichier ou texte requis).');
   }
-
-  assertStorageConfigured();
 
   const rawFileName = (input.fileName || '').trim();
   const sizeBytes = Number(input.sizeBytes);
@@ -423,28 +589,108 @@ export async function initCandidateSubmission(input: {
   const cleanName = sanitizeFileName(rawFileName);
   const storagePath = `${candidate.referenceCode}/${phase.id}/${Date.now()}-${cleanName}`;
 
-  await ensureSubmissionsBucket();
-  const admin = getSupabaseAdmin();
-  const { data, error } = await admin.storage
-    .from(SUBMISSIONS_BUCKET)
-    .createSignedUploadUrl(storagePath, { upsert: false });
+  if (isSupabaseAdminConfigured()) {
+    await ensureSubmissionsBucket();
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(SUBMISSIONS_BUCKET)
+      .createSignedUploadUrl(storagePath, { upsert: false });
 
-  if (error || !data?.token) {
-    throw new SubmissionHttpError(
-      502,
-      "Impossible de préparer le transfert vers le stockage sécurisé. Réessayez dans un instant.",
-    );
+    if (error || !data?.token) {
+      throw new SubmissionHttpError(
+        502,
+        "Impossible de préparer le transfert vers le stockage sécurisé. Réessayez dans un instant.",
+      );
+    }
+
+    return {
+      kind: 'file',
+      uploadMode: 'supabase_signed',
+      storagePath: data.path || storagePath,
+      token: data.token,
+      signedUrl: data.signedUrl,
+      normalizedMimeType: normalizedMime,
+      maxBytes: MAX_UPLOAD_BYTES,
+      maxTextLength: MAX_TEXT_SUBMISSION_LENGTH,
+    };
   }
+
+  // Mode serveur local (sans Supabase) : jeton HMAC vers POST /api/submissions/local-upload
+  const uploadToken = signTokenPayload({
+    purpose: 'local-upload',
+    storagePath,
+    mimeType: normalizedMime,
+    maxSize: MAX_UPLOAD_BYTES,
+    exp: Date.now() + 15 * 60 * 1000,
+  });
 
   return {
     kind: 'file',
-    storagePath: data.path || storagePath,
-    token: data.token,
-    signedUrl: data.signedUrl,
+    uploadMode: 'local_server',
+    storagePath,
+    token: uploadToken,
+    signedUrl: '/api/submissions/local-upload',
     normalizedMimeType: normalizedMime,
     maxBytes: MAX_UPLOAD_BYTES,
     maxTextLength: MAX_TEXT_SUBMISSION_LENGTH,
   };
+}
+
+export async function handleLocalFileUpload(
+  token: string,
+  buffer: Buffer,
+): Promise<{ ok: true; storagePath: string; sizeBytes: number }> {
+  const payload = verifyTokenPayload<{
+    purpose?: string;
+    storagePath?: string;
+    mimeType?: string;
+    exp?: number;
+  }>(token);
+
+  if (!payload || payload.purpose !== 'local-upload' || !payload.storagePath) {
+    throw new SubmissionHttpError(
+      401,
+      'Jeton de téléversement invalide ou expiré. Relancez l’envoi.',
+    );
+  }
+
+  if (!Buffer.isBuffer(buffer) || buffer.length <= 0) {
+    throw new SubmissionHttpError(400, 'Le fichier reçu est vide.');
+  }
+
+  if (buffer.length > MAX_UPLOAD_BYTES) {
+    throw new SubmissionHttpError(
+      400,
+      'Votre fichier dépasse la limite autorisée de 50 Mo.',
+    );
+  }
+
+  const diskPath = resolveSafeUploadDiskPath(payload.storagePath);
+  await fs.mkdir(path.dirname(diskPath), { recursive: true });
+  await fs.writeFile(diskPath, buffer);
+
+  return {
+    ok: true,
+    storagePath: payload.storagePath,
+    sizeBytes: buffer.length,
+  };
+}
+
+async function deleteStoredFileIfExists(storagePath: string | null | undefined): Promise<void> {
+  if (!storagePath) return;
+  if (isSupabaseAdminConfigured()) {
+    await getSupabaseAdmin()
+      .storage.from(SUBMISSIONS_BUCKET)
+      .remove([storagePath])
+      .catch(() => {});
+    return;
+  }
+  try {
+    const diskPath = resolveSafeUploadDiskPath(storagePath);
+    await fs.unlink(diskPath);
+  } catch {
+    // ignore missing old local file
+  }
 }
 
 export async function completeCandidateSubmission(input: {
@@ -461,18 +707,7 @@ export async function completeCandidateSubmission(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const cleanPhaseId = (input.phaseId || '').trim();
-  const phase = await withDbFallback(
-    async () => {
-      const phaseRows = await db
-        .select()
-        .from(phasesTable)
-        .where(eq(phasesTable.id, cleanPhaseId))
-        .limit(1);
-      return phaseRows[0] || null;
-    },
-    () => getPhaseByIdViaSupabaseRest(cleanPhaseId),
-  );
+  const phase = await getPhaseForSubmission(input.phaseId);
   if (!phase) {
     throw new SubmissionHttpError(404, 'Phase du concours introuvable.');
   }
@@ -485,8 +720,8 @@ export async function completeCandidateSubmission(input: {
     );
   }
 
-  const previous = await withDbFallback<DbSubmissionRowLike | null>(
-    async () => {
+  const previous = await withDbMode<DbSubmissionRowLike | null>({
+    pg: async () => {
       const existingRows = await db
         .select()
         .from(submissionsTable)
@@ -499,8 +734,16 @@ export async function completeCandidateSubmission(input: {
         .limit(1);
       return existingRows[0] || null;
     },
-    () => getSubmissionForCandidatePhaseViaSupabaseRest(candidate.id, phase.id),
-  );
+    rest: () => getSubmissionForCandidatePhaseViaSupabaseRest(candidate.id, phase.id),
+    local: async () => {
+      const store = await readJsonStore();
+      return (
+        (store.submissions || []).find(
+          (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
+        ) || null
+      );
+    },
+  });
   const oldStoragePath = previous?.storagePath || null;
 
   if (input.kind === 'text') {
@@ -516,9 +759,10 @@ export async function completeCandidateSubmission(input: {
     }
 
     const now = new Date();
+    const nowIso = now.toISOString();
     const byteSize = Buffer.byteLength(cleanText, 'utf8');
-    const savedRow = await withDbFallback<DbSubmissionRowLike>(
-      async () => {
+    const savedRow = await withDbMode<DbSubmissionRowLike>({
+      pg: async () => {
         const savedRows = await db
           .insert(submissionsTable)
           .values({
@@ -553,7 +797,7 @@ export async function completeCandidateSubmission(input: {
           .returning();
         return savedRows[0];
       },
-      () =>
+      rest: () =>
         upsertSubmissionViaSupabaseRest({
           id: previous?.id || crypto.randomUUID(),
           registrationId: candidate.id,
@@ -567,13 +811,38 @@ export async function completeCandidateSubmission(input: {
           status: 'received',
           organizerNote: '',
         }),
-    );
+      local: () =>
+        withJsonStoreLock((store) => {
+          const list = store.submissions || (store.submissions = []);
+          const existingIdx = list.findIndex(
+            (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
+          );
+          const nextRecord: LocalSubmissionRecord = {
+            id: existingIdx !== -1 ? list[existingIdx].id : crypto.randomUUID(),
+            registrationId: candidate.id,
+            phaseId: phase.id,
+            kind: 'text',
+            storagePath: null,
+            fileName: null,
+            mimeType: 'text/plain',
+            sizeBytes: byteSize,
+            textContent: cleanText,
+            status: 'received',
+            organizerNote: '',
+            createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
+            updatedAt: nowIso,
+          };
+          if (existingIdx !== -1) {
+            list[existingIdx] = nextRecord;
+          } else {
+            list.unshift(nextRecord);
+          }
+          return nextRecord;
+        }),
+    });
 
-    if (oldStoragePath && isSupabaseAdminConfigured()) {
-      getSupabaseAdmin()
-        .storage.from(SUBMISSIONS_BUCKET)
-        .remove([oldStoragePath])
-        .catch(() => {});
+    if (oldStoragePath) {
+      await deleteStoredFileIfExists(oldStoragePath);
     }
 
     return mapCandidateSubmissionSummary(savedRow);
@@ -582,8 +851,6 @@ export async function completeCandidateSubmission(input: {
   if (input.kind !== 'file') {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide.');
   }
-
-  assertStorageConfigured();
 
   const storagePath = (input.storagePath || '').trim();
   const expectedPrefix = `${candidate.referenceCode}/${phase.id}/`;
@@ -602,44 +869,67 @@ export async function completeCandidateSubmission(input: {
     throw new SubmissionHttpError(400, 'Format de fichier non autorisé.');
   }
 
-  // Vérification côté Supabase Storage que l'objet existe et respecte 50 Mo
-  const objectName = storagePath.slice(expectedPrefix.length);
-  const folder = `${candidate.referenceCode}/${phase.id}`;
-  const admin = getSupabaseAdmin();
-  const { data: listed, error: listErr } = await admin.storage
-    .from(SUBMISSIONS_BUCKET)
-    .list(folder, { limit: 100, search: objectName });
+  let storedSize = 0;
 
-  if (listErr) {
-    throw new SubmissionHttpError(
-      502,
-      'Impossible de confirmer la présence du fichier dans le stockage sécurisé.',
-    );
-  }
+  if (isSupabaseAdminConfigured()) {
+    const objectName = storagePath.slice(expectedPrefix.length);
+    const folder = `${candidate.referenceCode}/${phase.id}`;
+    const admin = getSupabaseAdmin();
+    const { data: listed, error: listErr } = await admin.storage
+      .from(SUBMISSIONS_BUCKET)
+      .list(folder, { limit: 100, search: objectName });
 
-  const matchedObject = (listed || []).find((item) => item.name === objectName);
-  if (!matchedObject) {
-    throw new SubmissionHttpError(
-      400,
-      'Le fichier n’a pas encore été reçu dans le stockage. Relancez le téléversement.',
-    );
-  }
+    if (listErr) {
+      throw new SubmissionHttpError(
+        502,
+        'Impossible de confirmer la présence du fichier dans le stockage sécurisé.',
+      );
+    }
 
-  const storedSize = Number(
-    (matchedObject.metadata as { size?: number } | null)?.size ?? input.sizeBytes ?? 0,
-  );
-  if (!Number.isFinite(storedSize) || storedSize <= 0 || storedSize > MAX_UPLOAD_BYTES) {
-    await admin.storage.from(SUBMISSIONS_BUCKET).remove([storagePath]).catch(() => {});
-    throw new SubmissionHttpError(
-      400,
-      'La taille du fichier envoyé est invalide ou dépasse 50 Mo.',
+    const matchedObject = (listed || []).find((item) => item.name === objectName);
+    if (!matchedObject) {
+      throw new SubmissionHttpError(
+        400,
+        'Le fichier n’a pas encore été reçu dans le stockage. Relancez le téléversement.',
+      );
+    }
+
+    storedSize = Number(
+      (matchedObject.metadata as { size?: number } | null)?.size ?? input.sizeBytes ?? 0,
     );
+    if (!Number.isFinite(storedSize) || storedSize <= 0 || storedSize > MAX_UPLOAD_BYTES) {
+      await admin.storage.from(SUBMISSIONS_BUCKET).remove([storagePath]).catch(() => {});
+      throw new SubmissionHttpError(
+        400,
+        'La taille du fichier envoyé est invalide ou dépasse 50 Mo.',
+      );
+    }
+  } else {
+    const diskPath = resolveSafeUploadDiskPath(storagePath);
+    let stat;
+    try {
+      stat = await fs.stat(diskPath);
+    } catch {
+      throw new SubmissionHttpError(
+        400,
+        'Le fichier n’a pas encore été reçu par le serveur. Relancez le téléversement.',
+      );
+    }
+    storedSize = stat.size;
+    if (!Number.isFinite(storedSize) || storedSize <= 0 || storedSize > MAX_UPLOAD_BYTES) {
+      await fs.unlink(diskPath).catch(() => {});
+      throw new SubmissionHttpError(
+        400,
+        'La taille du fichier envoyé est invalide ou dépasse 50 Mo.',
+      );
+    }
   }
 
   const safeDisplayName = rawFileName.slice(0, 180);
   const now = new Date();
-  const savedRow = await withDbFallback<DbSubmissionRowLike>(
-    async () => {
+  const nowIso = now.toISOString();
+  const savedRow = await withDbMode<DbSubmissionRowLike>({
+    pg: async () => {
       const savedRows = await db
         .insert(submissionsTable)
         .values({
@@ -674,7 +964,7 @@ export async function completeCandidateSubmission(input: {
         .returning();
       return savedRows[0];
     },
-    () =>
+    rest: () =>
       upsertSubmissionViaSupabaseRest({
         id: previous?.id || crypto.randomUUID(),
         registrationId: candidate.id,
@@ -688,13 +978,38 @@ export async function completeCandidateSubmission(input: {
         status: 'received',
         organizerNote: '',
       }),
-  );
+    local: () =>
+      withJsonStoreLock((store) => {
+        const list = store.submissions || (store.submissions = []);
+        const existingIdx = list.findIndex(
+          (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
+        );
+        const nextRecord: LocalSubmissionRecord = {
+          id: existingIdx !== -1 ? list[existingIdx].id : crypto.randomUUID(),
+          registrationId: candidate.id,
+          phaseId: phase.id,
+          kind: 'file',
+          storagePath,
+          fileName: safeDisplayName,
+          mimeType: normalizedMime,
+          sizeBytes: storedSize,
+          textContent: null,
+          status: 'received',
+          organizerNote: '',
+          createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
+          updatedAt: nowIso,
+        };
+        if (existingIdx !== -1) {
+          list[existingIdx] = nextRecord;
+        } else {
+          list.unshift(nextRecord);
+        }
+        return nextRecord;
+      }),
+  });
 
   if (oldStoragePath && oldStoragePath !== storagePath) {
-    admin.storage
-      .from(SUBMISSIONS_BUCKET)
-      .remove([oldStoragePath])
-      .catch(() => {});
+    await deleteStoredFileIfExists(oldStoragePath);
   }
 
   return mapCandidateSubmissionSummary(savedRow);
@@ -705,12 +1020,19 @@ export async function listAdminSubmissions(filters?: {
   status?: string;
 }): Promise<{
   storageConfigured: boolean;
+  uploadMode: SubmissionUploadMode;
   submissions: AdminSubmissionItem[];
 }> {
   await assertDatabaseReady();
 
-  const rows = await withDbFallback(
-    async () => {
+  const rows = await withDbMode<
+    Array<{
+      submission: DbSubmissionRowLike;
+      registration: DbRegistrationRowLike;
+      phase: DbPhaseRowLike;
+    }>
+  >({
+    pg: async () => {
       const conditions = [];
       if (filters?.phaseId && filters.phaseId !== 'all') {
         conditions.push(eq(submissionsTable.phaseId, filters.phaseId));
@@ -741,8 +1063,39 @@ export async function listAdminSubmissions(filters?: {
             .orderBy(desc(submissionsTable.updatedAt))
         : baseQuery.orderBy(desc(submissionsTable.updatedAt));
     },
-    () => listAdminSubmissionsViaSupabaseRest(filters),
-  );
+    rest: () => listAdminSubmissionsViaSupabaseRest(filters),
+    local: async () => {
+      const store = await readJsonStore();
+      const regById = new Map(store.registrations.map((r) => [r.id, r]));
+      const phaseById = new Map(
+        store.phases.map((p, idx) => [p.id, toDbPhaseLikeFromLocal(p, idx)]),
+      );
+
+      return (store.submissions || [])
+        .filter((s) => {
+          if (filters?.phaseId && filters.phaseId !== 'all' && s.phaseId !== filters.phaseId) {
+            return false;
+          }
+          if (
+            filters?.status &&
+            ['received', 'validated', 'rejected'].includes(filters.status) &&
+            s.status !== filters.status
+          ) {
+            return false;
+          }
+          return true;
+        })
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+        .map((submission) => {
+          const registration = regById.get(submission.registrationId);
+          const phase = phaseById.get(submission.phaseId);
+          return registration && phase
+            ? { submission, registration, phase }
+            : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+    },
+  });
 
   const items: AdminSubmissionItem[] = rows.map(({ submission, registration, phase }) => ({
     id: submission.id,
@@ -777,7 +1130,8 @@ export async function listAdminSubmissions(filters?: {
   }));
 
   return {
-    storageConfigured: isSupabaseAdminConfigured(),
+    storageConfigured: true,
+    uploadMode: getUploadMode(),
     submissions: items,
   };
 }
@@ -786,8 +1140,8 @@ export async function getAdminSubmissionAccess(
   submissionId: string,
 ): Promise<AdminSubmissionAccess> {
   await assertDatabaseReady();
-  const submission = await withDbFallback<DbSubmissionRowLike | null>(
-    async () => {
+  const submission = await withDbMode<DbSubmissionRowLike | null>({
+    pg: async () => {
       const rows = await db
         .select()
         .from(submissionsTable)
@@ -795,8 +1149,12 @@ export async function getAdminSubmissionAccess(
         .limit(1);
       return rows[0] || null;
     },
-    () => getSubmissionByIdViaSupabaseRest(submissionId),
-  );
+    rest: () => getSubmissionByIdViaSupabaseRest(submissionId),
+    local: async () => {
+      const store = await readJsonStore();
+      return (store.submissions || []).find((s) => s.id === submissionId) || null;
+    },
+  });
 
   if (!submission) {
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
@@ -819,18 +1177,45 @@ export async function getAdminSubmissionAccess(
     throw new SubmissionHttpError(404, 'Aucun fichier associé à ce dépôt.');
   }
 
-  assertStorageConfigured();
-  const admin = getSupabaseAdmin();
-  const { data, error } = await admin.storage
-    .from(SUBMISSIONS_BUCKET)
-    .createSignedUrl(submission.storagePath, 600);
+  if (isSupabaseAdminConfigured()) {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(SUBMISSIONS_BUCKET)
+      .createSignedUrl(submission.storagePath, 600);
 
-  if (error || !data?.signedUrl) {
-    throw new SubmissionHttpError(
-      502,
-      'Impossible de générer le lien temporaire de lecture.',
-    );
+    if (error || !data?.signedUrl) {
+      throw new SubmissionHttpError(
+        502,
+        'Impossible de générer le lien temporaire de lecture.',
+      );
+    }
+
+    return {
+      id: submission.id,
+      kind: 'file',
+      fileName: submission.fileName ?? null,
+      mimeType: submission.mimeType ?? null,
+      sizeBytes: submission.sizeBytes ?? null,
+      signedUrl: data.signedUrl,
+      expiresInSeconds: 600,
+      textContent: null,
+    };
   }
+
+  const diskPath = resolveSafeUploadDiskPath(submission.storagePath);
+  try {
+    await fs.access(diskPath);
+  } catch {
+    throw new SubmissionHttpError(404, 'Le fichier n’est plus disponible sur le disque.');
+  }
+
+  const downloadToken = signTokenPayload({
+    purpose: 'local-download',
+    storagePath: submission.storagePath,
+    fileName: submission.fileName || 'production',
+    mimeType: submission.mimeType || 'application/octet-stream',
+    exp: Date.now() + 600 * 1000,
+  });
 
   return {
     id: submission.id,
@@ -838,9 +1223,41 @@ export async function getAdminSubmissionAccess(
     fileName: submission.fileName ?? null,
     mimeType: submission.mimeType ?? null,
     sizeBytes: submission.sizeBytes ?? null,
-    signedUrl: data.signedUrl,
+    signedUrl: `/api/submissions/local-file?token=${encodeURIComponent(downloadToken)}`,
     expiresInSeconds: 600,
     textContent: null,
+  };
+}
+
+export async function resolveLocalSubmissionFile(token: string): Promise<{
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+}> {
+  const payload = verifyTokenPayload<{
+    purpose?: string;
+    storagePath?: string;
+    fileName?: string;
+    mimeType?: string;
+    exp?: number;
+  }>(token);
+
+  if (!payload || payload.purpose !== 'local-download' || !payload.storagePath) {
+    throw new SubmissionHttpError(401, 'Lien de téléchargement expiré ou invalide.');
+  }
+
+  const diskPath = resolveSafeUploadDiskPath(payload.storagePath);
+  let buffer: Buffer;
+  try {
+    buffer = await fs.readFile(diskPath);
+  } catch {
+    throw new SubmissionHttpError(404, 'Fichier introuvable.');
+  }
+
+  return {
+    fileName: sanitizeFileName(payload.fileName || 'production'),
+    mimeType: payload.mimeType || 'application/octet-stream',
+    buffer,
   };
 }
 
@@ -858,8 +1275,8 @@ export async function updateAdminSubmissionReview(
 }> {
   await assertDatabaseReady();
 
-  const current = await withDbFallback<DbSubmissionRowLike | null>(
-    async () => {
+  const current = await withDbMode<DbSubmissionRowLike | null>({
+    pg: async () => {
       const existingRows = await db
         .select()
         .from(submissionsTable)
@@ -867,8 +1284,12 @@ export async function updateAdminSubmissionReview(
         .limit(1);
       return existingRows[0] || null;
     },
-    () => getSubmissionByIdViaSupabaseRest(submissionId),
-  );
+    rest: () => getSubmissionByIdViaSupabaseRest(submissionId),
+    local: async () => {
+      const store = await readJsonStore();
+      return (store.submissions || []).find((s) => s.id === submissionId) || null;
+    },
+  });
 
   if (!current) {
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
@@ -884,8 +1305,8 @@ export async function updateAdminSubmissionReview(
       ? patch.organizerNote.trim().slice(0, 1500)
       : current.organizerNote;
 
-  const row = await withDbFallback<DbSubmissionRowLike>(
-    async () => {
+  const row = await withDbMode<DbSubmissionRowLike>({
+    pg: async () => {
       const updated = await db
         .update(submissionsTable)
         .set({
@@ -897,12 +1318,27 @@ export async function updateAdminSubmissionReview(
         .returning();
       return updated[0];
     },
-    () =>
+    rest: () =>
       updateSubmissionReviewViaSupabaseRest(submissionId, {
         status: nextStatus,
         organizerNote: nextNote,
       }),
-  );
+    local: () =>
+      withJsonStoreLock((store) => {
+        const list = store.submissions || [];
+        const idx = list.findIndex((s) => s.id === submissionId);
+        if (idx === -1) {
+          throw new SubmissionHttpError(404, 'Dépôt introuvable.');
+        }
+        list[idx] = {
+          ...list[idx],
+          status: nextStatus,
+          organizerNote: nextNote,
+          updatedAt: new Date().toISOString(),
+        };
+        return list[idx];
+      }),
+  });
 
   return {
     id: row.id,

@@ -1,6 +1,14 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Feather } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Feather,
+  UserPlus,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   BrandPatternCircle,
@@ -9,6 +17,11 @@ import {
 } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { fetchApiJson } from '../lib/api';
+import {
+  clearCandidateSession,
+  saveCandidateSession,
+  useCandidateSession,
+} from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
 import type { RegistrationPayload } from '../types/competition';
 
@@ -42,6 +55,7 @@ export function InscriptionPage() {
   );
 
   const navigate = useNavigate();
+  const existingSession = useCandidateSession();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<RegistrationPayload>(INITIAL_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -134,15 +148,19 @@ export function InscriptionPage() {
         );
       }
 
+      const receiptState = {
+        referenceCode: data.referenceCode,
+        candidateName: data.candidateName,
+        email: form.email.trim(),
+        department: data.department,
+        studyLevel: data.studyLevel,
+        createdAt: data.createdAt,
+        syncedToGoogleSheets: data.syncedToGoogleSheets,
+      };
+      saveCandidateSession(receiptState);
+
       navigate('/confirmation-inscription', {
-        state: {
-          referenceCode: data.referenceCode,
-          candidateName: data.candidateName,
-          department: data.department,
-          studyLevel: data.studyLevel,
-          createdAt: data.createdAt,
-          syncedToGoogleSheets: data.syncedToGoogleSheets,
-        },
+        state: receiptState,
         replace: true,
       });
     } catch (err) {
@@ -154,6 +172,78 @@ export function InscriptionPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (existingSession) {
+    return (
+      <div className="bg-ucaep-paper min-h-[82vh]">
+        <PageFolioHeader
+          folio="Inscription"
+          section="Édition 2026 · ENSET de Lokossa"
+          title="Dossier déjà"
+          italicWord="enregistré"
+          subtitle="Votre participation est déjà enregistrée sur cet appareil."
+        />
+
+        <section className="relative py-14 lg:py-20 bg-ucaep-paper paper-fiber overflow-hidden">
+          <BrandPatternSurface
+            variant="gold"
+            tileWidth={220}
+            opacityClass="opacity-[0.04]"
+            blendMultiply
+          />
+          <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
+            <div className="p-8 sm:p-10 bg-white border border-ucaep-green/25 rounded-sm space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <EditorialMark folio="Confirmé" label="Déjà inscrit(e)" tone="green" />
+                <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
+              </div>
+
+              <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
+                Vous êtes bien inscrit(e)
+                {existingSession.candidateName ? `, ${existingSession.candidateName}` : ''}.
+              </h2>
+
+              <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
+                Votre code d&apos;anonymat{' '}
+                <span className="font-mono font-semibold text-ucaep-brown">
+                  {existingSession.referenceCode}
+                </span>{' '}
+                est prêt. Vous pouvez accéder directement à votre espace candidat pour
+                consulter les phases et déposer votre production.
+              </p>
+
+              <div className="pt-2 flex flex-wrap items-center gap-4">
+                <Link
+                  to="/depot"
+                  className="group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                >
+                  <span>Accéder à mon espace dépôt</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  to="/confirmation-inscription"
+                  className="editorial-underline text-sm font-medium text-ucaep-brown"
+                >
+                  Voir mon reçu d&apos;inscription
+                </Link>
+              </div>
+
+              <div className="pt-4 border-t border-ucaep-brown/12">
+                <button
+                  type="button"
+                  onClick={() => clearCandidateSession()}
+                  className="inline-flex items-center gap-2 text-xs text-ucaep-ink/65 hover:text-ucaep-brown underline"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Inscrire une autre personne sur cet appareil</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (

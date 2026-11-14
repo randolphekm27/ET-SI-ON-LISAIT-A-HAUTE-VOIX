@@ -25,87 +25,179 @@ export function requireSupabase(): SupabaseClient {
   return supabase;
 }
 
+function sendXhrWithProgress(opts: {
+  method: 'POST' | 'PUT';
+  url: string;
+  headers?: Record<string, string>;
+  body: XMLHttpRequestBodyInit;
+  onProgress?: (percent: number) => void;
+}): Promise<Response> {
+  return new Promise<Response>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(opts.method, opts.url, true);
+
+    if (opts.headers) {
+      for (const [key, value] of Object.entries(opts.headers)) {
+        if (
+          !(opts.body instanceof FormData) ||
+          key.toLowerCase() !== 'content-type'
+        ) {
+          xhr.setRequestHeader(key, value);
+        }
+      }
+    }
+
+    if (xhr.upload && opts.onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
+          opts.onProgress?.(pct);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (opts.onProgress && xhr.status >= 200 && xhr.status < 300) {
+        opts.onProgress(100);
+      }
+      const rawHeaders = xhr.getAllResponseHeaders();
+      const headerMap = new Headers();
+      for (const line of rawHeaders.trim().split(/[\r\n]+/)) {
+        const idx = line.indexOf(':');
+        if (idx > 0) {
+          headerMap.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
+        }
+      }
+      resolve(
+        new Response(xhr.responseText || '{}', {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: headerMap,
+        }),
+      );
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Échec de la connexion réseau pendant le téléversement.'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('Le téléversement a pris trop de temps. Réessayez avec une connexion stable.'));
+    };
+
+    xhr.onabort = () => {
+      reject(new Error('Le téléversement a été annulé.'));
+    };
+
+    xhr.send(opts.body);
+  });
+}
+
 export async function uploadFileToSignedStorageUrl(params: {
   path: string;
   token: string;
+  signedUrl?: string;
+  uploadMode?: 'supabase_signed' | 'local_server';
   file: File;
   contentType: string;
   onProgress?: (percent: number) => void;
 }): Promise<void> {
+  // 1. Mode serveur local (/api/submissions/local-upload)
+  if (
+    params.uploadMode === 'local_server' ||
+    (params.signedUrl && params.signedUrl.startsWith('/api/'))
+  ) {
+    const targetUrl = params.signedUrl || '/api/submissions/local-upload';
+    const response = await sendXhrWithProgress({
+      method: 'POST',
+      url: targetUrl,
+      headers: {
+        'x-upload-token': params.token,
+        'Content-Type': params.contentType || 'application/octet-stream',
+      },
+      body: params.file,
+      onProgress: params.onProgress,
+    });
+    if (!response.ok) {
+      let msg = "Le serveur n'a pas accepté ce fichier.";
+      try {
+        const data = (await response.json()) as { error?: string };
+        if (data?.error) msg = data.error;
+      } catch {
+        // ignore JSON parse error
+      }
+      throw new Error(msg);
+    }
+    return;
+  }
+
+  // 2. Upload direct vers l'URL signée retournée par /api/submissions/init
+  // Fonctionne même sans VITE_SUPABASE_* configuré au build Vite !
+  if (params.signedUrl && /^https?:\/\//i.test(params.signedUrl)) {
+    const formData = new FormData();
+    formData.append('cacheControl', '3600');
+    formData.append('', params.file);
+
+    const headers: Record<string, string> = {};
+    if (supabasePublishableKey) {
+      headers.apikey = supabasePublishableKey;
+      headers.Authorization = `Bearer ${supabasePublishableKey}`;
+    }
+
+    const response = await sendXhrWithProgress({
+      method: 'PUT',
+      url: params.signedUrl,
+      headers,
+      body: formData,
+      onProgress: params.onProgress,
+    });
+
+    if (!response.ok) {
+      let msg = "Le stockage n'a pas accepté ce fichier.";
+      try {
+        const data = (await response.json()) as { message?: string; error?: string };
+        if (data?.message || data?.error) msg = data.message || data.error || msg;
+      } catch {
+        // ignore parse error
+      }
+      throw new Error(msg);
+    }
+    return;
+  }
+
+  // 3. Repli via SDK client Supabase si configuré
   if (!isSupabaseConfigured) {
     throw new Error(
-      "Le stockage de fichiers n'est pas configuré sur cet environnement.",
+      "Le service de téléversement n'a pas fourni de lien de destination valide.",
     );
   }
 
   const xhrFetch: typeof fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
     const method = (init?.method || 'GET').toUpperCase();
 
     if (method !== 'PUT' && method !== 'POST') {
       return fetch(input, init);
     }
 
-    return new Promise<Response>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open(method, url, true);
+    const headerRecord: Record<string, string> = {};
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        headerRecord[key] = value;
+      });
+    }
 
-      if (init?.headers) {
-        const headers = new Headers(init.headers);
-        headers.forEach((value, key) => {
-          // Laisse le navigateur définir Content-Type + boundary si FormData
-          if (
-            !(init.body instanceof FormData) ||
-            key.toLowerCase() !== 'content-type'
-          ) {
-            xhr.setRequestHeader(key, value);
-          }
-        });
-      }
-
-      if (xhr.upload && params.onProgress) {
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable && event.total > 0) {
-            const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
-            params.onProgress?.(pct);
-          }
-        };
-      }
-
-      xhr.onload = () => {
-        if (params.onProgress && xhr.status >= 200 && xhr.status < 300) {
-          params.onProgress(100);
-        }
-        const rawHeaders = xhr.getAllResponseHeaders();
-        const headerMap = new Headers();
-        for (const line of rawHeaders.trim().split(/[\r\n]+/)) {
-          const idx = line.indexOf(':');
-          if (idx > 0) {
-            headerMap.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
-          }
-        }
-        resolve(
-          new Response(xhr.responseText || '{}', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            headers: headerMap,
-          }),
-        );
-      };
-
-      xhr.onerror = () => {
-        reject(new Error('Échec de la connexion réseau pendant le téléversement.'));
-      };
-
-      xhr.ontimeout = () => {
-        reject(new Error('Le téléversement a pris trop de temps. Réessayez avec une connexion stable.'));
-      };
-
-      xhr.onabort = () => {
-        reject(new Error('Le téléversement a été annulé.'));
-      };
-
-      xhr.send((init?.body as XMLHttpRequestBodyInit | null) ?? null);
+    return sendXhrWithProgress({
+      method: method as 'POST' | 'PUT',
+      url,
+      headers: headerRecord,
+      body: (init?.body as XMLHttpRequestBodyInit | null) ?? '',
+      onProgress: params.onProgress,
     });
   };
 
@@ -127,8 +219,6 @@ export async function uploadFileToSignedStorageUrl(params: {
     });
 
   if (error) {
-    throw new Error(
-      error.message || "Le stockage n'a pas accepté ce fichier.",
-    );
+    throw new Error(error.message || "Le stockage n'a pas accepté ce fichier.");
   }
 }

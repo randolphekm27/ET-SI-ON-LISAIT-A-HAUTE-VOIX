@@ -47,7 +47,25 @@ import type {
   PublicationStatus,
   RegistrationPayload,
   RegistrationRecord,
+  SubmissionKind,
+  SubmissionStatus,
 } from '../src/types/competition';
+
+export interface LocalSubmissionRecord {
+  id: string;
+  registrationId: string;
+  phaseId: string;
+  kind: SubmissionKind;
+  storagePath: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  textContent: string | null;
+  status: SubmissionStatus;
+  organizerNote: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface StoreData {
   announcements: Announcement[];
@@ -55,6 +73,7 @@ interface StoreData {
   news: NewsArticle[];
   registrations: RegistrationRecord[];
   contacts: ContactMessageRecord[];
+  submissions?: LocalSubmissionRecord[];
   settings: {
     googleAppsScriptUrl: string;
     googleFormActionUrl: string;
@@ -66,6 +85,10 @@ const DATA_DIR = process.env.VERCEL
   ? path.join('/tmp', 'ucaep-data')
   : path.resolve(process.cwd(), 'data');
 const STORE_PATH = path.join(DATA_DIR, 'store.json');
+
+export function getLocalDataDir(): string {
+  return DATA_DIR;
+}
 
 const DEFAULT_STORE: StoreData = {
   settings: {
@@ -261,6 +284,7 @@ const DEFAULT_STORE: StoreData = {
   ],
   registrations: [],
   contacts: [],
+  submissions: [],
 };
 
 let seedPromise: Promise<void> | null = null;
@@ -382,11 +406,17 @@ async function ensureStoreFile(): Promise<void> {
   }
 }
 
-async function readJsonStore(): Promise<StoreData> {
+export async function readJsonStore(): Promise<StoreData> {
   try {
     await ensureStoreFile();
     const raw = await fs.readFile(STORE_PATH, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<StoreData>;
+    const rawPhases = parsed.phases?.length ? parsed.phases : DEFAULT_STORE.phases;
+    const normalizedPhases = rawPhases.map((p) => ({
+      ...p,
+      submissionsOpen: Boolean(p.submissionsOpen),
+      submissionDeadline: p.submissionDeadline ?? null,
+    }));
     const loaded: StoreData = {
       settings: {
         ...DEFAULT_STORE.settings,
@@ -400,13 +430,14 @@ async function readJsonStore(): Promise<StoreData> {
           process.env.GOOGLE_FORM_ACTION_URL ||
           '',
       },
-      phases: parsed.phases?.length ? parsed.phases : DEFAULT_STORE.phases,
+      phases: normalizedPhases,
       announcements: parsed.announcements?.length
         ? parsed.announcements
         : DEFAULT_STORE.announcements,
       news: parsed.news?.length ? parsed.news : DEFAULT_STORE.news,
       registrations: parsed.registrations || [],
       contacts: parsed.contacts || [],
+      submissions: parsed.submissions || [],
     };
     inMemoryJsonStore = loaded;
     return loaded;
@@ -437,7 +468,7 @@ async function writeJsonStore(data: StoreData): Promise<void> {
   }
 }
 
-function withJsonStoreLock<T>(fn: (store: StoreData) => Promise<T> | T): Promise<T> {
+export function withJsonStoreLock<T>(fn: (store: StoreData) => Promise<T> | T): Promise<T> {
   const next = writeQueue.then(async () => {
     const store = await readJsonStore();
     const result = await fn(store);
@@ -906,6 +937,8 @@ export async function updateAnnouncementRecord(
 export async function updatePhaseRecord(
   id: string,
   patch: {
+    title?: string;
+    shortDescription?: string;
     statusLabel?: CompetitionPhase['statusLabel'];
     isRevealed?: boolean;
     submissionsOpen?: boolean;
@@ -928,6 +961,8 @@ export async function updatePhaseRecord(
 
   if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
     return updatePhaseViaSupabaseRest(id, {
+      title: patch.title,
+      shortDescription: patch.shortDescription,
       statusLabel: patch.statusLabel,
       isRevealed: patch.isRevealed,
       submissionsOpen: patch.submissionsOpen,
@@ -949,6 +984,8 @@ export async function updatePhaseRecord(
             : Boolean(current.submissionsOpen);
       store.phases[idx] = {
         ...current,
+        title: patch.title?.trim() || current.title,
+        shortDescription: patch.shortDescription?.trim() || current.shortDescription,
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
@@ -962,18 +999,21 @@ export async function updatePhaseRecord(
         testDetails: patch.testDetails
           ? {
               instructionsTitle:
-                patch.testDetails.instructionsTitle ||
-                current.testDetails?.instructionsTitle ||
-                '',
-              theme: patch.testDetails.theme || current.testDetails?.theme || '',
+                patch.testDetails.instructionsTitle !== undefined
+                  ? patch.testDetails.instructionsTitle
+                  : current.testDetails?.instructionsTitle || '',
+              theme:
+                patch.testDetails.theme !== undefined
+                  ? patch.testDetails.theme
+                  : current.testDetails?.theme || '',
               instructions:
-                patch.testDetails.instructions ||
-                current.testDetails?.instructions ||
-                '',
+                patch.testDetails.instructions !== undefined
+                  ? patch.testDetails.instructions
+                  : current.testDetails?.instructions || '',
               submissionNote:
-                patch.testDetails.submissionNote ||
-                current.testDetails?.submissionNote ||
-                '',
+                patch.testDetails.submissionNote !== undefined
+                  ? patch.testDetails.submissionNote
+                  : current.testDetails?.submissionNote || '',
             }
           : current.testDetails,
       };
@@ -981,7 +1021,7 @@ export async function updatePhaseRecord(
     });
   }
 
-  try {
+  const runDbUpdate = async (): Promise<CompetitionPhase | null> => {
     await ensureDbSeeded();
     const rows = await db
       .select()
@@ -994,16 +1034,21 @@ export async function updatePhaseRecord(
     const nextDetails: PhaseTestDetails | null = patch.testDetails
       ? {
           instructionsTitle:
-            patch.testDetails.instructionsTitle ||
-            current.testDetails?.instructionsTitle ||
-            '',
-          theme: patch.testDetails.theme || current.testDetails?.theme || '',
+            patch.testDetails.instructionsTitle !== undefined
+              ? patch.testDetails.instructionsTitle
+              : current.testDetails?.instructionsTitle || '',
+          theme:
+            patch.testDetails.theme !== undefined
+              ? patch.testDetails.theme
+              : current.testDetails?.theme || '',
           instructions:
-            patch.testDetails.instructions || current.testDetails?.instructions || '',
+            patch.testDetails.instructions !== undefined
+              ? patch.testDetails.instructions
+              : current.testDetails?.instructions || '',
           submissionNote:
-            patch.testDetails.submissionNote ||
-            current.testDetails?.submissionNote ||
-            '',
+            patch.testDetails.submissionNote !== undefined
+              ? patch.testDetails.submissionNote
+              : current.testDetails?.submissionNote || '',
         }
       : current.testDetails;
 
@@ -1017,6 +1062,8 @@ export async function updatePhaseRecord(
     const updated = await db
       .update(phasesTable)
       .set({
+        title: patch.title?.trim() || current.title,
+        shortDescription: patch.shortDescription?.trim() || current.shortDescription,
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
@@ -1039,10 +1086,27 @@ export async function updatePhaseRecord(
       }).catch(() => {});
     }
     return result;
+  };
+
+  try {
+    return await runDbUpdate();
   } catch (error) {
-    if (isNetworkOrDnsError(error) && isSupabaseAdminConfigured()) {
-      markPreferSupabaseRest();
+    if (isSchemaDriftError(error)) {
+      try {
+        await ensureDatabaseSchemaReady(true);
+        return await runDbUpdate();
+      } catch (retryErr) {
+        error = retryErr;
+      }
+    }
+
+    if (isSupabaseAdminConfigured()) {
+      if (isNetworkOrDnsError(error)) {
+        markPreferSupabaseRest();
+      }
       return updatePhaseViaSupabaseRest(id, {
+        title: patch.title,
+        shortDescription: patch.shortDescription,
         statusLabel: patch.statusLabel,
         isRevealed: patch.isRevealed,
         submissionsOpen: patch.submissionsOpen,
@@ -1050,6 +1114,13 @@ export async function updatePhaseRecord(
         testDetails: patch.testDetails,
       });
     }
+
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      throw new Error(
+        `Impossible de mettre à jour la phase dans la base (${extractErrorDetail(error)}).`,
+      );
+    }
+
     console.warn('Database updatePhaseRecord failed, bascule sur JSON:', error);
     return withJsonStoreLock((store) => {
       const idx = store.phases.findIndex((p) => p.id === id);
@@ -1063,6 +1134,8 @@ export async function updatePhaseRecord(
             : Boolean(current.submissionsOpen);
       store.phases[idx] = {
         ...current,
+        title: patch.title?.trim() || current.title,
+        shortDescription: patch.shortDescription?.trim() || current.shortDescription,
         statusLabel: patch.statusLabel || current.statusLabel,
         isRevealed:
           typeof patch.isRevealed === 'boolean' ? patch.isRevealed : current.isRevealed,
@@ -1076,18 +1149,21 @@ export async function updatePhaseRecord(
         testDetails: patch.testDetails
           ? {
               instructionsTitle:
-                patch.testDetails.instructionsTitle ||
-                current.testDetails?.instructionsTitle ||
-                '',
-              theme: patch.testDetails.theme || current.testDetails?.theme || '',
+                patch.testDetails.instructionsTitle !== undefined
+                  ? patch.testDetails.instructionsTitle
+                  : current.testDetails?.instructionsTitle || '',
+              theme:
+                patch.testDetails.theme !== undefined
+                  ? patch.testDetails.theme
+                  : current.testDetails?.theme || '',
               instructions:
-                patch.testDetails.instructions ||
-                current.testDetails?.instructions ||
-                '',
+                patch.testDetails.instructions !== undefined
+                  ? patch.testDetails.instructions
+                  : current.testDetails?.instructions || '',
               submissionNote:
-                patch.testDetails.submissionNote ||
-                current.testDetails?.submissionNote ||
-                '',
+                patch.testDetails.submissionNote !== undefined
+                  ? patch.testDetails.submissionNote
+                  : current.testDetails?.submissionNote || '',
             }
           : current.testDetails,
       };
