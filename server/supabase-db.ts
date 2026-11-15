@@ -12,6 +12,7 @@ import type {
   PublicationStatus,
   RegistrationPayload,
   RegistrationRecord,
+  SiteDisplayConfig,
   SubmissionKind,
   SubmissionStatus,
 } from '../src/types/competition';
@@ -26,7 +27,29 @@ export interface SupabaseStoreSnapshot {
     googleAppsScriptUrl: string;
     googleFormActionUrl: string;
     officialEmail: string;
+    siteDisplay: SiteDisplayConfig;
   };
+}
+
+function parseSiteDisplayValue(raw: unknown): SiteDisplayConfig {
+  let obj: Record<string, unknown> | null = null;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      obj = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      obj = null;
+    }
+  } else if (raw && typeof raw === 'object') {
+    obj = raw as Record<string, unknown>;
+  }
+  const mode = obj?.mode === 'phase_single_page' ? 'phase_single_page' : 'multi_page';
+  const activePhaseId =
+    typeof obj?.activePhaseId === 'string' && ['phase-1', 'phase-2', 'phase-3'].includes(obj.activePhaseId)
+      ? obj.activePhaseId
+      : 'phase-1';
+  const customNotice =
+    typeof obj?.customNotice === 'string' ? obj.customNotice.trim().slice(0, 400) : '';
+  return { mode, activePhaseId, customNotice };
 }
 
 export interface DbPhaseRowLike {
@@ -414,8 +437,12 @@ export async function readStoreViaSupabaseRest(defaults: {
   if (cRes.error) throw new Error(cRes.error.message);
 
   const settingsMap = new Map<string, string>();
+  let rawSiteDisplay: unknown = null;
   for (const row of sRes.data || []) {
     const val = row.value;
+    if (String(row.key) === 'siteDisplay') {
+      rawSiteDisplay = val;
+    }
     settingsMap.set(
       String(row.key),
       typeof val === 'string'
@@ -455,6 +482,7 @@ export async function readStoreViaSupabaseRest(defaults: {
         process.env.GOOGLE_FORM_ACTION_URL ||
         '',
       officialEmail: 'ucaeplokossa@gmail.com',
+      siteDisplay: parseSiteDisplayValue(rawSiteDisplay),
     },
   };
 }
@@ -767,6 +795,25 @@ export async function updateSettingsViaSupabaseRest(cleanUrl: string): Promise<{
     googleFormActionUrl: process.env.GOOGLE_FORM_ACTION_URL || '',
     officialEmail: 'ucaeplokossa@gmail.com',
   };
+}
+
+export async function updateSiteDisplayViaSupabaseRest(
+  config: SiteDisplayConfig,
+): Promise<SiteDisplayConfig> {
+  const normalized = parseSiteDisplayValue(config);
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from('site_settings').upsert(
+    {
+      key: 'siteDisplay',
+      value: normalized,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  );
+  if (error) {
+    throw new Error(error.message);
+  }
+  return normalized;
 }
 
 export async function saveRegistrationViaSupabaseRest(

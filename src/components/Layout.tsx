@@ -1,13 +1,23 @@
 import { useEffect, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring } from 'motion/react';
+import { useSiteConfig } from '../lib/site-config';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const isHome = pathname === '/';
+  const { siteConfig } = useSiteConfig();
+
+  const isSinglePageMode = siteConfig.mode === 'phase_single_page';
+  const isFullBleedHero =
+    pathname === '/' ||
+    (isSinglePageMode &&
+      !['/gestion', '/mentions-legales', '/politique-de-confidentialite'].includes(
+        pathname,
+      ));
+
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 260,
@@ -46,7 +56,7 @@ export function Layout({ children }: { children: ReactNode }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-        className={`w-full flex-1 ${isHome ? '' : 'pt-16'}`}
+        className={`w-full flex-1 ${isFullBleedHero ? '' : 'pt-16'}`}
       >
         {children}
       </motion.main>

@@ -16,6 +16,8 @@ import {
   updateNewsRecord,
   updatePhaseRecord,
   updateSettingsRecord,
+  updateSiteDisplayRecord,
+  normalizeSiteDisplayConfig,
 } from './store.ts';
 import {
   completeCandidateSubmission,
@@ -193,6 +195,40 @@ export function registerApiRoutes(app: express.Express) {
       res.json({ phases: store.phases.map(sanitizePhaseForPublic) });
     } catch {
       res.status(500).json({ error: 'Impossible de charger le parcours.' });
+    }
+  });
+
+  // Public API: Site Display Configuration (Multi-page vs Phase-Focused Single Page)
+  app.get('/api/site-config', async (_req, res) => {
+    try {
+      const store = await readStore();
+      const siteConfig = normalizeSiteDisplayConfig(store.settings?.siteDisplay);
+      const rawActive =
+        store.phases.find((p) => p.id === siteConfig.activePhaseId) ||
+        store.phases[0] ||
+        null;
+      const activePhase = rawActive ? sanitizePhaseForPublic(rawActive) : null;
+      const now = new Date();
+      const announcements = store.announcements
+        .filter((a) => isAnnouncementPublic(a, now))
+        .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+        .slice(0, 6)
+        .map(sanitizeAnnouncementForPublic);
+
+      res.json({
+        siteConfig,
+        activePhase,
+        phasesSummary: store.phases.map((p) => ({
+          id: p.id,
+          number: p.number,
+          title: p.title,
+          format: p.format,
+          statusLabel: p.statusLabel,
+        })),
+        announcements,
+      });
+    } catch {
+      res.status(500).json({ error: 'Impossible de charger la configuration du site.' });
     }
   });
 
@@ -596,6 +632,7 @@ export function registerApiRoutes(app: express.Express) {
         contacts: store.contacts,
         settings: {
           googleAppsScriptUrl: store.settings.googleAppsScriptUrl,
+          siteDisplay: normalizeSiteDisplayConfig(store.settings.siteDisplay),
         },
       });
     } catch (error) {
@@ -799,6 +836,55 @@ export function registerApiRoutes(app: express.Express) {
     } catch (error) {
       const err = error as Error;
       res.status(500).json({ error: err.message || "Impossible d'enregistrer les paramètres." });
+    }
+  });
+
+  // Organizer CMS: Switch Public Site Architecture (Multi-page vs Phase-focused Single Page)
+  app.patch('/api/admin/site-config', requireAdmin, async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        mode?: string;
+        activePhaseId?: string;
+        customNotice?: string;
+        alsoRevealPhase?: boolean;
+        alsoOpenSubmissions?: boolean;
+      };
+
+      const nextConfig = normalizeSiteDisplayConfig({
+        mode: body.mode,
+        activePhaseId: body.activePhaseId,
+        customNotice: body.customNotice,
+      });
+
+      const savedConfig = await updateSiteDisplayRecord(nextConfig);
+      let updatedPhase = null;
+
+      if (
+        savedConfig.mode === 'phase_single_page' &&
+        (body.alsoRevealPhase || body.alsoOpenSubmissions)
+      ) {
+        const isPresentiel = savedConfig.activePhaseId === 'phase-3';
+        updatedPhase = await updatePhaseRecord(savedConfig.activePhaseId, {
+          ...(body.alsoRevealPhase
+            ? { isRevealed: true, statusLabel: 'Ouverte' }
+            : {}),
+          ...(body.alsoOpenSubmissions && !isPresentiel
+            ? { submissionsOpen: true }
+            : {}),
+        });
+      }
+
+      const freshStore = await readStore();
+      res.json({
+        siteDisplay: savedConfig,
+        updatedPhase,
+        phases: freshStore.phases,
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        error: err.message || "Impossible de mettre à jour le mode d'affichage du site.",
+      });
     }
   });
 

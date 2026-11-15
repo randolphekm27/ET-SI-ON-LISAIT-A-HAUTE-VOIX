@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
+import { useSiteConfig } from '../lib/site-config';
 import type { CompetitionPhase } from '../types/competition';
 
-const NAV_ITEMS = [
+const MULTI_PAGE_NAV_ITEMS = [
   { to: '/concours', label: 'Le concours', num: '01' },
   { to: '/parcours', label: 'Le parcours', num: '02' },
   { to: '/annonces', label: 'Annonces', num: '03' },
@@ -35,8 +36,19 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [hasOpenSubmissions, setHasOpenSubmissions] = useState(false);
   const candidateSession = useCandidateSession();
+  const { siteConfig, activePhase } = useSiteConfig();
   const location = useLocation();
-  const isHome = location.pathname === '/';
+  const navigate = useNavigate();
+
+  const isSinglePageMode = siteConfig.mode === 'phase_single_page';
+  const isPresentielPhase =
+    activePhase?.format === 'En présentiel' || activePhase?.id === 'phase-3';
+  const isPublicRoot =
+    location.pathname === '/' ||
+    (isSinglePageMode &&
+      !['/gestion', '/mentions-legales', '/politique-de-confidentialite'].includes(
+        location.pathname,
+      ));
 
   useEffect(() => {
     setMobileOpen(false);
@@ -72,7 +84,31 @@ export function Header() {
     };
   }, [mobileOpen]);
 
-  const overIvoryHero = isHome && !scrolled && !mobileOpen;
+  const overIvoryHero = isPublicRoot && !scrolled && !mobileOpen;
+
+  const singlePageNavItems = [
+    { id: 'phase-apercu', label: 'La phase', num: '01' },
+    { id: 'comprendre-phase', label: 'Comprendre', num: '02' },
+    { id: 'consignes', label: 'Consignes', num: '03' },
+    {
+      id: 'depot-production',
+      label: isPresentielPhase ? 'Présentiel' : 'Dépôt',
+      num: '04',
+    },
+    { id: 'informations', label: 'Annonces', num: '05' },
+  ];
+
+  function handleSectionJump(sectionId: string) {
+    setMobileOpen(false);
+    if (isPublicRoot) {
+      const target = document.getElementById(sectionId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    navigate(`/#${sectionId}`);
+  }
 
   return (
     <>
@@ -84,7 +120,7 @@ export function Header() {
         }`}
       >
         <div className="w-full h-full px-4 sm:px-8 lg:px-14 flex items-center justify-between gap-8">
-          {/* Zone 1: Brand mark (brun profond sur fond ivoire comme sur toute l'interface) */}
+          {/* Zone 1: Brand mark */}
           <Link
             to="/"
             aria-label="Accueil — Et si on lisait à haute voix ?"
@@ -93,47 +129,83 @@ export function Header() {
             <UcaepMark light={false} />
           </Link>
 
-          {/* Zone 2: 5 concise single-line nav links */}
+          {/* Zone 2: Navigation Links (Multi-page routes OR Single-page section anchors) */}
           <nav
             aria-label="Navigation principale"
             className="hidden lg:flex items-center gap-8 text-[13px] font-medium tracking-[0.04em]"
           >
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
-                    overIvoryHero
-                      ? isActive
-                        ? 'text-[#4E2A1E] font-semibold'
-                        : 'text-[#4E2A1E]/80 hover:text-[#4E2A1E]'
-                      : isActive
-                        ? 'text-ucaep-brown font-semibold'
+            {isSinglePageMode
+              ? singlePageNavItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSectionJump(item.id)}
+                    className={`relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
+                      overIvoryHero
+                        ? 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
                         : 'text-ucaep-ink/75 hover:text-ucaep-brown'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span>{item.label}</span>
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-active-rule"
-                        aria-hidden="true"
-                        className="absolute inset-x-0 -bottom-0.5 h-[1.5px] bg-ucaep-gold"
-                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                      />
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))
+              : MULTI_PAGE_NAV_ITEMS.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
+                        overIvoryHero
+                          ? isActive
+                            ? 'text-[#4E2A1E] font-semibold'
+                            : 'text-[#4E2A1E]/80 hover:text-[#4E2A1E]'
+                          : isActive
+                            ? 'text-ucaep-brown font-semibold'
+                            : 'text-ucaep-ink/75 hover:text-ucaep-brown'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span>{item.label}</span>
+                        {isActive && (
+                          <motion.span
+                            layoutId="nav-active-rule"
+                            aria-hidden="true"
+                            className="absolute inset-x-0 -bottom-0.5 h-[1.5px] bg-ucaep-gold"
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          />
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-              </NavLink>
-            ))}
+                  </NavLink>
+                ))}
           </nav>
 
           {/* Zone 3: Strictly 1 Primary Action + Mobile Drawer Toggle */}
           <div className="flex items-center gap-3 shrink-0">
-            {candidateSession ? (
+            {isSinglePageMode ? (
+              <button
+                type="button"
+                onClick={() =>
+                  handleSectionJump(isPresentielPhase ? 'consignes' : 'depot-production')
+                }
+                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
+                  overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
+                    : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
+                }`}
+              >
+                <span>
+                  {isPresentielPhase
+                    ? 'Voir les consignes'
+                    : candidateSession
+                      ? 'Mon espace dépôt'
+                      : 'Déposer ma production'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </button>
+            ) : candidateSession ? (
               <Link
                 to="/depot"
                 title={`Dossier ${candidateSession.referenceCode}`}
@@ -189,51 +261,90 @@ export function Header() {
           >
             <div className="space-y-6 pt-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
-                Sommaire · ENSET de Lokossa
+                {isSinglePageMode && activePhase
+                  ? `Phase ${activePhase.number} · ${activePhase.title}`
+                  : 'Sommaire · ENSET de Lokossa'}
               </p>
               <nav
                 aria-label="Menu mobile"
                 className="divide-y divide-white/10 border-t border-b border-white/10"
               >
-                <Link to="/" className="flex items-baseline justify-between py-4 group">
-                  <span className="font-serif text-3xl font-medium text-ucaep-paper group-hover:text-ucaep-gold transition-colors">
-                    Accueil
-                  </span>
-                  <span className="font-mono text-xs tabular-nums text-ucaep-gold/75">00</span>
-                </Link>
-                {NAV_ITEMS.map((item, idx) => (
-                  <motion.div
-                    key={item.to}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.24,
-                      delay: 0.04 * idx,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                  >
-                    <NavLink
-                      to={item.to}
-                      className={({ isActive }) =>
-                        `flex items-baseline justify-between py-4 transition-colors ${
-                          isActive
-                            ? 'text-ucaep-gold'
-                            : 'text-ucaep-paper hover:text-ucaep-gold'
-                        }`
-                      }
+                {isSinglePageMode ? (
+                  singlePageNavItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSectionJump(item.id)}
+                      className="w-full flex items-baseline justify-between py-4 text-left text-ucaep-paper hover:text-ucaep-gold transition-colors"
                     >
                       <span className="font-serif text-3xl font-medium">{item.label}</span>
                       <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
                         {item.num}
                       </span>
-                    </NavLink>
-                  </motion.div>
-                ))}
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <Link to="/" className="flex items-baseline justify-between py-4 group">
+                      <span className="font-serif text-3xl font-medium text-ucaep-paper group-hover:text-ucaep-gold transition-colors">
+                        Accueil
+                      </span>
+                      <span className="font-mono text-xs tabular-nums text-ucaep-gold/75">
+                        00
+                      </span>
+                    </Link>
+                    {MULTI_PAGE_NAV_ITEMS.map((item, idx) => (
+                      <motion.div
+                        key={item.to}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.24,
+                          delay: 0.04 * idx,
+                          ease: [0.16, 1, 0.3, 1],
+                        }}
+                      >
+                        <NavLink
+                          to={item.to}
+                          className={({ isActive }) =>
+                            `flex items-baseline justify-between py-4 transition-colors ${
+                              isActive
+                                ? 'text-ucaep-gold'
+                                : 'text-ucaep-paper hover:text-ucaep-gold'
+                            }`
+                          }
+                        >
+                          <span className="font-serif text-3xl font-medium">
+                            {item.label}
+                          </span>
+                          <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
+                            {item.num}
+                          </span>
+                        </NavLink>
+                      </motion.div>
+                    ))}
+                  </>
+                )}
               </nav>
             </div>
 
             <div className="pt-8 space-y-3">
-              {candidateSession ? (
+              {isSinglePageMode ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSectionJump(isPresentielPhase ? 'consignes' : 'depot-production')
+                  }
+                  className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                >
+                  <span>
+                    {isPresentielPhase
+                      ? 'Consulter le programme'
+                      : 'Accéder à l’espace dépôt'}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : candidateSession ? (
                 <>
                   <p className="text-xs text-ucaep-ivory/75">
                     Candidat enregistré · Réf.{' '}
@@ -270,9 +381,19 @@ export function Header() {
                 </>
               )}
               <div className="flex items-center justify-between text-xs text-ucaep-ivory/65 pt-2">
-                <Link to="/contact" className="hover:text-ucaep-paper underline">
-                  Contacter l&apos;organisation
-                </Link>
+                {isSinglePageMode ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSectionJump('informations')}
+                    className="hover:text-ucaep-paper underline"
+                  >
+                    Contacter l&apos;organisation
+                  </button>
+                ) : (
+                  <Link to="/contact" className="hover:text-ucaep-paper underline">
+                    Contacter l&apos;organisation
+                  </Link>
+                )}
                 <span className="tabular-nums">+229 01 68 62 46 00</span>
               </div>
             </div>

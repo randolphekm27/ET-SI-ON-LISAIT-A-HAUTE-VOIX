@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, type FormEvent, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertCircle,
   CheckCircle2,
   Download,
   Edit3,
+  ExternalLink,
   Eye,
   FileText,
+  Layers,
+  LayoutTemplate,
   Lock,
   LogOut,
   Plus,
@@ -17,6 +21,7 @@ import {
 } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
+import { useSiteConfig } from '../lib/site-config';
 import { formatFileSize } from '../lib/submissions-config';
 import type {
   AdminSubmissionAccess,
@@ -28,6 +33,8 @@ import type {
   NewsArticle,
   PublicationStatus,
   RegistrationRecord,
+  SiteDisplayConfig,
+  SiteDisplayMode,
   SubmissionStatus,
 } from '../types/competition';
 
@@ -40,6 +47,7 @@ interface AdminOverview {
   contacts: ContactMessageRecord[];
   settings: {
     googleAppsScriptUrl: string;
+    siteDisplay?: SiteDisplayConfig;
   };
 }
 
@@ -79,6 +87,7 @@ function toDateTimeLocalValue(iso?: string | null): string {
 }
 
 type GestionTab =
+  | 'interface'
   | 'annonces'
   | 'actualites'
   | 'parcours'
@@ -87,6 +96,7 @@ type GestionTab =
   | 'config';
 
 const VALID_TABS: GestionTab[] = [
+  'interface',
   'annonces',
   'actualites',
   'parcours',
@@ -100,8 +110,9 @@ const CANDIDATES_PER_PAGE = 50;
 export function GestionPage() {
   usePageSeo(
     'Espace organisateurs',
-    'Gestion des annonces, des phases et des inscriptions au concours UCAEP.',
+    'Gestion des annonces, des phases, de l’interface publique et des inscriptions au concours UCAEP.',
   );
+  const { refreshSiteConfig } = useSiteConfig();
 
   const [token, setToken] = useState<string>(() => {
     try {
@@ -220,6 +231,16 @@ export function GestionPage() {
   const [gasTestMsg, setGasTestMsg] = useState('');
   const [gasTestError, setGasTestError] = useState('');
 
+  // Site architecture / interface mode switcher state
+  const [draftSiteMode, setDraftSiteMode] = useState<SiteDisplayMode>('multi_page');
+  const [draftActivePhaseId, setDraftActivePhaseId] = useState('phase-1');
+  const [draftCustomNotice, setDraftCustomNotice] = useState('');
+  const [autoRevealOnSwitch, setAutoRevealOnSwitch] = useState(true);
+  const [autoOpenSubmissionsOnSwitch, setAutoOpenSubmissionsOnSwitch] = useState(true);
+  const [siteConfigSaving, setSiteConfigSaving] = useState(false);
+  const [siteConfigError, setSiteConfigError] = useState('');
+  const siteDraftInitializedRef = useRef(false);
+
   function buildAuthHeaders(
     extraHeaders?: Record<string, string>,
     overrideAdminToken?: string,
@@ -248,6 +269,12 @@ export function GestionPage() {
       if (requestId !== requestSeqRef.current) return;
       setData(json);
       setGasUrl(json.settings?.googleAppsScriptUrl || '');
+      if (!siteDraftInitializedRef.current && json.settings?.siteDisplay) {
+        siteDraftInitializedRef.current = true;
+        setDraftSiteMode(json.settings.siteDisplay.mode);
+        setDraftActivePhaseId(json.settings.siteDisplay.activePhaseId || 'phase-1');
+        setDraftCustomNotice(json.settings.siteDisplay.customNotice || '');
+      }
       setPhaseDeadlines((prev) => {
         const next = { ...prev };
         for (const p of json.phases || []) {
@@ -801,6 +828,80 @@ export function GestionPage() {
     }
   }
 
+  async function handleApplySiteConfig(
+    overrideMode?: SiteDisplayMode,
+    overridePhaseId?: string,
+  ) {
+    const targetMode = overrideMode || draftSiteMode;
+    const targetPhaseId = overridePhaseId || draftActivePhaseId;
+    setSiteConfigSaving(true);
+    setSiteConfigError('');
+    setNotice('');
+
+    try {
+      const res = await fetchApiJson<{
+        siteDisplay: SiteDisplayConfig;
+        phases?: CompetitionPhase[];
+      }>('/api/admin/site-config', {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          mode: targetMode,
+          activePhaseId: targetPhaseId,
+          customNotice: draftCustomNotice,
+          alsoRevealPhase:
+            targetMode === 'phase_single_page' ? autoRevealOnSwitch : false,
+          alsoOpenSubmissions:
+            targetMode === 'phase_single_page' && targetPhaseId !== 'phase-3'
+              ? autoOpenSubmissionsOnSwitch
+              : false,
+        }),
+      });
+
+      setDraftSiteMode(res.siteDisplay.mode);
+      setDraftActivePhaseId(res.siteDisplay.activePhaseId);
+      setDraftCustomNotice(res.siteDisplay.customNotice || '');
+      siteDraftInitializedRef.current = true;
+
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              phases: res.phases || prev.phases,
+              settings: {
+                ...prev.settings,
+                siteDisplay: res.siteDisplay,
+              },
+            }
+          : prev,
+      );
+
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
+
+      if (res.siteDisplay.mode === 'multi_page') {
+        setNotice(
+          'Interface publique basculée en mode Site complet (Multi-pages · Inscriptions).',
+        );
+      } else {
+        const chosenPhase = (res.phases || data?.phases || []).find(
+          (p) => p.id === res.siteDisplay.activePhaseId,
+        );
+        setNotice(
+          `Site public transformé en Page Unique centrée sur la Phase ${chosenPhase?.number || ''} (${chosenPhase?.title || res.siteDisplay.activePhaseId}).`,
+        );
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Impossible d'appliquer cette interface sur le site.";
+      setSiteConfigError(msg);
+      setNotice(msg);
+    } finally {
+      setSiteConfigSaving(false);
+    }
+  }
+
   function exportCsv() {
     if (!data?.registrations.length) return;
     const headers = [
@@ -1079,6 +1180,7 @@ export function GestionPage() {
           <div className="flex flex-wrap items-center gap-1.5 p-1 bg-ucaep-ivory/45 rounded-sm border border-ucaep-brown/12">
             {(
               [
+                ['interface', 'Interface du site'],
                 ['annonces', 'Annonces'],
                 ['actualites', `Actualités (${data.news.length})`],
                 ['parcours', 'Phases'],
@@ -1103,6 +1205,51 @@ export function GestionPage() {
           </div>
         </div>
 
+        {/* Bandeau d'état rapide de l'interface publique */}
+        {(() => {
+          const liveConfig = data.settings?.siteDisplay || {
+            mode: 'multi_page' as SiteDisplayMode,
+            activePhaseId: 'phase-1',
+          };
+          const livePhase = data.phases.find((p) => p.id === liveConfig.activePhaseId);
+          return (
+            <div className="px-5 py-3.5 bg-white border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                <span className="font-semibold uppercase tracking-wider text-ucaep-brown/70">
+                  Interface publique en ligne :
+                </span>
+                {liveConfig.mode === 'phase_single_page' ? (
+                  <span className="font-semibold text-ucaep-green">
+                    Page Unique — Phase {livePhase?.number} : {livePhase?.title}
+                  </span>
+                ) : (
+                  <span className="font-semibold text-ucaep-brown">
+                    Site Complet (Multi-pages · Inscriptions)
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {tab !== 'interface' && (
+                  <button
+                    type="button"
+                    onClick={() => selectTab('interface')}
+                    className="text-xs font-semibold text-ucaep-brown underline hover:text-ucaep-gold"
+                  >
+                    Réorganiser l&apos;interface du site
+                  </button>
+                )}
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm bg-ucaep-ivory/70 text-ucaep-brown hover:bg-ucaep-gold/30 transition-colors"
+                >
+                  <span>Voir le site public</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          );
+        })()}
+
         {data && data.databaseConnected === false && (
           <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-sm text-sm space-y-1.5 shadow-xs">
             <p className="font-semibold flex items-center gap-2 text-amber-900">
@@ -1121,6 +1268,217 @@ export function GestionPage() {
             className="sticky top-3 z-40 p-3.5 text-sm bg-white text-ucaep-green border border-ucaep-green/40 rounded-sm shadow-md"
           >
             {notice}
+          </div>
+        )}
+
+        {/* ONGLET INTERFACE DU SITE */}
+        {tab === 'interface' && (
+          <div className="space-y-8">
+            <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-5">
+                <div className="space-y-1.5 max-w-2xl">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                    Pilotage de l&apos;architecture publique
+                  </p>
+                  <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
+                    Basculer entre site complet et page unique par phase
+                  </h2>
+                  <p className="text-sm text-ucaep-ink/75 leading-relaxed">
+                    Après la clôture des inscriptions, sélectionnez la phase en cours
+                    pour transformer immédiatement l&apos;ensemble du site public en une
+                    page unique dédiée exclusivement à cette phase (consignes, barème,
+                    dépôt en ligne et annonces). L&apos;accès à{' '}
+                    <span className="font-mono text-xs">/gestion</span> reste toujours
+                    disponible.
+                  </p>
+                </div>
+                <Link
+                  to="/"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper shrink-0"
+                >
+                  <span>Ouvrir le site public</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {siteConfigError && (
+                <div
+                  role="alert"
+                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{siteConfigError}</span>
+                </div>
+              )}
+
+              {/* 4 cartes cliquables : Site complet OR Page unique Phase 1 / 2 / 3 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDraftSiteMode('multi_page')}
+                  className={`text-left p-5 rounded-sm border transition-all space-y-3 ${
+                    draftSiteMode === 'multi_page'
+                      ? 'bg-[#F7E6C8]/45 border-ucaep-gold ring-2 ring-ucaep-gold/30'
+                      : 'bg-ucaep-paper/50 border-ucaep-brown/15 hover:border-ucaep-brown/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider text-ucaep-brown">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Multi-pages</span>
+                    </span>
+                    {data.settings?.siteDisplay?.mode !== 'phase_single_page' && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-ucaep-green">
+                        · Actif
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
+                    Site complet (Inscriptions)
+                  </h3>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Affiche toutes les pages du site (Accueil, Concours, Parcours,
+                    Annonces, Actualités, FAQ, Inscription et Dépôt).
+                  </p>
+                </button>
+
+                {data.phases.map((phase) => {
+                  const isSelected =
+                    draftSiteMode === 'phase_single_page' &&
+                    draftActivePhaseId === phase.id;
+                  const isCurrentlyLive =
+                    data.settings?.siteDisplay?.mode === 'phase_single_page' &&
+                    data.settings?.siteDisplay?.activePhaseId === phase.id;
+
+                  return (
+                    <button
+                      key={phase.id}
+                      type="button"
+                      onClick={() => {
+                        setDraftSiteMode('phase_single_page');
+                        setDraftActivePhaseId(phase.id);
+                      }}
+                      className={`text-left p-5 rounded-sm border transition-all space-y-3 ${
+                        isSelected
+                          ? 'bg-[#F7E6C8]/45 border-ucaep-gold ring-2 ring-ucaep-gold/30'
+                          : 'bg-ucaep-paper/50 border-ucaep-brown/15 hover:border-ucaep-brown/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs tabular-nums">
+                        <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider text-ucaep-brown">
+                          <LayoutTemplate className="w-3.5 h-3.5" />
+                          <span>Page unique · {phase.number}</span>
+                        </span>
+                        {isCurrentlyLive && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-ucaep-green">
+                            · Actif
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
+                        Phase {phase.number} : {phase.title}
+                      </h3>
+                      <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                        {phase.format === 'En présentiel'
+                          ? 'Site en 1 page dédié à la Grande Finale en présentiel (programme, jury, annonces).'
+                          : `Site en 1 page centré sur ${phase.title} (consignes, barème, dépôt en ligne et annonces).`}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Options complémentaires pour le mode Page Unique */}
+              {draftSiteMode === 'phase_single_page' && (
+                <div className="p-5 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-ucaep-brown">
+                    Options d&apos;activation pour cette phase
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-ucaep-ink/85">
+                    <label className="flex items-start gap-2.5 p-3 bg-white border border-ucaep-brown/12 rounded-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoRevealOnSwitch}
+                        onChange={(e) => setAutoRevealOnSwitch(e.target.checked)}
+                        className="mt-0.5 accent-ucaep-brown"
+                      />
+                      <span>
+                        <strong className="block text-ucaep-brown">
+                          Rendre automatiquement les consignes visibles
+                        </strong>
+                        Affiche les sujets, thèmes et directives détaillées de la phase
+                        sur la page unique dès la bascule.
+                      </span>
+                    </label>
+
+                    {draftActivePhaseId !== 'phase-3' && (
+                      <label className="flex items-start gap-2.5 p-3 bg-white border border-ucaep-brown/12 rounded-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={autoOpenSubmissionsOnSwitch}
+                          onChange={(e) =>
+                            setAutoOpenSubmissionsOnSwitch(e.target.checked)
+                          }
+                          className="mt-0.5 accent-ucaep-brown"
+                        />
+                        <span>
+                          <strong className="block text-ucaep-brown">
+                            Ouvrir également la fenêtre de dépôt en ligne
+                          </strong>
+                          Permet aux candidats d&apos;envoyer leur travail directement
+                          depuis la section Dépôt de la page unique.
+                        </span>
+                      </label>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="site-custom-notice"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Message d&apos;information rapide affiché en haut de la page unique
+                      (optionnel)
+                    </label>
+                    <input
+                      id="site-custom-notice"
+                      type="text"
+                      maxLength={400}
+                      value={draftCustomNotice}
+                      onChange={(e) => setDraftCustomNotice(e.target.value)}
+                      placeholder="Ex. : Les inscriptions sont clôturées. Place à la Phase 01 jusqu'au vendredi à 23h59."
+                      className="w-full px-3.5 py-2 text-sm bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <button
+                  type="button"
+                  disabled={siteConfigSaving}
+                  onClick={() => handleApplySiteConfig()}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>
+                    {siteConfigSaving
+                      ? 'Application en cours...'
+                      : draftSiteMode === 'multi_page'
+                        ? 'Activer le site complet (Multi-pages)'
+                        : `Activer la page unique (${
+                            data.phases.find((p) => p.id === draftActivePhaseId)?.title ||
+                            draftActivePhaseId
+                          })`}
+                  </span>
+                </button>
+                <p className="text-xs text-ucaep-ink/65">
+                  Vous pouvez modifier les consignes et dates limites de chaque phase à
+                  tout moment dans l&apos;onglet <strong>Phases</strong>.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

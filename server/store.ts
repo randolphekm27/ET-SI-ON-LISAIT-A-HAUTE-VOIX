@@ -34,6 +34,7 @@ import {
   updateNewsViaSupabaseRest,
   updatePhaseViaSupabaseRest,
   updateSettingsViaSupabaseRest,
+  updateSiteDisplayViaSupabaseRest,
 } from './supabase-db.ts';
 import type {
   Announcement,
@@ -48,9 +49,32 @@ import type {
   PublicationStatus,
   RegistrationPayload,
   RegistrationRecord,
+  SiteDisplayConfig,
   SubmissionKind,
   SubmissionStatus,
 } from '../src/types/competition';
+
+export function normalizeSiteDisplayConfig(raw: unknown): SiteDisplayConfig {
+  let obj: Record<string, unknown> | null = null;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      obj = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      obj = null;
+    }
+  } else if (raw && typeof raw === 'object') {
+    obj = raw as Record<string, unknown>;
+  }
+  const mode = obj?.mode === 'phase_single_page' ? 'phase_single_page' : 'multi_page';
+  const activePhaseId =
+    typeof obj?.activePhaseId === 'string' &&
+    ['phase-1', 'phase-2', 'phase-3'].includes(obj.activePhaseId)
+      ? obj.activePhaseId
+      : 'phase-1';
+  const customNotice =
+    typeof obj?.customNotice === 'string' ? obj.customNotice.trim().slice(0, 400) : '';
+  return { mode, activePhaseId, customNotice };
+}
 
 export interface LocalSubmissionRecord {
   id: string;
@@ -79,6 +103,7 @@ interface StoreData {
     googleAppsScriptUrl: string;
     googleFormActionUrl: string;
     officialEmail: string;
+    siteDisplay: SiteDisplayConfig;
   };
 }
 
@@ -96,6 +121,11 @@ const DEFAULT_STORE: StoreData = {
     googleAppsScriptUrl: process.env.GOOGLE_APPS_SCRIPT_URL || '',
     googleFormActionUrl: process.env.GOOGLE_FORM_ACTION_URL || '',
     officialEmail: 'ucaeplokossa@gmail.com',
+    siteDisplay: {
+      mode: 'multi_page',
+      activePhaseId: 'phase-1',
+      customNotice: '',
+    },
   },
   phases: [
     {
@@ -440,6 +470,7 @@ export async function readJsonStore(): Promise<StoreData> {
           parsed.settings?.googleFormActionUrl ||
           process.env.GOOGLE_FORM_ACTION_URL ||
           '',
+        siteDisplay: normalizeSiteDisplayConfig(parsed.settings?.siteDisplay),
       },
       phases: normalizedPhases,
       announcements: parsed.announcements?.length
@@ -647,6 +678,7 @@ export async function readStore(): Promise<StoreData> {
               : String(s.value || ''),
         ]),
       );
+      const rawSiteDisplayRow = settingsRows.find((s) => s.key === 'siteDisplay')?.value;
 
       const storeData: StoreData = {
         phases: phaseRows.map(mapPhaseRow),
@@ -671,6 +703,7 @@ export async function readStore(): Promise<StoreData> {
             process.env.GOOGLE_FORM_ACTION_URL ||
             '',
           officialEmail: 'ucaeplokossa@gmail.com',
+          siteDisplay: normalizeSiteDisplayConfig(rawSiteDisplayRow),
         },
       };
 
@@ -1441,6 +1474,71 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
     return withJsonStoreLock((store) => {
       store.settings.googleAppsScriptUrl = cleanUrl;
       return store.settings;
+    });
+  }
+}
+
+export async function updateSiteDisplayRecord(
+  config: SiteDisplayConfig,
+): Promise<SiteDisplayConfig> {
+  const normalized = normalizeSiteDisplayConfig(config);
+
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    const saved = await updateSiteDisplayViaSupabaseRest(normalized);
+    if (cachedStore) {
+      cachedStore.settings.siteDisplay = saved;
+    }
+    withJsonStoreLock((store) => {
+      store.settings.siteDisplay = saved;
+    }).catch(() => {});
+    return saved;
+  }
+
+  if (!isCloudSqlConfigured()) {
+    return withJsonStoreLock((store) => {
+      store.settings.siteDisplay = normalized;
+      if (cachedStore) {
+        cachedStore.settings.siteDisplay = normalized;
+      }
+      return normalized;
+    });
+  }
+
+  try {
+    await ensureDbSeeded();
+    await db
+      .insert(appSettingsTable)
+      .values({
+        key: 'siteDisplay',
+        value: normalized as unknown as Record<string, unknown>,
+      })
+      .onConflictDoUpdate({
+        target: appSettingsTable.key,
+        set: {
+          value: normalized as unknown as Record<string, unknown>,
+          updatedAt: new Date(),
+        },
+      });
+    if (cachedStore) {
+      cachedStore.settings.siteDisplay = normalized;
+    }
+    withJsonStoreLock((store) => {
+      store.settings.siteDisplay = normalized;
+    }).catch(() => {});
+    return normalized;
+  } catch (error) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      const saved = await updateSiteDisplayViaSupabaseRest(normalized);
+      if (cachedStore) {
+        cachedStore.settings.siteDisplay = saved;
+      }
+      return saved;
+    }
+    console.warn('Database updateSiteDisplayRecord failed, bascule sur JSON:', error);
+    return withJsonStoreLock((store) => {
+      store.settings.siteDisplay = normalized;
+      return normalized;
     });
   }
 }

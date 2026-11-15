@@ -160,3 +160,25 @@ export interface ContactMessageRecord extends ContactPayload {
   id: string;
   createdAt: string;
 }
+
+export type SiteDisplayMode = 'multi_page' | 'phase_single_page';
+
+export interface SiteDisplayConfig {
+  mode: SiteDisplayMode;
+  activePhaseId: string;
+  customNotice?: string;
+}
+
+export interface PublicSiteConfigPayload {
+  siteConfig: SiteDisplayConfig;
+  activePhase: CompetitionPhase | null;
+  phasesSummary: Array<{
+    id: string;
+    number: string;
+    title: string;
+    format: CompetitionPhase['format'];
+    statusLabel: CompetitionPhase['statusLabel'];
+  }>;
+  announcements: PublicAnnouncement[];
+}
+

@@ -1,8 +1,14 @@
 import { Link } from 'react-router-dom';
+import { useSiteConfig } from '../lib/site-config';
 import { BrandPatternBand, BrandPatternCircle } from './BrandPattern';
 import { UcaepMark } from './Header';
 
 export function Footer() {
+  const { siteConfig, activePhase } = useSiteConfig();
+  const isSinglePageMode = siteConfig.mode === 'phase_single_page';
+  const isPresentiel =
+    activePhase?.format === 'En présentiel' || activePhase?.id === 'phase-3';
+
   return (
     <footer className="relative bg-[#161210] text-ucaep-ivory border-t border-ucaep-brown/40 overflow-hidden">
       <BrandPatternBand
@@ -45,45 +51,111 @@ export function Footer() {
 
           <div className="md:col-span-4 space-y-4">
             <h2 className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-              Rubriques
+              {isSinglePageMode ? 'Sections de la page' : 'Rubriques'}
             </h2>
-            <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-ucaep-ivory/80">
-              <li>
-                <Link to="/concours" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Le concours
-                </Link>
-              </li>
-              <li>
-                <Link to="/parcours" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Le parcours
-                </Link>
-              </li>
-              <li>
-                <Link to="/annonces" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Annonces
-                </Link>
-              </li>
-              <li>
-                <Link to="/actualites" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Actualités
-                </Link>
-              </li>
-              <li>
-                <Link to="/inscription" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Inscription
-                </Link>
-              </li>
-              <li>
-                <Link to="/depot" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Dépôt candidat
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  FAQ
-                </Link>
-              </li>
-            </ul>
+            {isSinglePageMode ? (
+              <ul className="space-y-3 text-sm text-ucaep-ivory/80">
+                <li>
+                  <a
+                    href="/#phase-apercu"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Présentation de la phase
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/#comprendre-phase"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Comprendre les épreuves
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/#consignes"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Consignes et barème
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/#depot-production"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    {isPresentiel ? 'Programme en présentiel' : 'Espace dépôt candidat'}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/#informations"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Annonces officielles
+                  </a>
+                </li>
+              </ul>
+            ) : (
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-ucaep-ivory/80">
+                <li>
+                  <Link
+                    to="/concours"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Le concours
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/parcours"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Le parcours
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/annonces"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Annonces
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/actualites"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Actualités
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/inscription"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Inscription
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/depot"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Dépôt candidat
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/faq"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+            )}
           </div>
 
           <div className="md:col-span-3 space-y-4">
@@ -92,12 +164,27 @@ export function Footer() {
             </h2>
             <ul className="space-y-3 text-sm text-ucaep-ivory/80">
               <li>
-                <Link to="/contact" className="editorial-underline hover:text-ucaep-paper transition-colors">
-                  Contact
-                </Link>
+                {isSinglePageMode ? (
+                  <a
+                    href="/#informations"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Contact
+                  </a>
+                ) : (
+                  <Link
+                    to="/contact"
+                    className="editorial-underline hover:text-ucaep-paper transition-colors"
+                  >
+                    Contact
+                  </Link>
+                )}
               </li>
               <li>
-                <Link to="/mentions-legales" className="editorial-underline hover:text-ucaep-paper transition-colors">
+                <Link
+                  to="/mentions-legales"
+                  className="editorial-underline hover:text-ucaep-paper transition-colors"
+                >
                   Mentions légales
                 </Link>
               </li>
