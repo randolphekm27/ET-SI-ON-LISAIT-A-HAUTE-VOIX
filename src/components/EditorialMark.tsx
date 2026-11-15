@@ -74,7 +74,7 @@ export function PageFolioHeader({
   patternVariant?: 'brown' | 'green' | 'gold';
 }) {
   return (
-    <section className="relative pt-10 pb-12 sm:pt-12 sm:pb-14 lg:pt-14 lg:pb-16 border-b border-ucaep-brown/14 bg-ucaep-paper paper-grain overflow-hidden">
+    <section className="relative w-full min-h-[calc(100dvh-4rem)] flex flex-col justify-center pt-14 pb-24 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-28 border-b border-ucaep-brown/14 bg-ucaep-paper paper-grain overflow-hidden">
       <BrandPatternBand
         variant={patternVariant}
         tileWidth={135}
@@ -114,7 +114,7 @@ export function PageFolioHeader({
         className="absolute bottom-0 inset-x-0 h-16 sm:h-20"
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
+      <div className="relative z-10 w-full max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 my-auto space-y-10 sm:space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-end">
           <motion.div
             initial={{ opacity: 0, y: 14 }}

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Fraunces", Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --color-ucaep-brown: #4E2A1E;
@@ -39,12 +39,8 @@
 
   h1, h2, h3, h4, .font-editorial, .font-serif {
     font-family: var(--font-serif);
-    font-variation-settings: "SOFT" 55, "WONK" 1;
+    font-feature-settings: "kern" 1, "liga" 1;
     text-wrap: balance;
-  }
-
-  h1 em, h2 em, h3 em, .font-serif em {
-    font-variation-settings: "SOFT" 100, "WONK" 1;
   }
 
   :focus-visible {

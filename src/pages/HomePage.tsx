@@ -294,7 +294,7 @@ export function HomePage() {
           ================================================================ */}
       <section
         ref={heroRef}
-        className="relative z-20 w-full min-h-[92vh] lg:min-h-screen bg-[radial-gradient(ellipse_at_72%_30%,#FCF5E6_0%,#F7E6C8_58%,#EDD6AF_100%)] text-[#4E2A1E] pt-[148px] sm:pt-[118px] lg:pt-[108px] flex flex-col justify-between paper-grain"
+        className="relative z-20 w-full min-h-[100dvh] bg-[radial-gradient(ellipse_at_72%_30%,#FCF5E6_0%,#F7E6C8_58%,#EDD6AF_100%)] text-[#4E2A1E] pt-[132px] sm:pt-[112px] lg:pt-[100px] flex flex-col justify-between paper-grain"
       >
         {/* SVG clipPath réutilisable pour les angles échancrés du cadre portrait */}
         <svg aria-hidden="true" width="0" height="0" className="absolute pointer-events-none">
@@ -341,8 +341,8 @@ export function HomePage() {
           />
         </div>
 
-        {/* Plan 2 : Composition principale 54% gauche / 46% droite dans un conteneur 1380px */}
-        <div className="relative z-20 max-w-[1380px] mx-auto w-full px-5 sm:px-8 lg:px-14 my-auto py-4 sm:py-6 lg:py-8">
+        {/* Plan 2 : Composition principale 54% gauche / 46% droite sur toute la largeur éditoriale */}
+        <div className="relative z-20 max-w-[1520px] mx-auto w-full px-5 sm:px-8 lg:px-14 xl:px-20 my-auto py-4 sm:py-6 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,54fr)_minmax(0,46fr)] gap-10 lg:gap-12 xl:gap-16 items-center">
             {/* COLONNE GAUCHE — Contenu éditorial (ordre strict & copywriting intact) */}
             <div className="lg:pl-8 xl:pl-12 space-y-6 sm:space-y-7">
@@ -539,7 +539,7 @@ export function HomePage() {
               tileWidth={190}
               opacityClass="opacity-[0.06]"
             />
-            <div className="relative z-10 max-w-[1380px] mx-auto w-full px-5 sm:px-8 lg:px-14 pt-2 pb-10 sm:pb-12">
+            <div className="relative z-10 max-w-[1520px] mx-auto w-full px-5 sm:px-8 lg:px-14 xl:px-20 pt-2 pb-10 sm:pb-12">
               <div className="hero-meta-fade flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs text-[#F7E6C8]/90 tabular-nums pr-24 sm:pr-44 lg:pr-64 xl:pr-72">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   <span>

@@ -79,15 +79,11 @@ export function Header() {
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           overIvoryHero
-            ? 'h-16 lg:h-[78px] bg-[#F7E6C8]/88 backdrop-blur-sm text-[#4E2A1E]'
+            ? 'h-16 lg:h-[78px] bg-[#F7E6C8]/88 backdrop-blur-sm border-b border-[#4E2A1E]/14 text-[#4E2A1E]'
             : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
-        <div
-          className={`max-w-[1380px] mx-auto h-full px-4 sm:px-8 lg:px-14 flex items-center justify-between gap-8 ${
-            overIvoryHero ? 'border-b border-[#4E2A1E]/14' : ''
-          }`}
-        >
+        <div className="w-full h-full px-4 sm:px-8 lg:px-14 flex items-center justify-between gap-8">
           {/* Zone 1: Brand mark (brun profond sur fond ivoire comme sur toute l'interface) */}
           <Link
             to="/"
