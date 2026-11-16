@@ -11,7 +11,6 @@ import {
   Lock,
   MessageSquareQuote,
   Mic2,
-  Scale,
   Unlock,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -23,6 +22,9 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { InteractiveRubric } from '../components/InteractiveRubric';
+import { SectionAnchorRail } from '../components/SectionAnchorRail';
+import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
@@ -63,13 +65,6 @@ const PHASE_ATMOSPHERES = [
     markTone: 'gold' as const,
     patternVariant: 'gold' as const,
   },
-];
-
-const PHASE_1_RUBRIC = [
-  { label: 'Sincérité et profondeur du propos', value: 6, points: '6 pts' },
-  { label: 'Qualité de la langue et de l’écriture', value: 6, points: '6 pts' },
-  { label: 'Originalité et créativité', value: 5, points: '5 pts' },
-  { label: 'Cohérence et construction du texte', value: 3, points: '3 pts' },
 ];
 
 function buildCalendarWeeks(phase1Revealed: boolean, phase2Revealed: boolean) {
@@ -171,13 +166,23 @@ export function ParcoursPage() {
         ]}
       />
 
+      <SectionAnchorRail
+        items={[
+          { id: 'chapitres', num: '01', label: 'Les 3 phases' },
+          { id: 'phase-1-dossier', num: '02', label: 'Phase 1 · La Plume' },
+          { id: 'atelier-video', num: '03', label: 'Atelier vidéo 5 min' },
+          { id: 'phases-suivantes', num: '04', label: 'Phases 2 & 3' },
+          { id: 'calendrier', num: '05', label: 'Calendrier' },
+        ]}
+      />
+
       {loading ? (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-20 space-y-8">
           <div className="h-24 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
           <div className="h-96 rounded-[2px] bg-ucaep-ivory/30 animate-pulse" />
         </div>
       ) : (
-        <>
+        <div id="chapitres" className="scroll-mt-20">
           {/* DESKTOP: Horizontal 3-Chapter Progression Rail + Atmospheric Stage */}
           <section className="hidden lg:block py-16 lg:py-20 bg-ucaep-paper">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
@@ -358,11 +363,14 @@ export function ParcoursPage() {
               );
             })}
           </section>
-        </>
+        </div>
       )}
 
       {/* VISIBLE COMPLETE DOSSIER FOR PHASE 1 — LA PLUME */}
-      <section className="relative py-20 lg:py-28 bg-[#F4EDE1] paper-grain border-t border-b border-ucaep-brown/14 overflow-hidden">
+      <section
+        id="phase-1-dossier"
+        className="scroll-mt-20 relative py-20 lg:py-28 bg-[#F4EDE1] paper-grain border-t border-b border-ucaep-brown/14 overflow-hidden"
+      >
         <BrandPatternSurface
           variant="brown"
           tileWidth={220}
@@ -414,6 +422,7 @@ export function ParcoursPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <article
               data-reveal
+              data-parallax-card="8"
               className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
             >
               <Feather
@@ -455,6 +464,7 @@ export function ParcoursPage() {
             <article
               data-reveal
               data-reveal-delay="0.08"
+              data-parallax-card="-8"
               className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
             >
               <MessageSquareQuote
@@ -533,47 +543,13 @@ export function ParcoursPage() {
           </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <article
-              data-reveal
-              className="lg:col-span-5 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-white paper-fiber p-7 sm:p-8 space-y-5"
-            >
-              <Scale
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12"
-                strokeWidth={1.2}
-              />
-              <div className="relative z-10 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                  Grille d&apos;évaluation · / 20 points par épreuve
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                  Comment chaque texte est noté
-                </h3>
-              </div>
-              <dl className="relative z-10 divide-y divide-ucaep-brown/12 border-t border-b border-ucaep-brown/12 text-sm tabular-nums">
-                {PHASE_1_RUBRIC.map((item) => (
-                  <div key={item.label} className="py-3 flex items-center justify-between gap-4">
-                    <dt className="text-ucaep-ink/85">{item.label}</dt>
-                    <dd
-                      data-counter={item.value}
-                      data-counter-suffix=" pts"
-                      className="font-mono text-lg font-semibold text-ucaep-brown shrink-0"
-                    >
-                      {item.points}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="relative z-10 text-xs text-ucaep-brown/75 leading-relaxed">
-                Chaque copie porte uniquement votre numéro de référence anonyme et passe entre les mains de deux correcteurs du jury.
-              </p>
-            </article>
+          <div className="space-y-8">
+            <InteractiveRubric phaseId="phase-1" />
 
             <article
               data-reveal
               data-reveal-delay="0.06"
-              className="lg:col-span-7 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-8 space-y-5"
+              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-9 space-y-6"
             >
               <BrandPatternSurface
                 variant="green"
@@ -592,15 +568,47 @@ export function ParcoursPage() {
                 className="pointer-events-none select-none absolute -bottom-7 -right-6 w-40 h-40 text-ucaep-gold opacity-[0.1] -rotate-12"
                 strokeWidth={1.2}
               />
-              <div className="relative z-10 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                  Temps de parole, règles &amp; qualification
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-paper">
-                  Modalités pratiques de la Phase 1
-                </h3>
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                    Temps de parole, règles &amp; qualification
+                  </p>
+                  <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-paper">
+                    Modalités pratiques de la Phase 1
+                  </h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  {candidateSession ? (
+                    <Link
+                      to="/depot"
+                      className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
+                    >
+                      <span>Accéder à mon dossier ({candidateSession.referenceCode})</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
+                    </Link>
+                  ) : (
+                    <>
+                      <Link
+                        to="/inscription"
+                        className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
+                      >
+                        <span>M&apos;inscrire pour recevoir mon code</span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
+                      </Link>
+                      {hasOpenDeposits && (
+                        <Link
+                          to="/depot"
+                          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
+                        >
+                          <span className="editorial-underline">Déposer mes productions</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
+              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
                 <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
                   <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
                     Production &amp; vidéo
@@ -618,43 +626,38 @@ export function ParcoursPage() {
                   </p>
                 </div>
               </div>
-              <div className="relative z-10 pt-1 flex flex-wrap items-center gap-4">
-                {candidateSession ? (
-                  <Link
-                    to="/depot"
-                    className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
-                  >
-                    <span>Accéder à mon dossier ({candidateSession.referenceCode})</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
-                  </Link>
-                ) : (
-                  <>
-                    <Link
-                      to="/inscription"
-                      className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
-                    >
-                      <span>M&apos;inscrire pour recevoir mon code</span>
-                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
-                    </Link>
-                    {hasOpenDeposits && (
-                      <Link
-                        to="/depot"
-                        className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
-                      >
-                        <span className="editorial-underline">Déposer mes productions</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    )}
-                  </>
-                )}
-              </div>
             </article>
           </div>
         </div>
       </section>
 
+      {/* ATELIER PRATIQUE DU TEXTE À LA VIDÉO (5 MIN) */}
+      <section
+        id="atelier-video"
+        className="scroll-mt-20 relative py-20 lg:py-24 bg-ucaep-paper border-b border-ucaep-brown/14 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
+          <div className="space-y-2 max-w-2xl" data-reveal>
+            <EditorialMark
+              folio="Accompagnement pas à pas"
+              label="Du texte à la vidéo · Limite 05:00"
+              tone="green"
+            />
+            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
+              Préparer son brouillon et{' '}
+              <em className="italic font-normal text-ucaep-brown">son tournage</em>
+            </h2>
+          </div>
+
+          <VideoPrepWorkshop />
+        </div>
+      </section>
+
       {/* OVERVIEW OF PHASES 2 & 3 */}
-      <section className="relative py-20 lg:py-24 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/14 overflow-hidden">
+      <section
+        id="phases-suivantes"
+        className="scroll-mt-20 relative py-20 lg:py-24 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/14 overflow-hidden"
+      >
         <BrandPatternSurface
           variant="brown"
           tileWidth={220}
@@ -699,6 +702,7 @@ export function ParcoursPage() {
             {/* PHASE 02 CARD */}
             <article
               data-reveal
+              data-parallax-card="8"
               className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
             >
               <BookOpen
@@ -754,6 +758,7 @@ export function ParcoursPage() {
             <article
               data-reveal
               data-reveal-delay="0.08"
+              data-parallax-card="-8"
               className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
             >
               <Mic2
@@ -809,7 +814,10 @@ export function ParcoursPage() {
       </section>
 
       {/* 3-WEEK CALENDAR CARDS */}
-      <section className="relative py-20 lg:py-24 bg-ucaep-linen/70 paper-fiber border-b border-ucaep-brown/14 overflow-hidden">
+      <section
+        id="calendrier"
+        className="scroll-mt-20 relative py-20 lg:py-24 bg-ucaep-linen/70 paper-fiber border-b border-ucaep-brown/14 overflow-hidden"
+      >
         <BrandPatternSurface
           variant="gold"
           tileWidth={210}

@@ -25,6 +25,7 @@ import {
   BrandPatternWave,
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
+import { InteractiveRubric } from '../components/InteractiveRubric';
 import { LanterneSequence } from '../components/LanterneSequence';
 import { ScenicStageAsset } from '../components/ScenicStageAsset';
 import { fetchApiJson } from '../lib/api';
@@ -597,6 +598,38 @@ export function HomePage() {
           className="hidden lg:block -top-24 -left-24 w-64 h-64 opacity-[0.08]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
+          {candidateSession && (
+            <div
+              data-reveal
+              className="p-5 sm:p-6 bg-white border border-ucaep-brown/18 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                  Mon dossier candidat · Code actif
+                </p>
+                <p className="font-serif text-xl sm:text-2xl font-semibold text-ucaep-brown tabular-nums">
+                  {candidateSession.candidateName} ·{' '}
+                  <span className="font-mono text-ucaep-gold">{candidateSession.referenceCode}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  to="/parcours#atelier-video"
+                  className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] border border-ucaep-brown/25 text-ucaep-brown hover:border-ucaep-gold transition-colors whitespace-nowrap"
+                >
+                  Calculateur 5 min
+                </Link>
+                <Link
+                  to="/depot"
+                  className="btn-tactile group inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] whitespace-nowrap"
+                >
+                  <span>Suivre mon dossier</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4" data-reveal>
               <div>
@@ -626,6 +659,7 @@ export function HomePage() {
                     key={card.index}
                     data-reveal
                     data-reveal-delay={String(idx * 0.06)}
+                    data-parallax-card={idx % 2 === 0 ? '-6' : '6'}
                     className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-white/95 paper-grain p-6 space-y-3"
                   >
                     <Icon
@@ -793,6 +827,7 @@ export function HomePage() {
                     to="/parcours"
                     data-reveal
                     data-reveal-delay={String(idx * 0.08)}
+                    data-parallax-card={idx === 1 ? '-8' : '8'}
                     className="group block space-y-5"
                   >
                     <div
@@ -856,189 +891,146 @@ export function HomePage() {
               const phase1 = phases.find((p) => p.id === 'phase-1' || p.number === '01');
               const phase1Revealed = Boolean(phase1?.isRevealed);
               return (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {phase1Revealed ? (
-                <>
-                  <article className="lg:col-span-4 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4">
-                    <Feather
-                      aria-hidden="true"
-                      className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                      strokeWidth={1.25}
-                    />
-                    <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                      <span>Épreuve 01</span>
-                      <span className="text-ucaep-green">Texte + vidéo</span>
-                    </div>
-                    <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
-                      « Je suis… »
-                    </h4>
-                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                      Les candidats rédigent un texte original pour se présenter{' '}
-                      <strong className="font-semibold text-ucaep-brown">
-                        au-delà de leur état civil ou de leur filière
-                      </strong>
-                      , puis l&apos;interprètent en vidéo : parcours personnel, interrogations, aspirations et regard sur le monde.
-                    </p>
-                    <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                      Poème, prose, monologue ou récit · Interprétation vidéo (jusqu&apos;à 5 min).
-                    </p>
-                  </article>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {phase1Revealed ? (
+                  <>
+                    <article
+                      data-parallax-card="6"
+                      className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4"
+                    >
+                      <Feather
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105"
+                        strokeWidth={1.25}
+                      />
+                      <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
+                        <span>Épreuve 01</span>
+                        <span className="text-ucaep-green">Texte + vidéo</span>
+                      </div>
+                      <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
+                        « Je suis… »
+                      </h4>
+                      <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                        Les candidats rédigent un texte original pour se présenter{' '}
+                        <strong className="font-semibold text-ucaep-brown">
+                          au-delà de leur état civil ou de leur filière
+                        </strong>
+                        , puis l&apos;interprètent en vidéo : parcours personnel, interrogations, aspirations et regard sur le monde.
+                      </p>
+                      <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
+                        Poème, prose, monologue ou récit · Interprétation vidéo (jusqu&apos;à 5 min).
+                      </p>
+                    </article>
 
-                  <article className="lg:col-span-4 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4">
-                    <ScrollText
-                      aria-hidden="true"
-                      className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                      strokeWidth={1.25}
-                    />
-                    <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                      <span>Épreuve 02</span>
-                      <span className="text-ucaep-green">Texte + vidéo</span>
-                    </div>
-                    <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
-                      « Les mots que l&apos;on n&apos;ose pas dire »
-                    </h4>
-                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                      Les candidats produisent un texte original consacré à{' '}
-                      <strong className="font-semibold text-ucaep-brown">
-                        une pensée, une gratitude ou une vérité retenue par pudeur
-                      </strong>
-                      , puis en livrent une interprétation filmée en vidéo.
-                    </p>
-                    <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                      Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
-                    </p>
-                  </article>
-                </>
-              ) : (
-                <>
-                  <article className="lg:col-span-4 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4">
-                    <Lock
-                      aria-hidden="true"
-                      className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12"
-                      strokeWidth={1.25}
-                    />
-                    <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                      <span>Épreuve 01</span>
-                      <span className="text-ucaep-brown/75 inline-flex items-center gap-1">
-                        <Lock className="w-3 h-3" aria-hidden="true" /> Masquée
-                      </span>
-                    </div>
-                    <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
-                      Sujet dévoilé au lancement
-                    </h4>
-                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                      La première épreuve porte sur la rédaction d&apos;un texte original en français et son interprétation filmée. L&apos;intitulé exact et les consignes sont masqués jusqu&apos;à l&apos;ouverture de La Plume.
-                    </p>
-                    <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                      En ligne · Jusqu&apos;à 5 minutes · Double lecture anonyme.
-                    </p>
-                  </article>
+                    <article
+                      data-parallax-card="-6"
+                      className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4"
+                    >
+                      <ScrollText
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105"
+                        strokeWidth={1.25}
+                      />
+                      <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
+                        <span>Épreuve 02</span>
+                        <span className="text-ucaep-green">Texte + vidéo</span>
+                      </div>
+                      <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
+                        « Les mots que l&apos;on n&apos;ose pas dire »
+                      </h4>
+                      <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                        Les candidats produisent un texte original consacré à{' '}
+                        <strong className="font-semibold text-ucaep-brown">
+                          une pensée, une gratitude ou une vérité retenue par pudeur
+                        </strong>
+                        , puis en livrent une interprétation filmée en vidéo.
+                      </p>
+                      <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
+                        Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
+                      </p>
+                    </article>
+                  </>
+                ) : (
+                  <>
+                    <article
+                      data-parallax-card="6"
+                      className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4"
+                    >
+                      <Lock
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12"
+                        strokeWidth={1.25}
+                      />
+                      <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
+                        <span>Épreuve 01</span>
+                        <span className="text-ucaep-brown/75 inline-flex items-center gap-1">
+                          <Lock className="w-3 h-3" aria-hidden="true" /> Masquée
+                        </span>
+                      </div>
+                      <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
+                        Sujet dévoilé au lancement
+                      </h4>
+                      <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                        La première épreuve porte sur la rédaction d&apos;un texte original en français et son interprétation filmée. L&apos;intitulé exact et les consignes sont masqués jusqu&apos;à l&apos;ouverture de La Plume.
+                      </p>
+                      <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
+                        En ligne · Jusqu&apos;à 5 minutes · Double lecture anonyme.
+                      </p>
+                    </article>
 
-                  <article className="lg:col-span-4 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4">
-                    <Lock
-                      aria-hidden="true"
-                      className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12"
-                      strokeWidth={1.25}
-                    />
-                    <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                      <span>Épreuve 02</span>
-                      <span className="text-ucaep-brown/75 inline-flex items-center gap-1">
-                        <Lock className="w-3 h-3" aria-hidden="true" /> Masquée
-                      </span>
-                    </div>
-                    <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
-                      Sujet dévoilé au lancement
-                    </h4>
-                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                      La deuxième épreuve invite à rédiger une création littéraire personnelle et à la présenter en vidéo. Les consignes détaillées apparaîtront ici dès l&apos;activation de la phase.
-                    </p>
-                    <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                      Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
-                    </p>
-                  </article>
-                </>
-              )}
+                    <article
+                      data-parallax-card="-6"
+                      className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-7 space-y-4"
+                    >
+                      <Lock
+                        aria-hidden="true"
+                        className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-brown opacity-[0.06] -rotate-12"
+                        strokeWidth={1.25}
+                      />
+                      <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
+                        <span>Épreuve 02</span>
+                        <span className="text-ucaep-brown/75 inline-flex items-center gap-1">
+                          <Lock className="w-3 h-3" aria-hidden="true" /> Masquée
+                        </span>
+                      </div>
+                      <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
+                        Sujet dévoilé au lancement
+                      </h4>
+                      <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                        La deuxième épreuve invite à rédiger une création littéraire personnelle et à la présenter en vidéo. Les consignes détaillées apparaîtront ici dès l&apos;activation de la phase.
+                      </p>
+                      <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
+                        Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
+                      </p>
+                    </article>
+                  </>
+                )}
+              </div>
 
-              <article className="lg:col-span-4 art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 space-y-4">
-                <BrandPatternSurface
-                  variant="green"
-                  tileWidth={180}
-                  opacityClass="opacity-[0.12]"
-                />
-                <BrandPatternCircle
-                  variant="gold"
-                  tileWidth={110}
-                  ring={false}
-                  orbit
-                  className="absolute -top-10 -right-10 w-32 h-32 opacity-20"
-                />
-                <Scale
-                  aria-hidden="true"
-                  className="pointer-events-none select-none absolute -bottom-6 -right-5 w-36 h-36 text-ucaep-gold opacity-[0.1] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                  strokeWidth={1.25}
-                />
-                <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
-                  <span>Barème officiel</span>
-                  <span>/ 20 points</span>
-                </div>
-                <h4 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-paper leading-snug">
-                  Critères d&apos;évaluation
-                </h4>
-                <ul className="relative z-10 divide-y divide-ucaep-ivory/14 text-sm text-ucaep-ivory/90 tabular-nums">
-                  <li className="py-1.5 flex justify-between gap-2">
-                    <span>Sincérité &amp; profondeur</span>
-                    <span
-                      data-counter="6"
-                      data-counter-suffix=" pts"
-                      className="font-mono font-semibold text-ucaep-gold"
-                    >
-                      6 pts
-                    </span>
-                  </li>
-                  <li className="py-1.5 flex justify-between gap-2">
-                    <span>Qualité de la langue</span>
-                    <span
-                      data-counter="6"
-                      data-counter-suffix=" pts"
-                      className="font-mono font-semibold text-ucaep-gold"
-                    >
-                      6 pts
-                    </span>
-                  </li>
-                  <li className="py-1.5 flex justify-between gap-2">
-                    <span>Originalité &amp; créativité</span>
-                    <span
-                      data-counter="5"
-                      data-counter-suffix=" pts"
-                      className="font-mono font-semibold text-ucaep-gold"
-                    >
-                      5 pts
-                    </span>
-                  </li>
-                  <li className="py-1.5 flex justify-between gap-2">
-                    <span>Cohérence &amp; construction</span>
-                    <span
-                      data-counter="3"
-                      data-counter-suffix=" pts"
-                      className="font-mono font-semibold text-ucaep-gold"
-                    >
-                      3 pts
-                    </span>
-                  </li>
-                </ul>
-                <p className="relative z-10 text-xs text-ucaep-ivory/82 leading-relaxed pt-1">
-                  Les retenus accèdent à La Connaissance (en ligne), puis les finalistes à L&apos;Éloquence (en présentiel).
+              <InteractiveRubric phaseId="phase-1" compact />
+
+              <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 rounded-[2px] bg-ucaep-green text-ucaep-paper border border-ucaep-brown/16">
+                <p className="text-xs sm:text-sm text-ucaep-ivory/90">
+                  Préparez votre texte et vérifiez votre temps de lecture orale (limite 05:00) avec l&apos;atelier vidéo UCAEP.
                 </p>
-                <div className="relative z-10 pt-1">
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link
+                    to="/parcours#atelier-video"
+                    className="btn-tactile inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
+                  >
+                    <span>Ouvrir l&apos;atelier vidéo</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                   <Link
                     to="/parcours"
                     className="group/link inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-gold hover:text-ucaep-paper transition-colors"
                   >
-                    <span>Voir les 6 épreuves du parcours</span>
+                    <span>Voir les 3 phases</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/link:translate-x-1" />
                   </Link>
                 </div>
-              </article>
+              </div>
             </div>
               );
             })()}

@@ -149,6 +149,26 @@ export function useEditorialScrollMotion(
             });
           });
 
+          const parallaxCards = gsap.utils.toArray<HTMLElement>('[data-parallax-card]');
+          parallaxCards.forEach((card) => {
+            const rawY = Number(card.dataset.parallaxCard || 16);
+            const yShift = isDesktop ? rawY : rawY * 0.35;
+            gsap.fromTo(
+              card,
+              { y: yShift },
+              {
+                y: -yShift,
+                ease: 'none',
+                scrollTrigger: {
+                  trigger: card,
+                  start: 'top bottom',
+                  end: 'bottom top',
+                  scrub: 0.75,
+                },
+              },
+            );
+          });
+
           const scenicNodes = gsap.utils.toArray<HTMLElement>('[data-scenic-motion]');
           scenicNodes.forEach((node) => {
             const kind = node.dataset.scenicMotion;

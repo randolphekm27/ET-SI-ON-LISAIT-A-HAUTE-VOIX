@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { fetchApiJson } from '../lib/api';
+import { CandidateProgressCard } from './CandidateProgressCard';
 import {
   getCandidateSession,
   saveCandidateSession,
@@ -837,6 +838,28 @@ export function DepotSubmissionPanel({
               Changer de dossier
             </button>
           </div>
+
+          {selectedPhase && (
+            <CandidateProgressCard
+              referenceCode={sessionData.candidate.referenceCode}
+              phaseNumber={selectedPhase.number}
+              phaseTitle={selectedPhase.title}
+              isPresentiel={selectedPhase.format === 'En présentiel'}
+              acceptingNow={selectedPhase.acceptingNow}
+              submissionDeadline={selectedPhase.submissionDeadline}
+              hasGoogleForm={hasGoogleForm}
+              text1Submitted={Boolean(submittedText1)}
+              text1Status={text1Status}
+              text2Submitted={Boolean(submittedText2)}
+              text2Status={text2Status}
+              fileSubmitted={Boolean(displayedFileSubmission)}
+              fileStatus={displayedFileSubmission?.status ?? null}
+              onCopyReference={() =>
+                handleCopyRef(sessionData.candidate.referenceCode)
+              }
+              copiedRef={copiedRef}
+            />
+          )}
 
           {/* SÉLECTION DE PHASE (masquée si lockedPhaseId est défini pour rester focalisé) */}
           {!lockedPhaseId && (

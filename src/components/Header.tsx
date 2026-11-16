@@ -34,6 +34,7 @@ export function UcaepMark({ light = false }: { light?: boolean }) {
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [hasOpenSubmissions, setHasOpenSubmissions] = useState(false);
   const candidateSession = useCandidateSession();
   const { siteConfig, activePhase } = useSiteConfig();
@@ -69,11 +70,18 @@ export function Header() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 40);
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, y / maxScroll)) : 0;
+      setScrollProgress(ratio);
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -247,6 +255,12 @@ export function Header() {
             </button>
           </div>
         </div>
+        {/* Barre de progression de lecture ultra-fine (GPU scaleX uniquement) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-ucaep-gold origin-left transition-transform duration-150 ease-out"
+          style={{ transform: `scaleX(${scrollProgress})` }}
+        />
       </header>
 
       {/* Full-screen Editorial Mobile Menu */}

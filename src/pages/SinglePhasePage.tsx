@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDown,
   ArrowRight,
@@ -27,8 +27,12 @@ import {
 } from '../components/BrandPattern';
 import { DepotSubmissionPanel } from '../components/DepotSubmissionPanel';
 import { EditorialImage } from '../components/EditorialImage';
+import { InteractiveRubric } from '../components/InteractiveRubric';
+import { SectionAnchorRail } from '../components/SectionAnchorRail';
+import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
+import { useEditorialScrollMotion } from '../lib/motion';
 import { useSiteConfig } from '../lib/site-config';
 
 interface PhaseEpreuveCard {
@@ -739,11 +743,14 @@ function formatDeadline(iso?: string | null): string | null {
 
 export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   const { siteConfig, activePhase, phasesSummary, announcements } = useSiteConfig();
+  const pageRef = useRef<HTMLDivElement>(null);
   const [expandedAnnId, setExpandedAnnId] = useState<string | null>(null);
   const [showFullIntro, setShowFullIntro] = useState(false);
   const [expandedEpreuves, setExpandedEpreuves] = useState<Record<string, boolean>>({});
   const [activeModalityIdx, setActiveModalityIdx] = useState(0);
   const [showFullModality, setShowFullModality] = useState(false);
+
+  useEditorialScrollMotion(pageRef, [activePhase?.id]);
 
   useEffect(() => {
     setShowFullIntro(false);
@@ -839,7 +846,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
     : [];
 
   return (
-    <div className="bg-ucaep-paper text-ucaep-ink">
+    <div ref={pageRef} className="bg-ucaep-paper text-ucaep-ink">
       {/* SECTION 1 : HERO PLEIN ÉCRAN CENTRÉ SUR LA PHASE ACTIVE */}
       <section
         id="phase-apercu"
@@ -1012,6 +1019,24 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
           </div>
         </div>
       </section>
+
+      <SectionAnchorRail
+        items={[
+          { id: 'comprendre-phase', num: '01', label: 'Présentation' },
+          {
+            id: 'atelier-video',
+            num: '02',
+            label: isPresentiel ? 'Préparation scénique' : 'Atelier vidéo 5 min',
+          },
+          { id: 'consignes', num: '03', label: 'Consignes & barème' },
+          {
+            id: 'depot-production',
+            num: '04',
+            label: isPresentiel ? 'Finale présentiel' : 'Espace dépôt',
+          },
+          { id: 'informations', num: '05', label: 'Annonces & contact' },
+        ]}
+      />
 
       {/* SECTION 2 : PRÉSENTATION DYNAMIQUE ET STRUCTURÉE DE LA PHASE ACTIVE */}
       <section
@@ -1471,6 +1496,27 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
         </div>
       </section>
 
+      {/* SECTION 2B : ATELIER PRATIQUE DU TEXTE À LA VIDÉO (5 MIN) */}
+      <section
+        id="atelier-video"
+        className="relative scroll-mt-20 py-16 lg:py-20 bg-[#F4EDE1] paper-grain border-b border-ucaep-brown/12 overflow-hidden"
+      >
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8">
+          <div className="max-w-3xl space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
+              Accompagnement pas à pas · Limite 05:00
+            </p>
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown text-balance">
+              {isPresentiel
+                ? 'Préparer votre passage et votre minuterie'
+                : 'Du texte à la vidéo : calculateur 5 min et checklist'}
+            </h2>
+          </div>
+
+          <VideoPrepWorkshop isPresentiel={isPresentiel} />
+        </div>
+      </section>
+
       {/* SECTION 3 : CONSIGNES OFFICIELLES & BARÈME DE LA PHASE */}
       <section
         id="consignes"
@@ -1573,35 +1619,28 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               )}
             </div>
 
-            {/* Colonne droite : Barème & Règles pratiques */}
+            {/* Colonne droite : Note pratique & Date limite */}
             <aside className="lg:col-span-5 space-y-6">
-              <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+              <div
+                data-parallax-card="6"
+                className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-4"
+              >
                 <div className="flex items-baseline justify-between border-b border-ucaep-brown/12 pb-3">
                   <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                    Grille d&apos;évaluation
+                    Règles d&apos;évaluation
                   </h3>
                   <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums">
                     Total : 20 pts
                   </span>
                 </div>
 
-                <dl className="divide-y divide-ucaep-brown/10 text-sm">
-                  {dossier.criteria.map((c) => (
-                    <div
-                      key={c.label}
-                      className="py-3 flex items-center justify-between gap-4"
-                    >
-                      <dt className="text-ucaep-ink/85">{c.label}</dt>
-                      <dd className="font-mono font-semibold text-ucaep-brown tabular-nums shrink-0">
-                        {c.points}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-
-                <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm text-xs text-ucaep-ink/80 leading-relaxed">
+                <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
                   {dossier.practicalNote}
                 </div>
+
+                <p className="text-xs text-ucaep-brown/75 leading-relaxed">
+                  Explorez chaque critère dans le barème interactif ci-dessous pour connaître précisément les attentes du jury et les erreurs à éviter.
+                </p>
               </div>
 
               {deadlineLabel && !isPresentiel && (
@@ -1621,6 +1660,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               )}
             </aside>
           </div>
+
+          <InteractiveRubric phaseId={activePhase.id} compact />
         </div>
       </section>
 

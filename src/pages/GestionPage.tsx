@@ -12,9 +12,11 @@ import {
   LayoutTemplate,
   Lock,
   LogOut,
+  Monitor,
   Plus,
   RefreshCw,
   Search,
+  Smartphone,
   Unlock,
   X,
   XCircle,
@@ -151,7 +153,14 @@ export function GestionPage() {
   const [submissionsError, setSubmissionsError] = useState('');
   const [submissionPhaseFilter, setSubmissionPhaseFilter] = useState('all');
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
+  const [submissionQueueFilter, setSubmissionQueueFilter] = useState<
+    'all' | 'pending_t1' | 'pending_t2' | 'both_validated' | 'rejected'
+  >('all');
   const [submissionSearch, setSubmissionSearch] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [previewRoute, setPreviewRoute] = useState<'/' | '/parcours' | '/concours'>('/');
+  const [previewKey, setPreviewKey] = useState(0);
   const [inspectingItem, setInspectingItem] = useState<AdminSubmissionItem | null>(null);
   const [inspectingAccess, setInspectingAccess] = useState<AdminSubmissionAccess | null>(
     null,
@@ -195,6 +204,7 @@ export function GestionPage() {
   useEffect(() => {
     if (!token) return;
     loadOverview(token);
+    loadSubmissions(token);
 
     // Actualisation automatique en temps réel toutes les 6 secondes
     const interval = setInterval(() => {
@@ -1157,12 +1167,41 @@ export function GestionPage() {
     let received = 0;
     let validated = 0;
     let rejected = 0;
+    let pendingT1 = 0;
+    let pendingT2 = 0;
+    let bothValidated = 0;
+    let anyRejected = 0;
+
     for (const s of submissions) {
       if (s.status === 'validated') validated += 1;
       else if (s.status === 'rejected') rejected += 1;
       else received += 1;
+
+      if (s.kind === 'text') {
+        const t1Status = s.text1Status || 'received';
+        const t2Status = s.text2Status || 'received';
+        if (t1Status === 'received') pendingT1 += 1;
+        if (t2Status === 'received') pendingT2 += 1;
+        if (t1Status === 'validated' && t2Status === 'validated') bothValidated += 1;
+        if (s.status === 'rejected' || t1Status === 'rejected' || t2Status === 'rejected') {
+          anyRejected += 1;
+        }
+      } else {
+        if (s.status === 'received') pendingT1 += 1;
+        if (s.status === 'validated') bothValidated += 1;
+        if (s.status === 'rejected') anyRejected += 1;
+      }
     }
-    return { total: submissions.length, received, validated, rejected };
+    return {
+      total: submissions.length,
+      received,
+      validated,
+      rejected,
+      pendingT1,
+      pendingT2,
+      bothValidated,
+      anyRejected,
+    };
   }, [submissions]);
 
   const filteredSubmissions = useMemo(() => {
@@ -1172,6 +1211,28 @@ export function GestionPage() {
       }
       if (submissionStatusFilter !== 'all' && s.status !== submissionStatusFilter) {
         return false;
+      }
+      if (submissionQueueFilter !== 'all') {
+        const isText = s.kind === 'text';
+        const t1Status = s.text1Status || 'received';
+        const t2Status = s.text2Status || 'received';
+        if (submissionQueueFilter === 'pending_t1') {
+          if (isText ? t1Status !== 'received' : s.status !== 'received') {
+            return false;
+          }
+        } else if (submissionQueueFilter === 'pending_t2') {
+          if (!isText || t2Status !== 'received') {
+            return false;
+          }
+        } else if (submissionQueueFilter === 'both_validated') {
+          if (isText ? t1Status !== 'validated' || t2Status !== 'validated' : s.status !== 'validated') {
+            return false;
+          }
+        } else if (submissionQueueFilter === 'rejected') {
+          if (s.status !== 'rejected' && t1Status !== 'rejected' && t2Status !== 'rejected') {
+            return false;
+          }
+        }
       }
       if (submissionSearch.trim()) {
         const q = submissionSearch.trim().toLowerCase();
@@ -1184,7 +1245,13 @@ export function GestionPage() {
       }
       return true;
     });
-  }, [submissions, submissionPhaseFilter, submissionStatusFilter, submissionSearch]);
+  }, [
+    submissions,
+    submissionPhaseFilter,
+    submissionStatusFilter,
+    submissionQueueFilter,
+    submissionSearch,
+  ]);
 
   if (!token) {
     return (
@@ -1395,6 +1462,17 @@ export function GestionPage() {
                     Réorganiser l&apos;interface du site
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewKey((k) => k + 1);
+                    setPreviewOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-ucaep-paper text-ucaep-brown hover:border-ucaep-gold transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5 text-ucaep-green" />
+                  <span>Aperçu visiteur</span>
+                </button>
                 <Link
                   to="/"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm bg-ucaep-ivory/70 text-ucaep-brown hover:bg-ucaep-gold/30 transition-colors"
@@ -1406,6 +1484,64 @@ export function GestionPage() {
             </div>
           );
         })()}
+
+        {/* Bandeau KPI Cockpit Pro */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 sm:p-5 bg-white border border-ucaep-brown/15 rounded-sm space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown/70">
+              01 · Inscrits ENSET
+            </p>
+            <p className="font-serif text-3xl font-bold text-ucaep-brown tabular-nums">
+              {stats.total}
+            </p>
+            <p className="text-xs text-ucaep-ink/70 tabular-nums">
+              {Object.keys(stats.byDept).length} filière(s) représentée(s)
+            </p>
+          </div>
+
+          <div className="p-4 sm:p-5 bg-white border border-ucaep-brown/15 rounded-sm space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown/70">
+              02 · Dépôts reçus
+            </p>
+            <p className="font-serif text-3xl font-bold text-ucaep-brown tabular-nums">
+              {submissionStats.total}
+            </p>
+            <p className="text-xs text-ucaep-ink/70 tabular-nums">
+              T1 en attente : {submissionStats.pendingT1} · T2 : {submissionStats.pendingT2}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSubmissionQueueFilter('pending_t1');
+              selectTab('depots');
+            }}
+            className="text-left p-4 sm:p-5 bg-white border border-ucaep-brown/15 hover:border-ucaep-gold rounded-sm space-y-1 transition-colors"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-800">
+              03 · File d&apos;attente jury
+            </p>
+            <p className="font-serif text-3xl font-bold text-amber-800 tabular-nums">
+              {submissionStats.received}
+            </p>
+            <p className="text-xs font-medium text-ucaep-brown underline">
+              Ouvrir la file de validation →
+            </p>
+          </button>
+
+          <div className="p-4 sm:p-5 bg-white border border-ucaep-brown/15 rounded-sm space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
+              04 · Validés complets
+            </p>
+            <p className="font-serif text-3xl font-bold text-ucaep-green tabular-nums">
+              {submissionStats.bothValidated}
+            </p>
+            <p className="text-xs text-ucaep-ink/70 tabular-nums">
+              {submissionStats.anyRejected} dossier(s) à reprendre
+            </p>
+          </div>
+        </div>
 
         {data && data.databaseConnected === false && (
           <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-sm text-sm space-y-1.5 shadow-xs">
@@ -2576,6 +2712,35 @@ export function GestionPage() {
               </div>
             </div>
 
+            {/* Filtres rapides de file d'attente */}
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { id: 'all', label: `Tout (${submissionStats.total})` },
+                  { id: 'pending_t1', label: `À valider Texte 1 (${submissionStats.pendingT1})` },
+                  { id: 'pending_t2', label: `À valider Texte 2 (${submissionStats.pendingT2})` },
+                  { id: 'both_validated', label: `Validés complets (${submissionStats.bothValidated})` },
+                  { id: 'rejected', label: `À reprendre (${submissionStats.anyRejected})` },
+                ] as const
+              ).map((q) => {
+                const active = submissionQueueFilter === q.id;
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => setSubmissionQueueFilter(q.id)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-sm border transition-colors tabular-nums ${
+                      active
+                        ? 'bg-ucaep-brown text-ucaep-paper border-ucaep-brown'
+                        : 'bg-white text-ucaep-brown border-ucaep-brown/20 hover:border-ucaep-gold'
+                    }`}
+                  >
+                    {q.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3 flex-1">
                 <div className="relative flex-1 min-w-[210px] max-w-sm">
@@ -3272,6 +3437,115 @@ export function GestionPage() {
           </div>
         )}
       </div>
+
+      {/* MODALE APERÇU VISITEUR IN-APP */}
+      {previewOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aperçu visiteur du site public"
+          className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-3 sm:p-6"
+        >
+          <div className="bg-ucaep-paper border border-ucaep-brown/25 rounded-sm shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+            {/* Barre supérieure de contrôle */}
+            <div className="px-4 sm:px-6 py-3.5 bg-white border-b border-ucaep-brown/15 flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
+                  Aperçu visiteur en direct
+                </p>
+                <p className="text-xs text-ucaep-ink/75 tabular-nums">
+                  {data.settings?.siteDisplay?.mode === 'phase_single_page'
+                    ? `Mode Page Unique · ${data.settings.siteDisplay.activePhaseId}`
+                    : 'Mode Site Complet (Multi-pages)'}{' '}
+                  ·{' '}
+                  {data.phases
+                    .map(
+                      (p) =>
+                        `P${p.number}: ${p.isRevealed ? 'Révélée' : 'Masquée'}`,
+                    )
+                    .join(' · ')}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {(['/', '/parcours', '/concours'] as const).map((route) => (
+                  <button
+                    key={route}
+                    type="button"
+                    onClick={() => {
+                      setPreviewRoute(route);
+                      setPreviewKey((k) => k + 1);
+                    }}
+                    className={`px-2.5 py-1.5 text-xs font-medium rounded-sm border ${
+                      previewRoute === route
+                        ? 'bg-ucaep-brown text-ucaep-paper border-ucaep-brown'
+                        : 'bg-ucaep-paper text-ucaep-brown border-ucaep-brown/20'
+                    }`}
+                  >
+                    {route === '/' ? 'Accueil' : route === '/parcours' ? 'Parcours' : 'Concours'}
+                  </button>
+                ))}
+
+                <div className="inline-flex border border-ucaep-brown/20 rounded-sm overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('desktop')}
+                    className={`px-2.5 py-1.5 text-xs inline-flex items-center gap-1 ${
+                      previewDevice === 'desktop'
+                        ? 'bg-ucaep-green text-ucaep-paper'
+                        : 'bg-white text-ucaep-brown'
+                    }`}
+                  >
+                    <Monitor className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Bureau</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`px-2.5 py-1.5 text-xs inline-flex items-center gap-1 ${
+                      previewDevice === 'mobile'
+                        ? 'bg-ucaep-green text-ucaep-paper'
+                        : 'bg-white text-ucaep-brown'
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Mobile</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewKey((k) => k + 1)}
+                  className="p-1.5 rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-ucaep-paper"
+                  title="Recharger l'aperçu"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(false)}
+                  className="p-1.5 rounded-sm border border-ucaep-brown/20 text-ucaep-brown hover:bg-red-50 hover:text-red-800"
+                  title="Fermer l'aperçu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cadre iframe centré */}
+            <div className="flex-1 bg-ucaep-brown/10 p-3 sm:p-5 overflow-auto flex justify-center">
+              <iframe
+                key={`${previewRoute}-${previewKey}`}
+                src={previewRoute}
+                title="Aperçu visiteur du site public UCAEP"
+                className={`bg-white border border-ucaep-brown/20 rounded-sm shadow-lg h-full transition-all duration-200 ${
+                  previewDevice === 'mobile' ? 'w-[390px]' : 'w-full'
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

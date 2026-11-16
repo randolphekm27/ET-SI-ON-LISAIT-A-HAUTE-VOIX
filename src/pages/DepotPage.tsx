@@ -7,6 +7,8 @@ import { DepotSubmissionPanel } from '../components/DepotSubmissionPanel';
 import { PageFolioHeader } from '../components/EditorialMark';
 import { usePageSeo } from '../lib/format';
 
+import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
+
 export function DepotPage() {
   usePageSeo(
     'Déposer ma production',
@@ -52,8 +54,9 @@ export function DepotPage() {
           doubleWave
           className="absolute bottom-0 inset-x-0 h-16"
         />
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <DepotSubmissionPanel />
+          <VideoPrepWorkshop />
         </div>
       </section>
     </div>
