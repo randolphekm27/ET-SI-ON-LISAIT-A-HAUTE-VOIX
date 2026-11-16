@@ -12,30 +12,47 @@ import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
 import type { CompetitionPhase } from '../types/competition';
 
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+interface FaqChapter {
+  id: string;
+  folio: string;
+  title: string;
+  subtitle: string;
+  items: FaqItem[];
+}
+
 const QUICK_ANSWERS = [
   {
     num: '01',
-    title: 'Public & coût ?',
-    summary: "Gratuit et ouvert à tous les étudiants de l'ENSET de Lokossa, quelle que soit la filière.",
+    title: 'Public & gratuité',
+    summary:
+      "Gratuit et ouvert à tous les étudiants de l'ENSET de Lokossa, sans aucune expérience théâtrale exigée.",
   },
   {
     num: '02',
-    title: 'Déroulement ?',
-    summary: "Deux phases en ligne en vidéo (La Plume, La Connaissance) et une finale en présentiel (L'Éloquence).",
+    title: 'Matériel requis',
+    summary:
+      'Un téléphone portable dans un endroit calme suffit pour filmer les vidéos des deux premières phases.',
   },
   {
     num: '03',
-    title: 'Épreuves ?',
-    summary: "Six épreuves précises (deux par phase), avec jusqu'à 5 minutes par présentation et une note sur 20 pts.",
+    title: 'Phases & durée',
+    summary:
+      'Deux phases en ligne (texte et vidéo de 5 min max par épreuve) puis une finale en présentiel sur le campus.',
   },
   {
     num: '04',
-    title: 'Équité ?',
-    summary: 'Correction en double lecture anonyme sous code UCAEP · Recours écrit sous 24 h.',
+    title: 'Anonymat & jury',
+    summary:
+      'Vos copies sont lues en double correction sous code UCAEP anonyme, avec recours écrit sous 24 heures.',
   },
 ];
 
-function buildFaqItems(phases: CompetitionPhase[]) {
+function buildFaqChapters(phases: CompetitionPhase[]): FaqChapter[] {
   const p1 = phases.find((p) => p.id === 'phase-1' || p.number === '01');
   const p2 = phases.find((p) => p.id === 'phase-2' || p.number === '02');
   const p3 = phases.find((p) => p.id === 'phase-3' || p.number === '03');
@@ -46,69 +63,97 @@ function buildFaqItems(phases: CompetitionPhase[]) {
 
   return [
     {
-      q: "Qui peut participer au concours ?",
-      a: "La participation est ouverte à tous les étudiants inscrits à l'ENSET de Lokossa, quelle que soit leur filière ou leur année d'études. Aucune expérience préalable en théâtre, poésie ou prise de parole n'est exigée.",
+      id: 'avant-de-participer',
+      folio: 'Chapitre 01',
+      title: 'Avant de participer',
+      subtitle: 'Conditions d’accès, matériel nécessaire et fonctionnement de l’inscription.',
+      items: [
+        {
+          q: 'Qui peut s’inscrire et faut-il une expérience en théâtre ?',
+          a: "Le concours est ouvert à tous les étudiants régulièrement inscrits à l'ENSET de Lokossa, toutes filières et années d'études confondues. Aucune expérience préalable en théâtre, en écriture ou en prise de parole en public n'est demandée.",
+        },
+        {
+          q: 'La participation est-elle vraiment gratuite ?',
+          a: "Oui, l'inscription et l'ensemble du parcours sont entièrement gratuits du début jusqu'à la remise des attestations.",
+        },
+        {
+          q: 'Quel matériel faut-il pour enregistrer ses vidéos ?',
+          a: "Aucun appareil professionnel ni studio n'est demandé. Un smartphone posé de manière stable dans une pièce calme et suffisamment éclairée suffit. L'important est qu'on vous voie et qu'on entende clairement votre voix.",
+        },
+        {
+          q: 'Comment s’inscrire et à quoi sert le code UCAEP ?',
+          a: "Remplissez le formulaire sur la page S'inscrire avant le vendredi 20 novembre 2026. Dès que vous validez l'étape finale, votre code d'anonymat personnel (de type UCAEP-2026-XXXX) s'affiche à l'écran : conservez-le, car il vous sert à accéder à votre espace de dépôt sans révéler votre nom au jury.",
+        },
+      ],
     },
     {
-      q: "La participation est-elle payante ?",
-      a: "Non, l'inscription et la participation sont entièrement gratuites du début à la fin du parcours. Il suffit de remplir le formulaire d'inscription en ligne pour recevoir votre code d'anonymat.",
+      id: 'pendant-les-epreuves',
+      folio: 'Chapitre 02',
+      title: 'Pendant les épreuves',
+      subtitle: 'Organisation en ligne ou en présentiel, formats acceptés et remise des travaux.',
+      items: [
+        {
+          q: 'Comment s’enchaînent les phases en ligne et la finale sur le campus ?',
+          a: "Les Phases 1 (« La Plume ») et 2 (« La Connaissance ») se déroulent à distance : vous déposez vos textes et vos vidéos depuis votre espace candidat. Les finalistes retenus rejoignent ensuite le campus de l'ENSET de Lokossa pour deux jours d'ateliers pratiques (Jours 12 et 13) puis la Grande Finale en présentiel (Jour 14).",
+        },
+        {
+          q: 'Que faut-il produire en Phase 1 (La Plume) ?',
+          a: p1Revealed
+            ? "Vous rédigez deux textes personnels originaux autour des deux sujets officiels — « Je suis… » et « Les mots que l'on n'ose pas dire » — et vous réalisez pour chacun une vidéo de lecture ou d'interprétation (jusqu'à 5 minutes par épreuve)."
+            : "Vous rédigez deux textes personnels en français et réalisez pour chacun une vidéo de lecture (jusqu'à 5 minutes). Les intitulés exacts des deux exercices sont affichés dès l'ouverture officielle de la phase.",
+        },
+        {
+          q: 'En quoi consistent les Phases 2 et 3 ?',
+          a: `${
+            p2Revealed
+              ? "En Phase 2 (« La Connaissance », en ligne), vous préparez un contenu de vulgarisation scientifique (« La science dans notre quotidien ») et un texte sur l'éducation (« L'école, le savoir et l'avenir »), accompagnés chacun d'une vidéo."
+              : "En Phase 2 (« La Connaissance », en ligne), les candidats qualifiés travaillent sur la vulgarisation scientifique et la réflexion éducative (texte et vidéo). Les sujets précis restent masqués jusqu'au Jour 6."
+          } ${
+            p3Revealed
+              ? "En Phase 3 (« L'Éloquence », en présentiel), les finalistes présentent un discours préparé sur sujet libre (« La parole que le monde doit entendre ») puis relèvent une épreuve d'improvisation sur place (« Le défi de l'inattendu »)."
+              : "En Phase 3 (« L'Éloquence », en présentiel à l'ENSET), les finalistes présentent deux épreuves orales devant public et jury dont les intitulés seront publiés à l'approche de la finale."
+          }`,
+        },
+        {
+          q: 'Quels formats de fichiers sont acceptés et peut-on intégrer des langues nationales ?',
+          a: "Les textes sont rédigés en français (des touches ou proverbes en langues nationales béninoises sont admis s'ils enrichissent naturellement le propos). Dans l'espace de dépôt, chaque vidéo ou audio doit rester sous 5 minutes (formats MP4, MOV, WebM, audio, PDF ou Word, 50 Mo maximum par envoi), sauf si un formulaire Google Form officiel est activé pour les vidéos de la phase.",
+        },
+        {
+          q: 'Peut-on recommencer une prise vidéo ou modifier un texte après l’envoi ?',
+          a: "Oui, avant l'envoi, vous pouvez filmer autant de prises que vous le souhaitez jusqu'à obtenir un son clair. Une fois envoyé dans l'espace candidat, un texte reste modifiable tant que le jury ne l'a pas encore validé ; dès qu'il est validé, sa modification est automatiquement verrouillée.",
+        },
+      ],
     },
     {
-      q: 'Comment se répartissent les épreuves en ligne et en présentiel ?',
-      a: "Les deux premières phases (Phase 1 « La Plume » et Phase 2 « La Connaissance ») se déroulent en ligne : les candidats transmettent leurs textes ou contenus explicatifs et leurs prestations vidéo depuis l'espace Dépôt candidat. La troisième phase (Phase 3 « L'Éloquence ») se tient en présentiel sur le campus devant le jury et le public.",
+      id: 'evaluation-et-resultats',
+      folio: 'Chapitre 03',
+      title: 'Évaluation et résultats',
+      subtitle: 'Composition du jury, contrôle d’originalité, publication et attestations.',
+      items: [
+        {
+          q: 'Qui note les productions et comment l’équité est-elle assurée ?',
+          a: "Le jury réunit six à huit membres (enseignants littéraires et scientifiques de l'ENSET, membres de la Session Théâtre UCAEP et personnalité culturelle). Pendant les phases en ligne, chaque dossier est examiné anonymement sous code UCAEP par deux correcteurs distincts sur 20 points, sans connaître le nom, la filière ou le niveau d'études du candidat.",
+        },
+        {
+          q: 'Pourquoi les textes copiés ou générés par IA sont-ils interdits ?',
+          a: "Le concours cherche à évaluer votre réflexion personnelle et votre capacité à la défendre ensuite à l'oral. Tout plagiat ou texte rédigé par une intelligence artificielle fausserait l'évaluation et entraîne une disqualification ; le jury peut également vérifier votre maîtrise du texte lors de la phase orale.",
+        },
+        {
+          q: 'Comment sont publiés les résultats et que reçoit chaque participant ?',
+          a: "Les listes de qualifiés et résultats sont publiés sous code candidat sur la page Annonces et dans le canal officiel. Vous disposez d'un délai écrit de 24 heures après publication pour signaler toute erreur matérielle. Chaque étudiant inscrit reçoit une attestation officielle de la Session Théâtre UCAEP ainsi qu'une invitation à la Grande Finale sur le campus.",
+        },
+      ],
     },
-    {
-      q: 'En quoi consiste la Phase 1 : La Plume ?',
-      a: p1Revealed
-        ? "Lors de la Phase 1 (en ligne), les candidats produisent des textes originaux autour de deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — et les interprètent en vidéo (jusqu'à 5 minutes par prestation). L'évaluation porte sur la sincérité (6 pts), la qualité de la langue (6 pts), l'originalité (5 pts) et la cohérence (3 pts)."
-        : "Lors de la Phase 1 (en ligne), les candidats produisent deux textes originaux en français et les interprètent en vidéo (jusqu'à 5 minutes par prestation). L'évaluation porte sur la sincérité (6 pts), la qualité de la langue (6 pts), l'originalité (5 pts) et la cohérence (3 pts). Les sujets précis des deux épreuves sont masqués jusqu'à l'ouverture officielle de la phase.",
-    },
-    {
-      q: 'En quoi consiste la Phase 2 : La Connaissance ?',
-      a: p2Revealed
-        ? "Lors de la Phase 2 (en ligne), les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'épreuve évalue la capacité à vulgariser des idées scientifiques ou éducatives avec clarté."
-        : "Lors de la Phase 2 (en ligne), les candidats retenus préparent deux contenus explicatifs et leurs prestations vidéo (jusqu'à 5 minutes) pour vulgariser des notions scientifiques ou éducatives avec clarté. Les sujets précis de cette phase sont masqués jusqu'à son lancement officiel au Jour 6.",
-    },
-    {
-      q: "En quoi consiste la Phase 3 : L'Éloquence ?",
-      a: p3Revealed
-        ? "Lors de la Phase 3 (en présentiel), les finalistes participent d'abord à deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), puis présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu »."
-        : "Lors de la Phase 3 (en présentiel), les finalistes participent d'abord à deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), puis présentent deux épreuves orales devant le jury et le public à l'ENSET de Lokossa. Les intitulés précis des deux épreuves finales restent masqués jusqu'à l'approche de la finale.",
-    },
-  {
-    q: 'Quelle est la durée et quels formats sont acceptés pour les dépôts en ligne ?',
-    a: "Chaque candidat dispose de jusqu'à 5 minutes par présentation. L'espace Dépôt candidat accepte les fichiers vidéo (MP4, MOV, WebM), audio, PDF, Word ou la saisie directe de texte en ligne (50 Mo maximum pour les fichiers).",
-  },
-  {
-    q: 'Peut-on intégrer des expressions en langues nationales ?',
-    a: "Les textes et présentations sont réalisés en français. L'emploi ponctuel de mots, proverbes ou expressions en langues nationales béninoises est autorisé lorsqu'il enrichit le propos.",
-  },
-  {
-    q: "Comment le plagiat et les textes générés par IA sont-ils traités ?",
-    a: "Toutes les productions doivent être strictement personnelles et originales. Tout plagiat ou usage d'intelligence artificielle pour rédiger les textes entraîne une disqualification ; le jury se réserve le droit de vérifier la maîtrise de l'œuvre à l'oral.",
-  },
-  {
-    q: 'Qui compose le jury et comment l’équité est-elle garantie ?',
-    a: "Le jury réunit six à huit membres (enseignants littéraires et scientifiques de l'ENSET, représentants de la Session Théâtre UCAEP et personnalité culturelle). Les productions en ligne sont corrigées en double lecture sous code candidat anonyme, avec un délai écrit de recours de 24 heures après publication des résultats.",
-  },
-  {
-    q: 'Que reçoit chaque participant à l’issue du concours ?',
-    a: "Chaque étudiant participant reçoit une attestation officielle de la Session Théâtre de l'UCAEP ainsi qu'une invitation à la Grande Finale en présentiel sur le campus.",
-  },
-  {
-    q: 'Comment s’inscrire et suivre le calendrier officiel ?',
-    a: "L'inscription s'effectue en ligne depuis la page S'inscrire avant le vendredi 20 novembre 2026 afin d'obtenir votre référence UCAEP. Toutes les ouvertures de phase et communications officielles sont publiées sur la page Annonces.",
-  },
   ];
 }
 
 export function FaqPage() {
   usePageSeo(
     'FAQ',
-    "Réponses pratiques sur le concours UCAEP à l'ENSET de Lokossa : conditions d'accès gratuites, 3 phases, 6 épreuves (en ligne en vidéo et en présentiel), notation et jury.",
+    "Réponses concrètes avant de participer, pendant les épreuves et sur l'évaluation au concours UCAEP à l'ENSET de Lokossa.",
   );
 
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openKey, setOpenKey] = useState<string | null>('avant-de-participer-0');
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
 
   useEffect(() => {
@@ -123,23 +168,25 @@ export function FaqPage() {
     };
   }, []);
 
-  const faqItems = buildFaqItems(phases);
+  const chapters = buildFaqChapters(phases);
+
+  let runningIndex = 0;
 
   return (
     <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Questions fréquentes"
-        section="Fonctionnement · 12 réponses"
-        title="Questions pratiques"
-        italicWord="et modalités."
-        subtitle="Toutes les précisions sur l'inscription gratuite pour les étudiants de l'ENSET de Lokossa, le format des phases en ligne et en présentiel, et l'évaluation des six épreuves."
+        section="Guide rapide · 3 chapitres"
+        title="Vos questions"
+        italicWord="dans l'ordre."
+        subtitle="Retrouvez les réponses organisées selon le moment où vous vous trouvez : avant de vous inscrire, pendant la préparation et le dépôt de vos épreuves, puis au moment de l'évaluation et des résultats."
       />
 
-      {/* Instant-scan 4-point top ledger */}
+      {/* Synthèse rapide en quatre points */}
       <section className="border-b border-ucaep-brown/14 bg-ucaep-linen/60 paper-fiber py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-            Synthèse en quatre points
+            L’essentiel en quatre repères
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {QUICK_ANSWERS.map((qa) => (
@@ -184,7 +231,25 @@ export function FaqPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 h-fit">
-            <EditorialMark folio="12 repères" label="Questions fréquentes" tone="brown" />
+            <EditorialMark folio="Sommaire" label="3 chapitres" tone="brown" />
+
+            <nav
+              aria-label="Chapitres de la FAQ"
+              className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14 text-sm"
+            >
+              {chapters.map((chapter) => (
+                <a
+                  key={chapter.id}
+                  href={`#${chapter.id}`}
+                  className="flex items-baseline justify-between py-3 text-ucaep-brown hover:text-ucaep-gold transition-colors"
+                >
+                  <span className="font-medium">{chapter.title}</span>
+                  <span className="font-mono text-xs text-ucaep-brown/60">
+                    {chapter.folio}
+                  </span>
+                </a>
+              ))}
+            </nav>
 
             <div className="art-card relative overflow-hidden p-6 bg-white border border-ucaep-brown/14 rounded-[2px] space-y-3 paper-fiber">
               <Feather
@@ -195,8 +260,8 @@ export function FaqPage() {
               <p className="relative z-10 font-serif italic text-2xl text-ucaep-brown leading-snug">
                 « Aucune expérience scénique préalable n&apos;est requise. »
               </p>
-              <p className="relative z-10 text-xs text-ucaep-ink/75 leading-relaxed">
-                Les deux premières phases se réalisent en ligne en vidéo avant les ateliers et la finale en présentiel à l&apos;ENSET de Lokossa.
+              <p className="relative z-10 text-xs text-ucaep-ink/78 leading-relaxed">
+                Les deux premières phases se réalisent en ligne avant les ateliers pratiques et la finale en présentiel à l&apos;ENSET de Lokossa.
               </p>
             </div>
 
@@ -207,10 +272,10 @@ export function FaqPage() {
                 strokeWidth={1.25}
               />
               <h2 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown">
-                Une question complémentaire ?
+                Vous ne trouvez pas votre réponse ?
               </h2>
-              <p className="relative z-10 text-sm text-ucaep-ink/75 leading-relaxed">
-                Adressez votre demande à l&apos;équipe d&apos;organisation de la Session Théâtre UCAEP depuis l&apos;espace Contact.
+              <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
+                Écrivez directement à l&apos;équipe de la Session Théâtre UCAEP en précisant, si possible, votre filière ou votre code candidat.
               </p>
               <Link
                 to="/contact"
@@ -222,53 +287,75 @@ export function FaqPage() {
             </div>
           </aside>
 
-          <div className="lg:col-span-8">
-            <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15 bg-ucaep-paper/85">
-              {faqItems.map((item, idx) => {
-                const isOpen = openIndex === idx;
-                const displayIdx = String(idx + 1).padStart(2, '0');
-                return (
-                  <div key={item.q}>
-                    <button
-                      type="button"
-                      aria-expanded={isOpen}
-                      onClick={() => setOpenIndex(isOpen ? null : idx)}
-                      className="w-full py-6 flex items-baseline justify-between gap-6 text-left group"
-                    >
-                      <div className="flex items-baseline gap-5">
-                        <span className="font-mono text-base sm:text-lg text-ucaep-gold tabular-nums shrink-0">
-                          {displayIdx}
-                        </span>
-                        <span className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors">
-                          {item.q}
-                        </span>
-                      </div>
-                      <Plus
-                        className={`w-5 h-5 text-ucaep-brown shrink-0 transition-transform duration-200 ${
-                          isOpen ? 'rotate-45 text-ucaep-gold' : ''
-                        }`}
-                      />
-                    </button>
+          <div className="lg:col-span-8 space-y-14">
+            {chapters.map((chapter) => (
+              <section
+                key={chapter.id}
+                id={chapter.id}
+                className="scroll-mt-24 space-y-5"
+              >
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
+                    {chapter.folio}
+                  </p>
+                  <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                    {chapter.title}
+                  </h2>
+                  <p className="text-sm text-ucaep-ink/75 max-w-prose">
+                    {chapter.subtitle}
+                  </p>
+                </div>
 
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                          className="overflow-hidden"
+                <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15 bg-ucaep-paper/85">
+                  {chapter.items.map((item, idx) => {
+                    runningIndex += 1;
+                    const itemKey = `${chapter.id}-${idx}`;
+                    const isOpen = openKey === itemKey;
+                    const displayIdx = String(runningIndex).padStart(2, '0');
+                    return (
+                      <div key={item.q}>
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() => setOpenKey(isOpen ? null : itemKey)}
+                          className="w-full py-5 sm:py-6 flex items-baseline justify-between gap-6 text-left group"
                         >
-                          <div className="pb-6 pl-9 sm:pl-11 pr-6 text-base text-ucaep-ink/82 leading-relaxed max-w-2xl">
-                            {item.a}
+                          <div className="flex items-baseline gap-4 sm:gap-5">
+                            <span className="font-mono text-base sm:text-lg text-ucaep-gold tabular-nums shrink-0">
+                              {displayIdx}
+                            </span>
+                            <span className="font-serif text-xl sm:text-2xl font-semibold text-ucaep-ink group-hover:text-ucaep-brown transition-colors">
+                              {item.q}
+                            </span>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-            </div>
+                          <Plus
+                            className={`w-5 h-5 text-ucaep-brown shrink-0 transition-transform duration-200 ${
+                              isOpen ? 'rotate-45 text-ucaep-gold' : ''
+                            }`}
+                          />
+                        </button>
+
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pb-6 pl-9 sm:pl-11 pr-6 text-sm sm:text-base text-ucaep-ink/84 leading-[1.75] max-w-prose">
+                                {item.a}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
       </section>

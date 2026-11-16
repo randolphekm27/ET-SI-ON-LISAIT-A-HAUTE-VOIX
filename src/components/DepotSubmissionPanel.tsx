@@ -720,15 +720,14 @@ export function DepotSubmissionPanel({
         >
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-              Identification candidat
+              Étape 01 · Identifiez-vous
             </p>
             <h3 className="font-serif text-3xl font-semibold text-ucaep-brown">
-              Accéder à votre espace de dépôt
+              Accéder à mon espace candidat
             </h3>
-            <p className="text-sm text-ucaep-ink/75">
-              Identifiez-vous à l’aide du code d’anonymat reçu lors de votre inscription
-              (ex. <span className="font-mono font-semibold">UCAEP-2026-0001</span>) et
-              de l’adresse e-mail associée à votre dossier.
+            <p className="text-sm text-ucaep-ink/78 leading-relaxed">
+              Saisissez le code d’anonymat reçu à la fin de votre inscription (ex.{' '}
+              <span className="font-mono font-semibold">UCAEP-2026-0001</span>) ainsi que l’adresse e-mail utilisée dans votre dossier.
             </p>
           </div>
 
@@ -786,18 +785,18 @@ export function DepotSubmissionPanel({
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-50"
             >
               <span>
-                {authLoading ? 'Vérification en cours...' : 'Continuer vers le dépôt'}
+                {authLoading ? 'Vérification en cours...' : 'Ouvrir mon dossier'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>
             {!hideRegistrationHint && (
               <p className="text-xs text-ucaep-ink/65">
-                Étudiant(e) à l&apos;ENSET de Lokossa pas encore inscrit(e) ?{' '}
+                Pas encore inscrit(e) ?{' '}
                 <Link
                   to="/inscription"
                   className="text-ucaep-brown font-semibold underline hover:text-ucaep-gold"
                 >
-                  Accéder au formulaire d&apos;inscription
+                  Commencer mon inscription
                 </Link>
               </p>
             )}
@@ -1056,12 +1055,10 @@ export function DepotSubmissionPanel({
                           Épreuves écrites · Phase {selectedPhase.number}
                         </p>
                         <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                          Soumettre vos deux textes (Texte 1 et Texte 2)
+                          Déposez vos deux textes (Texte 1 et Texte 2)
                         </h3>
-                        <p className="text-xs text-ucaep-ink/70 leading-relaxed">
-                          Déposez ci-dessous le texte intégral de chacune des deux épreuves.
-                          Une fois qu&apos;un texte est validé par le jury, sa modification
-                          est automatiquement verrouillée.
+                        <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                          Collez et envoyez séparément le texte complet de chaque épreuve ci-dessous. Vérifiez l&apos;ordre (Texte 1 puis Texte 2) : dès qu&apos;un texte est validé par le jury, sa modification est automatiquement bloquée.
                         </p>
                       </div>
 

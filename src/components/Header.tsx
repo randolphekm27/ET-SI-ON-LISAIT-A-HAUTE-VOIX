@@ -370,7 +370,7 @@ export function Header() {
                     to="/depot"
                     className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                   >
-                    <span>Mon espace dépôt</span>
+                    <span>Accéder à mon espace candidat</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </>
@@ -381,7 +381,7 @@ export function Header() {
                       to="/depot"
                       className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm border border-ucaep-gold text-ucaep-gold hover:bg-ucaep-gold/10"
                     >
-                      <span>Déposer ma production</span>
+                      <span>Déposer mes productions</span>
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   )}
@@ -389,7 +389,7 @@ export function Header() {
                     to="/inscription"
                     className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
                   >
-                    <span>Je m&apos;inscris au concours</span>
+                    <span>Commencer mon inscription</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </>

@@ -61,15 +61,13 @@ export function ConfirmationInscriptionPage() {
             <em className="italic font-normal text-ucaep-ink">{state.candidateName}.</em>
           </h1>
 
-          <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
-            Votre candidature au concours « Et si on lisait à haute voix ? » est confirmée.
-            Conservez le code d&apos;anonymat ci-dessous : il identifie vos dépôts en ligne
-            sans révéler votre identité aux membres du jury.
+          <p className="text-sm sm:text-base text-ucaep-ink/82 leading-relaxed">
+            Votre participation au concours « Et si on lisait à haute voix ? » est confirmée. Notez dès maintenant ou capturez votre code d&apos;anonymat ci-dessous : il vous sera demandé pour vous connecter à votre espace candidat et déposer vos textes et vidéos sans révéler votre nom aux membres du jury.
           </p>
 
           <dl className="divide-y divide-ucaep-brown/12 border-t border-b border-ucaep-brown/12 text-sm">
             <div className="py-3.5 flex justify-between gap-4">
-              <dt className="text-ucaep-brown/75">Code d&apos;anonymat</dt>
+              <dt className="text-ucaep-brown/75">Votre code d&apos;anonymat</dt>
               <dd className="font-mono font-semibold text-ucaep-ink tabular-nums">
                 {state.referenceCode}
               </dd>
@@ -92,11 +90,10 @@ export function ConfirmationInscriptionPage() {
           <div className="p-6 sm:p-7 rounded-[2px] bg-[#25D366]/10 border border-[#25D366]/30 space-y-3.5">
             <div className="flex items-center gap-2.5 text-[#128C7E] font-semibold text-sm">
               <MessageCircle className="w-5 h-5 shrink-0" />
-              <span>Étape suivante : Canal d&apos;information officiel</span>
+              <span>Étape suivante : rejoindre le canal d&apos;information officiel</span>
             </div>
             <p className="text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
-              Rejoignez le canal officiel du concours pour recevoir les dates d&apos;ouverture
-              des phases en ligne, les rappels de consignes et les avis de l&apos;équipe organisatrice.
+              Ce canal WhatsApp sert à annoncer l&apos;ouverture des phases en ligne, les rappels de délais et la publication des résultats sous code.
             </p>
             <a
               href="https://chat.whatsapp.com/D2RVspXf4Sp1OfllUCskoE?s=cl&p=a&iam=2"
@@ -105,29 +102,29 @@ export function ConfirmationInscriptionPage() {
               className="btn-tactile inline-flex items-center justify-center gap-2.5 w-full py-3.5 px-6 rounded-[2px] bg-[#25D366] text-white font-semibold text-sm hover:bg-[#20ba59]"
             >
               <MessageCircle className="w-4 h-4 shrink-0" />
-              <span>Rejoindre le canal WhatsApp</span>
+              <span>Rejoindre le canal WhatsApp officiel</span>
             </a>
           </div>
 
           <div className="pt-2 flex flex-wrap items-center gap-5">
             <Link
-              to="/annonces"
+              to={`/depot?ref=${encodeURIComponent(state.referenceCode)}`}
               className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
             >
-              <span>Voir les annonces</span>
+              <span>Accéder à mon espace candidat</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
-              to={`/depot?ref=${encodeURIComponent(state.referenceCode)}`}
+              to="/annonces"
               className="editorial-underline text-sm font-semibold text-ucaep-green"
             >
-              Espace de dépôt candidat
+              Consulter les annonces
             </Link>
             <Link
               to="/parcours"
               className="editorial-underline text-sm font-medium text-ucaep-brown"
             >
-              Découvrir le parcours
+              Voir le déroulement des phases
             </Link>
           </div>
         </div>

@@ -58,8 +58,8 @@ function AnnouncementsFeedView() {
         folio="Tableau"
         section="Communications officielles"
         title="Annonces et"
-        italicWord="calendrier."
-        subtitle="Les avis d'ouverture des phases, les consignes d'épreuves et les repères pratiques sont publiés ici par l'équipe organisatrice."
+        italicWord="échéances."
+        subtitle="Retrouvez ici les dates officielles, les ouvertures de phases, les avis de publication des résultats sous code et les précisions pratiques communiquées par l'équipe organisatrice."
       />
 
       <section className="relative py-16 lg:py-24 bg-ucaep-paper paper-fiber overflow-hidden">
@@ -301,14 +301,14 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
             to="/parcours"
             className="editorial-underline text-sm font-medium text-ucaep-brown"
           >
-            Voir les trois phases du concours
+            Voir le déroulement des trois phases
           </Link>
           {candidateSession ? (
             <Link
               to="/depot"
               className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]"
             >
-              <span>Mon espace dépôt</span>
+              <span>Accéder à mon espace candidat</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           ) : (
@@ -316,7 +316,7 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
               to="/inscription"
               className="btn-tactile group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
             >
-              <span>Je m&apos;inscris</span>
+              <span>Commencer mon inscription</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           )}

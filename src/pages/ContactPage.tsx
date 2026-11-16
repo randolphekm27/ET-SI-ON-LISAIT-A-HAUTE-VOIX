@@ -77,10 +77,10 @@ export function ContactPage() {
               <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
                 Nos coordonnées
               </h2>
-              <p className="text-sm sm:text-base text-ucaep-ink/75 leading-relaxed">
-                Vous pouvez transmettre votre demande via le formulaire ci-contre ou joindre
-                directement les responsables de la Session Théâtre UCAEP par téléphone, par
-                courrier électronique ou sur nos comptes officiels @UCAEP.
+              <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed max-w-prose">
+                Si vous êtes déjà inscrit et que votre demande concerne votre dossier, précisez votre code d&apos;anonymat{' '}
+                <span className="font-mono font-semibold text-ucaep-brown">UCAEP-2026-XXXX</span>{' '}
+                dans votre message : l&apos;équipe de la Session Théâtre pourra vous répondre plus rapidement.
               </p>
             </div>
 
@@ -262,7 +262,7 @@ export function ContactPage() {
                     className="btn-tactile group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] disabled:opacity-60"
                   >
                     <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                    <span>{status === 'submitting' ? 'Envoi…' : 'Envoyer'}</span>
+                    <span>{status === 'submitting' ? 'Envoi en cours…' : 'Envoyer le message'}</span>
                   </button>
                 </form>
               )}

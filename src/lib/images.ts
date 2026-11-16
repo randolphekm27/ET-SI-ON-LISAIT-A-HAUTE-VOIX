@@ -1,11 +1,11 @@
-import heroImg from '../assets/images/hero_ucaep_lecture_1794529691534.jpg';
-import plumeImg from '../assets/images/pillar_plume_writing_1794529692550.jpg';
-import connaissanceImg from '../assets/images/pillar_connaissance_study_1794529691495.jpg';
-import eloquenceImg from '../assets/images/pillar_eloquence_stage_1794529692943.jpg';
-import campusImg from '../assets/images/news_campus_dialogue_1794529692603.jpg';
-import heroPortraitImg from '../assets/images/hero_voice_portrait_1794549126251.jpg';
-import handwritingInkImg from '../assets/images/editorial_handwriting_ink_1794549126566.jpg';
-import audienceListeningImg from '../assets/images/editorial_audience_listening_1794549126545.jpg';
+import heroImg from '../assets/images/doc_hero_lecture_1794838417863.jpg';
+import plumeImg from '../assets/images/doc_plume_writing_1794838418544.jpg';
+import connaissanceImg from '../assets/images/doc_connaissance_study_1794838420622.jpg';
+import eloquenceImg from '../assets/images/doc_eloquence_clean_1794838471910.jpg';
+import campusImg from '../assets/images/doc_campus_clean_1794838471491.jpg';
+import heroPortraitImg from '../assets/images/doc_portrait_lecture_1794838418193.jpg';
+import handwritingInkImg from '../assets/images/doc_writing_closeup_1794838419533.jpg';
+import audienceListeningImg from '../assets/images/doc_audience_listening_1794838421644.jpg';
 import type { MediaAssetKey } from '../types/competition';
 
 export type ExtendedMediaKey =
@@ -20,43 +20,43 @@ export const MEDIA_ASSETS: Record<
 > = {
   hero: {
     src: heroImg,
-    alt: "Étudiante lisant à haute voix devant des étudiants à l'université",
-    caption: "Lecture à voix haute à l'ENSET de Lokossa",
+    alt: 'Étudiante béninoise lisant son cahier à voix haute devant ses camarades en salle de cours',
+    caption: 'Lecture à voix haute devant un groupe d’étudiants',
   },
   portrait: {
     src: heroPortraitImg,
-    alt: 'Jeune étudiante africaine lisant un texte imprimé devant un micro dans une lumière chaude',
-    caption: 'Interprétation orale d’un texte — ENSET de Lokossa',
+    alt: 'Jeune étudiante béninoise en chemise légère lisant un texte manuscrit en salle de classe éclairée par la lumière du jour',
+    caption: 'Mise en voix d’un texte personnel — esprit du concours',
   },
   plume: {
     src: plumeImg,
-    alt: 'Jeune étudiante écrivant un texte dans un cahier sur une table en bois',
-    caption: 'Phase 01 · La Plume (en ligne)',
+    alt: 'Étudiant béninois rédigeant un texte au stylo dans un cahier près d’une fenêtre ouverte',
+    caption: 'Phase 01 · La Plume — écriture originale en ligne',
   },
   writing: {
     src: handwritingInkImg,
-    alt: "Gros plan sur la main d'un étudiant écrivant au stylo dans un cahier entouré de livres",
-    caption: "Rédaction des textes et préparation de l'interprétation",
+    alt: 'Gros plan sur des mains écrivant au stylo sur un cahier Seyès posé sur une table en bois',
+    caption: 'Préparation écrite avant la lecture ou l’enregistrement vidéo',
   },
   connaissance: {
     src: connaissanceImg,
-    alt: 'Deux étudiants discutant autour de livres ouverts à la bibliothèque',
-    caption: 'Phase 02 · La Connaissance (en ligne)',
+    alt: 'Deux étudiants béninois échangeant autour d’un cahier et d’un schéma scientifique en salle d’étude',
+    caption: 'Phase 02 · La Connaissance — vulgarisation en ligne',
   },
   eloquence: {
     src: eloquenceImg,
-    alt: 'Étudiante prenant la parole au pupitre devant un public attentif',
-    caption: "Phase 03 · L'Éloquence (en présentiel)",
+    alt: 'Étudiant béninois prenant la parole debout devant ses camarades assis aux tables d’un amphithéâtre',
+    caption: 'Phase 03 · L’Éloquence — prise de parole en présentiel',
   },
   campus: {
     src: campusImg,
-    alt: "Étudiants discutant et partageant des livres sur le campus en fin d'après-midi",
-    caption: 'Échanges étudiants sur le campus',
+    alt: 'Trois étudiants béninois discutant cahiers en main dans une allée couverte du campus universitaire',
+    caption: 'Échanges et entraide entre étudiants sur le campus',
   },
   audience: {
     src: audienceListeningImg,
-    alt: 'Étudiants réunis et attentifs lors d’une séance de lecture et de prise de parole',
-    caption: "Écoute collective et partage d'idées",
+    alt: 'Groupe d’étudiants béninois écoutant attentivement une présentation dans une salle de cours',
+    caption: 'Écoute collective et débat étudiant',
   },
 };
 

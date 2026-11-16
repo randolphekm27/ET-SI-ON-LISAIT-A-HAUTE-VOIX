@@ -13,23 +13,23 @@ gsap.registerPlugin(ScrollTrigger);
 const JOURNEY_GUARANTEES = [
   {
     number: '01',
-    kicker: 'Écriture & interprétation',
-    title: 'Passer du texte original à la vidéo',
-    text: 'Les deux premières phases se déroulent en ligne : les candidats rédigent des textes originaux ou explicatifs et les interprètent en vidéo (jusqu’à 5 minutes par épreuve).',
+    kicker: 'Pas de matériel studio',
+    title: 'Vous enregistrez simplement depuis chez vous',
+    text: 'Pendant les deux phases en ligne, un téléphone portable dans une pièce calme suffit. Le jury note la justesse de vos idées et de votre diction, jamais la qualité d’un montage vidéo.',
     Icon: Clock,
   },
   {
     number: '02',
-    kicker: 'Progression en 3 temps',
-    title: 'De La Plume jusqu’à L’Éloquence',
-    text: 'Chaque phase travaille une compétence précise : expression personnelle en Phase 1, vulgarisation scientifique en Phase 2, puis prestations finales en présentiel.',
+    kicker: 'Anonymat garanti',
+    title: 'Vos copies sont lues sous code UCAEP',
+    text: 'Chaque production transmise porte uniquement votre code candidat. Ni votre nom, ni votre filière, ni votre niveau d’études ne sont communiqués aux correcteurs.',
     Icon: Feather,
   },
   {
     number: '03',
-    kicker: 'Suivi & reconnaissance',
-    title: 'Une attestation pour chaque inscrit',
-    text: 'Chaque participant reçoit une attestation officielle de la Session Théâtre de l’UCAEP et est convié à la finale en présentiel à l’ENSET de Lokossa.',
+    kicker: 'Reconnaissance sur le campus',
+    title: 'Une attestation pour chaque participant',
+    text: 'Tout étudiant inscrit reçoit une attestation officielle de la Session Théâtre de l’UCAEP et une invitation à la Grande Finale en présentiel à l’ENSET de Lokossa.',
     Icon: Award,
   },
 ];
@@ -468,12 +468,12 @@ export function LanterneSequence() {
         <div className="lantern-header lantern-divider border-b border-[#4E2A1E]/18 pb-7 sm:pl-44 lg:pl-56 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div className="space-y-2.5 max-w-2xl">
             <p className="lantern-eyebrow text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8A5810]">
-              Objectifs pédagogiques
+              Ce qui rend ce parcours accessible
             </p>
             <h2 className="lantern-heading font-serif text-4xl sm:text-5xl font-semibold text-[#4E2A1E] leading-tight">
-              Une démarche formative{' '}
+              Des conditions simples{' '}
               <em className="lantern-heading-italic italic font-normal text-[#4E2A1E]">
-                structurée et progressive
+                et équitables pour chacun
               </em>
             </h2>
           </div>
@@ -481,7 +481,7 @@ export function LanterneSequence() {
             to="/concours"
             className="lantern-cta-link group inline-flex items-center gap-2 text-sm font-semibold text-[#4E2A1E] hover:opacity-80 transition-opacity whitespace-nowrap shrink-0"
           >
-            <span className="editorial-underline">Consulter la présentation du concours</span>
+            <span className="editorial-underline">Comprendre le règlement et les objectifs</span>
             <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Link>
         </div>

@@ -218,14 +218,14 @@ export function InscriptionPage() {
                   to="/depot"
                   className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                 >
-                  <span>Accéder à mon espace dépôt</span>
+                  <span>Accéder à mon espace candidat</span>
                   <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
                 <Link
                   to="/confirmation-inscription"
                   className="editorial-underline text-sm font-medium text-ucaep-brown"
                 >
-                  Voir mon reçu d&apos;inscription
+                  Revoir mon reçu d&apos;inscription
                 </Link>
               </div>
 
@@ -251,13 +251,13 @@ export function InscriptionPage() {
       <PageFolioHeader
         folio="Inscription"
         section="Édition 2026 · ENSET de Lokossa"
-        title="S'inscrire"
-        italicWord="au concours"
-        subtitle="La participation est gratuite et ouverte exclusivement aux étudiants de l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026. La validation génère immédiatement votre code d'anonymat."
+        title="Commencer"
+        italicWord="mon inscription"
+        subtitle="L'inscription est gratuite et réservée aux étudiants de l'ENSET de Lokossa jusqu'au vendredi 20 novembre 2026. Dès que vous validez la dernière étape, votre code d'anonymat personnel (UCAEP-2026-XXXX) est créé et affiché à l'écran."
         quickFacts={[
           { label: 'Durée estimée', value: 'Environ 2 minutes' },
-          { label: 'Frais', value: 'Gratuit (ENSET)' },
-          { label: 'Code anonyme', value: "Attribué à l'envoi" },
+          { label: 'Coût', value: 'Entièrement gratuit' },
+          { label: 'Code anonyme', value: 'Généré à la validation' },
           { label: 'Clôture', value: '20 novembre 2026' },
         ]}
       />
@@ -329,9 +329,20 @@ export function InscriptionPage() {
               })}
             </nav>
 
-            <div className="hidden lg:block text-xs text-ucaep-brown/75 space-y-1.5 leading-relaxed">
-              <p className="font-semibold text-ucaep-brown">Accès et gratuité</p>
-              <p>Participation gratuite, ouverte à l&apos;ensemble des étudiants de l&apos;ENSET de Lokossa, toutes filières confondues.</p>
+            <div className="hidden lg:block space-y-4 text-xs text-ucaep-brown/80 leading-relaxed border-t border-ucaep-brown/14 pt-5">
+              <div className="space-y-1">
+                <p className="font-semibold text-ucaep-brown">À quoi sert votre code UCAEP ?</p>
+                <p>
+                  À la fin du formulaire, vous recevez un code du type{' '}
+                  <span className="font-mono font-semibold">UCAEP-2026-XXXX</span>. Ce code remplace votre nom devant le jury lorsque vous déposez vos textes et vos vidéos.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-ucaep-brown">Gratuit et sans prérequis</p>
+                <p>
+                  Aucune expérience préalable en théâtre n&apos;est demandée : le concours est ouvert gratuitement à toutes les filières de l&apos;ENSET de Lokossa.
+                </p>
+              </div>
             </div>
           </aside>
 
@@ -359,9 +370,14 @@ export function InscriptionPage() {
                       transition={{ duration: 0.18 }}
                       className="space-y-6"
                     >
-                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Identité et coordonnées de suivi.
-                      </h2>
+                      <div className="space-y-2">
+                        <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                          Identité et coordonnées de contact.
+                        </h2>
+                        <p className="text-sm text-ucaep-ink/75 leading-relaxed">
+                          Votre adresse e-mail sert ensuite à vous connecter à votre espace de dépôt. Votre numéro WhatsApp permet à l&apos;équipe de vous avertir lors de l&apos;ouverture des phases.
+                        </p>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <Field
                           label="Prénom"
@@ -443,9 +459,14 @@ export function InscriptionPage() {
                       transition={{ duration: 0.18 }}
                       className="space-y-6"
                     >
-                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Filière et niveau à l&apos;ENSET de Lokossa.
-                      </h2>
+                      <div className="space-y-2">
+                        <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                          Filière et niveau à l&apos;ENSET de Lokossa.
+                        </h2>
+                        <p className="text-sm text-ucaep-ink/75 leading-relaxed">
+                          Votre numéro matricule confirme votre statut d&apos;étudiant(e) à l&apos;ENSET de Lokossa. Ni votre filière ni votre niveau ne sont montrés aux correcteurs.
+                        </p>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <Field
                           label="Établissement"
@@ -503,23 +524,28 @@ export function InscriptionPage() {
                       transition={{ duration: 0.18 }}
                       className="space-y-6"
                     >
-                      <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                        Votre intérêt pour l&apos;écriture et la prise de parole.
-                      </h2>
+                      <div className="space-y-2">
+                        <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                          Votre démarche et votre accord.
+                        </h2>
+                        <p className="text-sm text-ucaep-ink/75 leading-relaxed">
+                          Dites-nous simplement en deux ou trois phrases ce qui vous donne envie de participer. Ce champ n&apos;est pas noté : il aide l&apos;équipe UCAEP à mieux connaître les participants.
+                        </p>
+                      </div>
                       <div className="space-y-5">
                         <div className="space-y-1.5">
                           <label
                             htmlFor="motivation"
                             className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
                           >
-                            Votre démarche de participation
+                            Pourquoi souhaitez-vous participer ? (25 caractères min.)
                           </label>
                           <textarea
                             id="motivation"
                             rows={4}
                             value={form.motivation}
                             onChange={(e) => updateField('motivation', e.target.value)}
-                            placeholder="Précisez en quelques phrases ce qui motive votre participation à ce parcours d'écriture, de vulgarisation et d'expression orale."
+                            placeholder="Par exemple : envie d'améliorer votre prise de parole, goût pour l'écriture, curiosité pour les ateliers de diction..."
                             className="w-full px-3.5 py-2.5 text-sm bg-ucaep-paper/50 border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:bg-white focus:outline-none transition-colors"
                             required
                           />
@@ -632,7 +658,7 @@ export function InscriptionPage() {
                       className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
                     >
                       <span>
-                        {submitting ? 'Envoi en cours…' : 'Envoyer mon inscription'}
+                        {submitting ? 'Enregistrement en cours…' : 'Valider et générer mon code UCAEP'}
                       </span>
                       <Check className="w-4 h-4" />
                     </button>

@@ -44,34 +44,34 @@ gsap.registerPlugin(ScrollTrigger);
 const MANIFESTO_CARDS = [
   {
     index: '01',
-    keyFigure: 'ENSET · Gratuit',
-    title: 'Réservé aux étudiants de l’ENSET de Lokossa',
+    keyFigure: 'Pourquoi',
+    title: 'Compléter vos études scientifiques et techniques',
     detail:
-      'La participation est entièrement gratuite et ouverte à tous les étudiants de l’ENSET de Lokossa, sans condition de filière.',
+      "Savoir résoudre un exercice ne suffit pas toujours quand il faut défendre un mémoire, expliquer une idée complexe ou captiver une future classe : ce concours entraîne à écrire juste et à parler clair.",
     Icon: Users,
   },
   {
     index: '02',
-    keyFigure: '2 en ligne · 1 scène',
-    title: 'Deux phases en ligne, une finale en présentiel',
+    keyFigure: 'Comment',
+    title: 'Deux étapes en vidéo, puis une finale sur scène',
     detail:
-      'La Plume et La Connaissance se préparent à distance avec des prestations vidéo ; L’Éloquence se déroule en présentiel devant le jury.',
+      "Vous commencez chez vous avec un simple téléphone portable : vous déposez deux textes puis deux exposés filmés (jusqu'à 5 min), avant une Grande Finale en présentiel pour les finalistes.",
     Icon: Clock,
   },
   {
     index: '03',
-    keyFigure: '6 épreuves · / 20 pts',
-    title: 'Trois phases progressives notées sur 20',
+    keyFigure: 'Pour qui',
+    title: 'Gratuit pour tout étudiant de l’ENSET de Lokossa',
     detail:
-      'Chaque phase évalue deux épreuves précises (jusqu’à 5 minutes par présentation) pour passer de l’écrit à la vulgarisation puis à l’oral.',
+      "Toutes les filières et années d'études sont accueillies gratuitement, sans expérience théâtrale ni littéraire préalable. Votre envie d'apprendre et d'essayer suffit.",
     Icon: Scale,
   },
   {
     index: '04',
-    keyFigure: 'Double lecture',
-    title: 'Anonymat et évaluation pluridisciplinaire',
+    keyFigure: 'Équité',
+    title: 'Un jury pluridisciplinaire et des copies anonymes',
     detail:
-      'Les productions sont corrigées sous code candidat UCAEP par un jury composé d’enseignants de l’ENSET et de membres culturels.',
+      "Vos productions sont lues en double correction sous votre seul code candidat UCAEP, sans mention de nom ni de filière, avec un droit de recours écrit sous 24 heures.",
     Icon: ShieldCheck,
   },
 ];
@@ -374,18 +374,18 @@ export function HomePage() {
 
               {/* 3. Description (max 570px) */}
               <p className="hero-meta-fade text-base sm:text-lg text-[#4E2A1E]/90 max-w-[570px] leading-relaxed font-normal">
-                Un concours gratuit ouvert à{' '}
+                Organisé gratuitement par la Session Théâtre de l&apos;UCAEP pour{' '}
                 <strong className="text-[#4E2A1E] font-semibold">
                   tous les étudiants de l&apos;ENSET de Lokossa
-                </strong>{' '}
-                pour développer l&apos;écriture personnelle, la vulgarisation des savoirs et la prise de parole en public — deux phases en ligne en vidéo et une finale en présentiel.
+                </strong>
+                , ce concours vous accompagne pas à pas : rédiger un texte personnel, vulgariser une notion scientifique en vidéo, puis prendre la parole devant un auditoire.
               </p>
 
               {/* 4. Trois informations clés avec séparateurs verticaux fins */}
               <dl className="hero-meta-fade grid grid-cols-3 gap-3 sm:gap-6 max-w-[560px] pt-1 pb-2 text-xs">
                 <div>
                   <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
-                    Public &amp; tarif
+                    Accès
                   </dt>
                   <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1">
                     ENSET · Gratuit
@@ -393,18 +393,18 @@ export function HomePage() {
                 </div>
                 <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
                   <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
-                    Format
+                    Parcours
                   </dt>
                   <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
-                    2 en ligne · 1 scène
+                    2 en ligne · 1 campus
                   </dd>
                 </div>
                 <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
                   <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
-                    Présentation
+                    Clôture
                   </dt>
                   <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
-                    Jusqu&apos;à 5 min
+                    20 nov. 2026
                   </dd>
                 </div>
               </dl>
@@ -418,7 +418,7 @@ export function HomePage() {
                     to="/depot"
                     className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
                   >
-                    <span>Mon espace dépôt ({candidateSession.referenceCode})</span>
+                    <span>Accéder à mon espace ({candidateSession.referenceCode})</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                   </Link>
                 ) : (
@@ -426,7 +426,7 @@ export function HomePage() {
                     to="/inscription"
                     className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
                   >
-                    <span>Je m&apos;inscris</span>
+                    <span>Commencer mon inscription</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
                   </Link>
                 )}
@@ -436,7 +436,7 @@ export function HomePage() {
                     to="/depot"
                     className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold rounded-[4px] border border-[#D19A3A] bg-transparent text-[#4E2A1E] hover:bg-[#D19A3A]/12 whitespace-nowrap shrink-0"
                   >
-                    <span>Déposer ma production</span>
+                    <span>Déposer une production</span>
                   </Link>
                 )}
 
@@ -444,7 +444,7 @@ export function HomePage() {
                   to="/parcours"
                   className="editorial-underline py-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#8C5A0D] transition-colors whitespace-nowrap shrink-0"
                 >
-                  Consulter les 3 phases et 6 épreuves
+                  Découvrir les 3 phases et les épreuves
                 </Link>
               </div>
             </div>
@@ -634,11 +634,11 @@ export function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4" data-reveal>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                  Repères du concours
+                  Comment ça fonctionne
                 </p>
                 <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown mt-1 overflow-hidden">
                   <span data-mask-title className="block">
-                    Quatre repères <em className="italic font-normal text-ucaep-ink">pour comprendre l&apos;organisation</em>
+                    L&apos;essentiel <em className="italic font-normal text-ucaep-ink">avant de commencer</em>
                   </span>
                 </h2>
               </div>
@@ -646,7 +646,7 @@ export function HomePage() {
                 to="/concours"
                 className="group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
               >
-                <span className="editorial-underline">Consulter la présentation complète</span>
+                <span className="editorial-underline">Lire l&apos;explication complète du concours</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -691,7 +691,7 @@ export function HomePage() {
       </section>
 
       {/* ================================================================
-          SECTION 2B · PRÉSENTATION « TROIS ÉTAPES, DU CAHIER JUSQU'À LA SCÈNE »
+          SECTION 2B · PRÉSENTATION EXPLICATIVE (Plan 4 opaque)
           ================================================================ */}
       <section className="relative z-25 pt-12 pb-20 lg:pt-20 lg:pb-28 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
@@ -700,29 +700,35 @@ export function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             <div className="lg:col-span-6 space-y-6" data-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                Présentation &amp; démarche pédagogique
+                Pourquoi lire à voix haute à l&apos;ENSET ?
               </p>
               <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-brown leading-[1.02] overflow-hidden">
                 <span data-mask-title className="block">
-                  Trois phases pour développer{' '}
+                  Passer de la réflexion écrite{' '}
                   <em className="italic font-normal text-ucaep-ink">
-                    ses capacités d&apos;écriture, de transmission des connaissances et de prise de parole.
+                    à une parole claire devant les autres.
                   </em>
                 </span>
               </h2>
-              <p className="text-base sm:text-lg text-ucaep-ink/80 max-w-xl leading-relaxed">
-                Imaginé par la Session Théâtre de l&apos;UCAEP pour les étudiants de l&apos;ENSET de Lokossa, ce concours complète la formation technique et scientifique.{' '}
-                <strong className="font-semibold text-ucaep-brown">
-                  Aucune expérience scénique préalable n&apos;est exigée
-                </strong>{' '}
-                : les deux premières phases se déroulent en ligne (textes et prestations vidéo) avant une finale en présentiel devant le jury et le campus.
-              </p>
+              <div className="space-y-4 text-base sm:text-lg text-ucaep-ink/82 max-w-prose leading-relaxed">
+                <p>
+                  En tant qu&apos;étudiant en génie, en informatique ou en sciences de l&apos;éducation, vous passez l&apos;essentiel de votre temps sur des formules, des schémas ou des travaux pratiques. Mais le jour d&apos;une soutenance ou devant une future classe, tout repose sur votre capacité à formuler une idée simplement et à vous faire comprendre.
+                </p>
+                <p>
+                  Ce parcours vous invite donc à prendre un cahier, à mettre vos propres idées au propre, puis à les tester à haute voix face caméra — avant de retrouver le jury et le campus en finale.{' '}
+                  <strong className="font-semibold text-ucaep-brown">
+                    Vous n&apos;avez pas besoin d&apos;avoir déjà fait du théâtre : chaque étape vous guide.
+                  </strong>
+                </p>
+              </div>
               <div className="pt-4 border-t border-ucaep-brown/14 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium text-ucaep-brown/80 tabular-nums">
-                <span>Gratuit · ENSET de Lokossa</span>
+                <Link to="/concours" className="editorial-underline font-semibold text-ucaep-brown hover:text-ucaep-green">
+                  Lire les objectifs et le règlement
+                </Link>
                 <span aria-hidden="true">·</span>
-                <span>Phases 1 &amp; 2 en ligne · Phase 3 en présentiel</span>
-                <span aria-hidden="true">·</span>
-                <span>Session Théâtre UCAEP</span>
+                <Link to="/faq" className="editorial-underline font-semibold text-ucaep-brown hover:text-ucaep-green">
+                  Consulter les questions fréquentes
+                </Link>
               </div>
             </div>
 
@@ -732,7 +738,7 @@ export function HomePage() {
                   <EditorialImage assetKey="writing" data-parallax="-5" />
                 </div>
                 <p className="mt-3 text-xs font-serif italic text-ucaep-brown/75">
-                  Fig. 01 — Rédaction des textes originaux avant l&apos;interprétation vidéo
+                  Fig. 01 — Rédaction au stylo avant la lecture à haute voix et l&apos;enregistrement
                 </p>
               </div>
               <div
@@ -801,7 +807,7 @@ export function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14" data-reveal>
               <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-brown/75">
-                  Les trois phases du concours
+                  Progression étape par étape
                 </p>
                 <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-ucaep-ink leading-none overflow-hidden">
                   <span data-mask-title className="block">
@@ -813,7 +819,7 @@ export function HomePage() {
                 to="/parcours"
                 className="group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-green transition-colors whitespace-nowrap shrink-0"
               >
-                <span className="editorial-underline">Consulter les 6 épreuves en détail</span>
+                <span className="editorial-underline">Voir le détail des 3 phases et l&apos;atelier vidéo</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
@@ -876,14 +882,14 @@ export function HomePage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-2 max-w-2xl">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                  Phase 01 · En ligne · Textes originaux et vidéo
+                  Phase 01 · En ligne · Votre point de départ
                 </p>
                 <h3 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
-                  Zoom sur <em className="italic font-normal text-ucaep-ink">La Plume</em> : les deux premières épreuves
+                  Ce que vous préparez en <em className="italic font-normal text-ucaep-ink">Phase 1 (La Plume)</em>
                 </h3>
               </div>
               <p className="text-xs sm:text-sm font-medium text-ucaep-brown/80 tabular-nums">
-                Phase 1 en ligne · Production écrite + interprétation vidéo · Jusqu&apos;à 5 min
+                Deux créations écrites + deux lectures filmées (jusqu&apos;à 5 min)
               </p>
             </div>
 
@@ -906,20 +912,20 @@ export function HomePage() {
                       />
                       <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
                         <span>Épreuve 01</span>
-                        <span className="text-ucaep-green">Texte + vidéo</span>
+                        <span className="text-ucaep-green">Autoportrait littéraire</span>
                       </div>
                       <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
                         « Je suis… »
                       </h4>
                       <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                        Les candidats rédigent un texte original pour se présenter{' '}
+                        Vous rédigez un texte personnel pour raconter qui vous êtes{' '}
                         <strong className="font-semibold text-ucaep-brown">
-                          au-delà de leur état civil ou de leur filière
+                          au-delà de votre nom, de votre filière ou de votre CV
                         </strong>
-                        , puis l&apos;interprètent en vidéo : parcours personnel, interrogations, aspirations et regard sur le monde.
+                        , puis vous vous filmez en train de le lire. Par exemple : un souvenir qui vous a construit, une contradiction ou une ambition qui oriente vos choix.
                       </p>
                       <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                        Poème, prose, monologue ou récit · Interprétation vidéo (jusqu&apos;à 5 min).
+                        Forme libre (récit, poème, lettre ou monologue) · Vidéo jusqu&apos;à 5 min.
                       </p>
                     </article>
 
@@ -934,20 +940,20 @@ export function HomePage() {
                       />
                       <div className="relative z-10 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold tabular-nums">
                         <span>Épreuve 02</span>
-                        <span className="text-ucaep-green">Texte + vidéo</span>
+                        <span className="text-ucaep-green">Parole intérieure</span>
                       </div>
                       <h4 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown leading-tight">
                         « Les mots que l&apos;on n&apos;ose pas dire »
                       </h4>
                       <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                        Les candidats produisent un texte original consacré à{' '}
+                        Vous écrivez un texte pour formuler{' '}
                         <strong className="font-semibold text-ucaep-brown">
-                          une pensée, une gratitude ou une vérité retenue par pudeur
+                          un remerciement, un aveu, un constat ou une idée longtemps gardée pour vous
                         </strong>
-                        , puis en livrent une interprétation filmée en vidéo.
+                        , puis vous l&apos;interprétez en vidéo. Cherchez la justesse et la sincérité plutôt qu&apos;un ton artificiellement dramatique.
                       </p>
                       <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
-                        Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
+                        En français (quelques mots en langues nationales possibles) · Jusqu&apos;à 5 min.
                       </p>
                     </article>
                   </>
@@ -972,7 +978,7 @@ export function HomePage() {
                         Sujet dévoilé au lancement
                       </h4>
                       <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                        La première épreuve porte sur la rédaction d&apos;un texte original en français et son interprétation filmée. L&apos;intitulé exact et les consignes sont masqués jusqu&apos;à l&apos;ouverture de La Plume.
+                        La première épreuve consiste à rédiger un texte personnel en français puis à l&apos;interpréter en vidéo. L&apos;intitulé exact et les consignes seront affichés ici dès l&apos;ouverture de La Plume.
                       </p>
                       <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
                         En ligne · Jusqu&apos;à 5 minutes · Double lecture anonyme.
@@ -998,7 +1004,7 @@ export function HomePage() {
                         Sujet dévoilé au lancement
                       </h4>
                       <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                        La deuxième épreuve invite à rédiger une création littéraire personnelle et à la présenter en vidéo. Les consignes détaillées apparaîtront ici dès l&apos;activation de la phase.
+                        La seconde épreuve vous invite également à écrire une création personnelle et à la lire face caméra. Ses consignes resteront masquées jusqu&apos;à l&apos;activation de la phase.
                       </p>
                       <p className="relative z-10 text-xs font-medium text-ucaep-brown/75 pt-3 border-t border-ucaep-brown/12">
                         Français (touches de langues nationales possibles) · Jusqu&apos;à 5 minutes.
@@ -1012,21 +1018,21 @@ export function HomePage() {
 
               <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 rounded-[2px] bg-ucaep-green text-ucaep-paper border border-ucaep-brown/16">
                 <p className="text-xs sm:text-sm text-ucaep-ivory/90">
-                  Préparez votre texte et vérifiez votre temps de lecture orale (limite 05:00) avec l&apos;atelier vidéo UCAEP.
+                  Vous voulez vérifier si votre brouillon tient sous la limite des 5 minutes avant de filmer ?
                 </p>
                 <div className="flex flex-wrap items-center gap-4">
                   <Link
                     to="/parcours#atelier-video"
                     className="btn-tactile inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                   >
-                    <span>Ouvrir l&apos;atelier vidéo</span>
+                    <span>Tester mon temps de lecture</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                   <Link
                     to="/parcours"
                     className="group/link inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-gold hover:text-ucaep-paper transition-colors"
                   >
-                    <span>Voir les 3 phases</span>
+                    <span>Explorer tout le parcours</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/link:translate-x-1" />
                   </Link>
                 </div>
@@ -1194,18 +1200,18 @@ export function HomePage() {
         >
           <div className="space-y-4 max-w-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
-              Participation étudiante · ENSET de Lokossa
+              Prêt à essayer l&apos;édition 2026 ?
             </p>
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-ucaep-paper leading-[1.08] overflow-hidden">
               <span data-mask-title className="block">
-                Un concours ouvert aux étudiants de l&apos;ENSET{' '}
+                Inscrivez-vous en deux minutes{' '}
                 <em className="italic font-normal text-ucaep-ivory">
-                  pour mettre en pratique leurs compétences en écriture, en vulgarisation scientifique et en expression orale.
+                  pour recevoir votre code d&apos;anonymat et préparer vos premiers textes.
                 </em>
               </span>
             </h2>
             <p className="text-sm sm:text-base text-ucaep-ivory/85 max-w-xl leading-relaxed">
-              L&apos;inscription est gratuite et ouverte à tous les étudiants de l&apos;ENSET de Lokossa jusqu&apos;au vendredi 20 novembre 2026. Chaque candidat reçoit un code d&apos;anonymat dès validation du formulaire.
+              Les inscriptions gratuites ferment le vendredi 20 novembre 2026. Une fois votre dossier validé, vous accédez directement au canal d&apos;information et à votre espace de dépôt en ligne.
             </p>
           </div>
           {candidateSession ? (
@@ -1213,7 +1219,7 @@ export function HomePage() {
               to="/depot"
               className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
             >
-              <span>Accéder à mon dossier</span>
+              <span>Accéder à mon espace dépôt</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           ) : (
@@ -1221,7 +1227,7 @@ export function HomePage() {
               to="/inscription"
               className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-8 py-4 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-[#161210] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
             >
-              <span>Je m&apos;inscris</span>
+              <span>Commencer mon inscription</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           )}

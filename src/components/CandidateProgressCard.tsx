@@ -155,12 +155,12 @@ export function CandidateProgressCard({
               ? ('done' as const)
               : ('pending' as const),
           detail: step2Validated
-            ? 'Validé par le jury'
+            ? 'Validé · Verrouillé'
             : text1Status === 'rejected'
-              ? 'À reprendre'
+              ? 'À modifier et renvoyer'
               : step2Done
-                ? 'Reçu · En relecture'
-                : 'À soumettre',
+                ? 'Reçu · En attente de validation'
+                : 'À déposer',
         },
         {
           num: '03',
@@ -171,21 +171,21 @@ export function CandidateProgressCard({
               ? ('done' as const)
               : ('pending' as const),
           detail: step3Validated
-            ? 'Validé par le jury'
+            ? 'Validé · Verrouillé'
             : text2Status === 'rejected'
-              ? 'À reprendre'
+              ? 'À modifier et renvoyer'
               : step3Done
-                ? 'Reçu · En relecture'
-                : 'À soumettre',
+                ? 'Reçu · En attente de validation'
+                : 'À déposer',
         },
         {
           num: '04',
           title: 'Dossier complet',
           state: step4Done ? ('validated' as const) : ('pending' as const),
           detail: step4Done
-            ? 'Verrouillé & conforme'
+            ? 'Tout est validé'
             : hasGoogleForm
-              ? 'Textes + Google Form'
+              ? 'Textes + formulaire vidéo'
               : 'En attente de validation',
         },
       ];

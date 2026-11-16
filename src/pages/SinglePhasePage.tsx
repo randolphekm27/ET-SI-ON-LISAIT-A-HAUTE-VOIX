@@ -41,690 +41,431 @@ interface PhaseEpreuveCard {
   duration: string;
   title: string;
   summary: string;
-  keyPoints: Array<{ label: string; text: string }>;
-  paragraphs: string[];
+  concreteAdvice: string;
+  extraParagraphs: string[];
   formatsLabel: string;
   formats: string;
 }
 
-interface PhaseEditorialBlock {
+interface PhaseGuideTab {
   tabLabel: string;
   kicker: string;
   title: string;
-  summary: string;
-  takeaways: string[];
   paragraphs: string[];
+  checklist: string[];
 }
 
-interface PhaseWorkflowCard {
-  step: string;
-  timing: string;
-  title: string;
-  detail: string;
-}
-
-interface PhaseRuleCard {
-  kicker: string;
-  title: string;
-  description: string;
-}
-
-interface PhaseInstitutionalDossier {
+interface PhaseEditorialDossier {
   sectionKicker: string;
   sectionTitle: string;
   sectionSubtitle: string;
-  introSummary: string;
-  introHighlights: Array<{ num: string; title: string; detail: string }>;
-  introParagraph: string;
+  introParagraphs: string[];
+  maskedSummary: string;
   timelineWindow: string;
+  deliverableSummary: string;
   outcomeSummary: string;
-  epreuvesTitle: string;
-  epreuvesIntro: string;
+  epreuvesHeading: string;
+  epreuvesLead: string;
   epreuves: PhaseEpreuveCard[];
-  modalitiesHeading: string;
-  modalitiesSubheading: string;
-  modalitiesBlocks: PhaseEditorialBlock[];
-  closingKicker: string;
-  closingTitle: string;
-  closingSummary: string;
-  closingStatement: string;
-  workflowTitle: string;
-  workflowIntro: string;
-  workflowSteps: PhaseWorkflowCard[];
-  rulesCards: PhaseRuleCard[];
-  criteria: Array<{ label: string; points: string }>;
-  deliverables: string[];
+  guideHeading: string;
+  guideLead: string;
+  guideTabs: PhaseGuideTab[];
+  equityRules: Array<{
+    kicker: string;
+    title: string;
+    description: string;
+  }>;
+  checklistBeforeSend: string[];
   practicalNote: string;
 }
 
-const PHASE_INSTITUTIONAL_DOSSIERS: Record<string, PhaseInstitutionalDossier> = {
+const PHASE_EDITORIAL_DOSSIERS: Record<string, PhaseEditorialDossier> = {
   'phase-1': {
-    sectionKicker: '01 · Présentation officielle — Phase 1',
+    sectionKicker: 'Étape 01 · Présentation de la phase',
     sectionTitle: 'Phase 1 — La Plume',
-    sectionSubtitle: 'Création littéraire, écriture personnelle et lecture à haute voix',
-    introSummary:
-      "Consacrée à la création littéraire et à l'expression personnelle, La Plume invite chaque candidat à observer, ressentir, structurer une pensée originale puis à lui donner vie à haute voix face caméra.",
-    introHighlights: [
-      {
-        num: '01',
-        title: 'Deux défis d’écriture',
-        detail: 'Un autoportrait (« Je suis… ») et une parole intérieure (« Les mots que l’on n’ose pas dire »).',
-      },
-      {
-        num: '02',
-        title: 'De la page à la voix',
-        detail: 'Chaque texte est accompagné d’une vidéo de lecture ou d’interprétation expressive.',
-      },
-      {
-        num: '03',
-        title: 'Simplicité & authenticité',
-        detail: 'Un téléphone portable au calme suffit : le texte et la sincérité de la voix priment.',
-      },
+    sectionSubtitle: 'Écrire deux textes personnels, puis les lire face caméra',
+    introParagraphs: [
+      "Dans cette première phase, vous travaillez chez vous sur deux créations écrites personnelles avant de les enregistrer en vidéo. L'objectif est simple : apprendre à organiser vos idées par écrit, à trouver des mots précis sans artifice, puis à transmettre le sens de votre texte à l'oral.",
+      "Le jury n'attend pas un vocabulaire compliqué ni des tournures artificielles. Une page claire, sincère et bien construite vaut toujours mieux qu'un texte surchargé. L'exercice mobilise à la fois votre sens de l'observation, la correction de la langue française et votre capacité à lire à haute voix avec un débit posé.",
+      "La Phase 1 est qualificative : les deux textes et leurs vidéos sont évalués sur 20 points par deux lecteurs différents, sous code d'anonymat. Les candidats retenus accèdent ensuite à la Phase 2 (« La Connaissance »).",
     ],
-    introParagraph:
-      "La première phase du concours « ET SI ON LISAIT À HAUTE VOIX ? », baptisée « LA PLUME », est une invitation à explorer le pouvoir des mots, à donner forme à ses pensées et à faire entendre une voix qui ne demande qu'à s'exprimer. Cette étape est entièrement consacrée à la création littéraire et à l'expression personnelle. Elle offre aux candidats l'occasion de révéler leur imagination, leur sensibilité, leur capacité à construire un texte et, surtout, leur manière singulière de raconter le monde. Il ne s'agit pas simplement de savoir écrire sans faute ou d'employer des mots compliqués. Il s'agit plutôt de savoir observer, ressentir, réfléchir, organiser ses idées et les traduire dans une création qui puisse toucher, interpeller ou faire réfléchir celui qui la découvre. Chaque candidat est donc invité à prendre sa plume, à trouver son inspiration et à produire des textes qui portent véritablement sa marque.",
-    timelineWindow: 'Jours 1 à 5 · Phase qualificative en ligne',
-    outcomeSummary: '2 textes originaux + 2 vidéos · Qualification vers la Phase 2.',
-    epreuvesTitle: 'Les deux défis d’écriture distincts',
-    epreuvesIntro:
-      'Deux créations personnelles aux intentions complémentaires, chacune suivie de sa mise en voix vidéo.',
+    maskedSummary:
+      "La Phase 1 demande deux créations écrites individuelles accompagnées chacune d'une lecture vidéo (jusqu'à 5 minutes). Les intitulés exacts des deux exercices sont publiés automatiquement à l'ouverture officielle de la phase.",
+    timelineWindow: 'Jours 1 à 5 · En ligne',
+    deliverableSummary: '2 textes originaux + 2 vidéos (≤ 5 min chacune)',
+    outcomeSummary: 'Qualification vers la Phase 2 (« La Connaissance »)',
+    epreuvesHeading: 'Présentation des deux épreuves de La Plume',
+    epreuvesLead:
+      'Vous devez réaliser ces deux exercices dans l’ordre : rédiger chaque texte personnellement, puis vous filmer en train de le lire ou de l’interpréter.',
     epreuves: [
       {
         number: '01',
-        tag: 'Premier défi · Autoportrait littéraire',
+        tag: 'Épreuve 01 · Autoportrait littéraire',
         duration: 'Texte + vidéo (≤ 5 min)',
         title: '« Je suis… »',
         summary:
-          "Un exercice d'autoportrait littéraire pour aller au-delà de votre état civil et proposer un véritable regard sur qui vous êtes profondément.",
-        keyPoints: [
-          {
-            label: 'À éviter',
-            text: 'Réciter son identité, son cursus scolaire ou dresser une simple liste de qualités et défauts.',
-          },
-          {
-            label: 'Pistes d’exploration',
-            text: 'Expériences fondatrices, aspirations, convictions, peurs, contradictions, image ou métaphore forte.',
-          },
-          {
-            label: 'Objectif',
-            text: 'Construire un texte personnel, cohérent et expressif qui révèle une personnalité.',
-          },
+          "Vous rédigez un autoportrait littéraire qui montre qui vous êtes au-delà de votre nom, de votre filière ou de votre année d'études. Par exemple, vous pouvez partir d'une habitude qui vous caractérise, d'un souvenir d'apprentissage, d'une contradiction que vous traversez ou d'un projet qui guide vos choix.",
+        concreteAdvice:
+          "Évitez la simple fiche d'état civil (« Je m'appelle…, je suis en Licence 2… »). Préférez un angle précis : une scène vécue, une conviction ou une image qui explique votre manière de voir le monde.",
+        extraParagraphs: [
+          "Ce premier défi vous laisse le choix de la forme : récit autobiographique, lettre adressée à vous-même, monologue intérieur, poème ou prose construite. Ce qui compte, c'est que le lecteur découvre une réflexion véritablement personnelle.",
+          "Avant de tourner la vidéo, relisez votre texte à voix haute crayon en main : supprimez les phrases trop longues qui coupent votre souffle et vérifiez que l'ouverture donne tout de suite envie d'écouter.",
         ],
-        paragraphs: [
-          "Pour cette première phase, les participants devront relever deux défis d'écriture distincts, chacun reposant sur une thématique précise et une intention particulière. Le premier défi, intitulé « Je suis… », est un exercice d'autoportrait littéraire. Il invite chaque candidat à se raconter, mais pas de manière ordinaire. Il ne s'agit pas de réciter son identité, de présenter son cursus scolaire ou de dresser une liste de ses qualités et de ses défauts. Le candidat devra aller au-delà des informations habituelles pour proposer un véritable regard sur lui-même.",
-          "Qui est-il derrière son nom ? Quelles expériences ont contribué à construire sa personnalité ? Quelles sont ses aspirations, ses convictions, ses rêves, ses peurs, ses contradictions ou les valeurs auxquelles il s'attache ? Quelle histoire, quelle image ou quelle métaphore pourrait traduire ce qu'il est profondément ? Autant de pistes qui peuvent nourrir cette création. Le participant dispose d'une liberté dans le choix de la forme littéraire : récit autobiographique, lettre à soi-même, poème, monologue, prose poétique ou toute autre forme pertinente. L'essentiel est de construire un texte personnel, cohérent, original et suffisamment expressif pour permettre au lecteur de découvrir une personnalité à travers les mots.",
-        ],
-        formatsLabel: 'Formes littéraires libres',
+        formatsLabel: 'Formes d’écriture libres',
         formats:
-          'Récit autobiographique, lettre à soi-même, poème, monologue, prose poétique ou toute autre forme pertinente.',
+          'Récit personnel, lettre à soi-même, monologue, poème ou prose littéraire en français.',
       },
       {
         number: '02',
-        tag: 'Deuxième défi · Paroles silencieuses',
+        tag: 'Épreuve 02 · Parole gardée sous silence',
         duration: 'Texte + vidéo (≤ 5 min)',
         title: "« Les mots que l'on n'ose pas dire »",
         summary:
-          "Un espace pour donner une voix aux pensées, émotions et vérités gardées silencieuses — adressées à une personne, une génération ou la société.",
-        keyPoints: [
-          {
-            label: 'Registres possibles',
-            text: 'Confession, hommage, regret, dénonciation, cri du cœur, message d’espoir ou réflexion collective.',
-          },
-          {
-            label: 'Approche attendue',
-            text: 'Privilégier la sincérité, la précision du propos et la sensibilité plutôt qu’un drame artificiel.',
-          },
-          {
-            label: 'Objectif',
-            text: 'Choisir un sujet qui vous parle réellement et le transformer en création littéraire porteuse d’intention.',
-          },
-        ],
-        paragraphs: [
-          "Le deuxième défi, « Les mots que l'on n'ose pas dire », invite les candidats à explorer une autre dimension de l'expression : celle des pensées, des émotions et des vérités que l'on garde parfois pour soi. Chacun possède des mots qu'il n'a jamais eu le courage de prononcer, des sentiments qu'il peine à exprimer, des questions auxquelles il n'a jamais obtenu de réponse ou des messages qu'il aurait aimé adresser à une personne, à une communauté, à une génération ou même à la société tout entière.",
-          "Cet exercice offre aux participants un espace pour donner une voix à ces paroles restées silencieuses. Il peut s'agir d'une confession, d'un hommage, d'un regret, d'une dénonciation, d'un cri du cœur, d'une prise de conscience, d'un message d'espoir ou d'une réflexion sur une réalité personnelle ou collective. Le candidat devra choisir un sujet qui lui parle réellement et le transformer en une création littéraire capable de transmettre une intention. Une lettre, un poème, un monologue, un récit ou un texte libre peuvent servir de support à cette expression. La démarche doit rester personnelle et authentique : il ne s'agit pas de rechercher une histoire artificiellement dramatique, mais de trouver les mots justes pour exprimer une pensée avec profondeur, sensibilité et sincérité.",
+          "Vous mettez par écrit une pensée, une gratitude, un constat ou une vérité que l'on retient souvent par pudeur, par crainte ou par manque d'occasion. Vous pouvez vous adresser à un proche, à un enseignant, à votre promotion ou à la société.",
+        concreteAdvice:
+          "Il n'est pas nécessaire d'inventer une histoire tragique. Une reconnaissance jamais exprimée, un regret lucide ou une question honnête sur nos habitudes collectives touchent davantage lorsqu'ils sonnent juste.",
+        extraParagraphs: [
+          "Vous pouvez choisir la forme d'une lettre que l'on n'a jamais envoyée, d'un poème, d'un monologue ou d'un court récit. Gardez un fil conducteur clair entre le début et la fin du texte.",
+          "L'usage ponctuel d'une expression ou d'un proverbe en langue nationale béninoise est permis s'il éclaire naturellement le propos en français.",
         ],
         formatsLabel: 'Supports admis',
         formats:
-          'Lettre, poème, monologue, récit ou texte libre exprimant une démarche personnelle et authentique.',
+          'Lettre non envoyée, poème, monologue ou récit personnel en français (touches de langues nationales possibles).',
       },
     ],
-    modalitiesHeading: 'De la page à la parole : vidéo, conditions et livrables',
-    modalitiesSubheading:
-      'Parcourez les trois volets essentiels pour préparer et enregistrer vos productions sans stress.',
-    modalitiesBlocks: [
+    guideHeading: 'Ce qu’il faut produire, comment travailler et comment filmer',
+    guideLead:
+      'Suivez ces trois volets pour préparer vos écrits, enregistrer vos vidéos sans matériel complexe et vérifier votre dossier.',
+    guideTabs: [
       {
-        tabLabel: '01 · Interprétation & vidéo',
-        kicker: 'Exigence d’interprétation',
-        title: 'Une vidéo de lecture ou d’interprétation par texte',
-        summary:
-          "Chaque texte écrit doit être lu ou mis en voix face caméra pour faire passer la création de la page à la parole et permettre au jury d'évaluer votre appropriation.",
-        takeaways: [
-          'Filmer deux vidéos distinctes : une pour « Je suis… » et une pour « Les mots que l’on n’ose pas dire ».',
-          'Soigner la diction, l’articulation, le rythme, l’intonation et le respect des pauses.',
-          'Engager le regard, la posture et la respiration pour faire ressentir le sens du texte.',
-        ],
+        tabLabel: '01 · Ce que vous devez produire',
+        kicker: 'Étape 03 · Livrables attendus',
+        title: 'Deux textes distincts et leurs deux vidéos correspondantes',
         paragraphs: [
-          "Cependant, le travail des candidats ne s'arrêtera pas à la rédaction de ces deux textes. Puisque le concours porte également sur la lecture à haute voix et l'expression, chaque production écrite devra être accompagnée d'une vidéo de lecture ou d'interprétation. Après avoir rédigé son premier texte, le candidat devra donc se filmer en train de le lire ou de le mettre en voix. Il devra ensuite procéder de la même manière pour son deuxième texte.",
-          "L'objectif est de faire passer la création de la page à la parole, de donner une présence aux mots et de permettre au jury d'apprécier non seulement la qualité de l'écriture, mais également la manière dont le candidat s'approprie son texte. Il sera ainsi attendu des participants qu'ils accordent une attention particulière à leur diction, à leur articulation, à leur rythme, à leur intonation, à leurs pauses et à la transmission des émotions. Une lecture ne consiste pas uniquement à prononcer correctement les phrases : elle suppose de comprendre ce que l'on dit, de respecter le sens du texte et de trouver la manière de le faire ressentir à celui qui écoute. Le regard, la posture, la respiration et l'engagement du candidat pourront également contribuer à rendre son interprétation plus vivante.",
+          "À l'issue de la Phase 1, votre dossier complet comprend deux créations écrites distinctes — une pour « Je suis… » et une pour « Les mots que l'on n'ose pas dire » — ainsi qu'une vidéo de lecture ou d'interprétation pour chacun des deux textes.",
+          "Chaque vidéo doit correspondre fidèlement au texte écrit que vous avez soumis : ne déposez pas un brouillon différent de ce que vous lisez face caméra. Les deux travaux sont strictement individuels.",
+        ],
+        checklist: [
+          'Texte 1 (« Je suis… ») déposé dans votre espace candidat.',
+          'Texte 2 (« Les mots que l’on n’ose pas dire ») déposé séparément.',
+          'Deux vidéos claires et audibles (chacune de 5 minutes maximum).',
         ],
       },
       {
-        tabLabel: '02 · Conditions techniques',
-        kicker: 'Simplicité & authenticité',
-        title: 'Un téléphone portable dans un lieu calme suffit',
-        summary:
-          "Aucun studio ni équipement professionnel n'est exigé : l'essentiel est de bien vous voir, de vous entendre distinctement et de laisser parler le texte.",
-        takeaways: [
-          'Choisir un endroit calme avec une lumière correcte et un son clair et audible.',
-          'Éviter les effets de montage ou artifices techniques qui masquent votre interprétation.',
-          'Mettre en avant la qualité littéraire du texte, votre personnalité et votre présence vocale.',
-        ],
+        tabLabel: '02 · Comment vous y prendre',
+        kicker: 'Étape 04 · Méthode de travail',
+        title: 'Avancer par étapes simples, de l’idée à la relecture orale',
         paragraphs: [
-          "Les vidéos devront permettre de distinguer clairement le candidat et d'entendre sa prestation dans de bonnes conditions. Il n'est pas nécessaire de disposer d'un appareil professionnel ou d'un studio pour participer. Un téléphone portable peut parfaitement suffire, à condition de choisir un environnement calme, de veiller à la qualité du son et de réaliser un enregistrement suffisamment clair.",
-          "Les candidats sont encouragés à soigner leur présentation et leur interprétation, sans que les effets de montage ou les artifices techniques ne prennent le dessus sur le travail littéraire et la prestation orale. Ce qui doit avant tout retenir l'attention, c'est le texte proposé, la personnalité qui s'y révèle et la capacité du participant à donner vie à ses propres mots.",
+          "Commencez par noter sur une feuille ce que vous voulez vraiment dire en deux ou trois idées simples, sans chercher tout de suite de « belles phrases ». Rédigez ensuite un premier jet continu pour ne pas bloquer sur chaque mot.",
+          "Une fois le texte terminé, lisez-le debout à voix haute. Vous repérerez immédiatement les répétitions, les phrases trop lourdes et les endroits où vous manquez d'air. Corrigez ces passages avant même de sortir votre téléphone.",
+        ],
+        checklist: [
+          'Jour 1 : poser vos idées et rédiger le premier jet des deux textes.',
+          'Jour 2 : relire à voix haute, corriger l’orthographe et chronométrer la lecture.',
+          'Jour 3 : enregistrer vos vidéos au calme et déposer l’ensemble avant clôture.',
         ],
       },
       {
-        tabLabel: '03 · Livrables attendus',
-        kicker: 'Dépôt complet',
-        title: 'Ce que chaque candidat transmet en fin de phase',
-        summary:
-          "À l'issue de la Phase 1, votre dossier complet réunit vos deux créations écrites individuelles et leurs deux vidéos correspondantes.",
-        takeaways: [
-          'Création n°1 : texte original « Je suis… » + sa vidéo d’interprétation.',
-          'Création n°2 : texte original « Les mots que l’on n’ose pas dire » + sa vidéo d’interprétation.',
-          'Travail strictement personnel, avec correspondance fidèle entre chaque vidéo et le texte soumis.',
-        ],
+        tabLabel: '03 · Enregistrer votre vidéo',
+        kicker: 'Étape 05 · Préparation technique',
+        title: 'Un téléphone portable dans un endroit calme suffit',
         paragraphs: [
-          "À la fin de cette première phase, chaque candidat devra donc transmettre deux textes originaux et deux vidéos correspondantes : une première création autour du thème « Je suis… », accompagnée de sa vidéo d'interprétation, puis une seconde création autour du thème « Les mots que l'on n'ose pas dire », également accompagnée de sa vidéo. Les deux exercices devront être réalisés individuellement et les textes devront être des créations personnelles du candidat. Les participants devront veiller à ce que leurs vidéos correspondent bien aux textes soumis et que leur interprétation permette d'en saisir le sens et l'intention.",
+          "Aucun studio ni matériel professionnel n'est demandé. Installez-vous dans une salle fermée ou un coin calme, face à une fenêtre ou une lampe douce (évitez d'avoir la lumière vive derrière votre dos), et calez votre téléphone à hauteur des yeux.",
+          "Faites un court essai de dix secondes et écoutez-le au casque pour vérifier que votre voix porte sans écho ni bruit de ventilateur. Évitez les musiques de fond ou les effets de montage : le jury souhaite entendre votre voix et votre diction clairement.",
+        ],
+        checklist: [
+          'Cadrage stable, visage bien éclairé, loin des bruits extérieurs.',
+          'Articulation nette, rythme posé et pauses entre les idées.',
+          'Vérifier que la vidéo ne dépasse pas 05:00 avant l’envoi.',
         ],
       },
     ],
-    closingKicker: 'Esprit de la Phase 1',
-    closingTitle: 'Révéler une plume et une voix singulière',
-    closingSummary:
-      "À travers « LA PLUME », chaque étudiant montre ce que les mots peuvent raconter, révéler ou questionner — sur la page comme par la voix.",
-    closingStatement:
-      "Car avant de prendre la parole devant un public, il faut parfois commencer par trouver les mots qui méritent d'être entendus.",
-    workflowTitle: 'Ce que les candidats vont faire concrètement',
-    workflowIntro:
-      'Quatre étapes simples pour passer de l’inspiration au dépôt en ligne.',
-    workflowSteps: [
+    equityRules: [
       {
-        step: 'Étape 01',
-        timing: 'Jours 1 à 2',
-        title: 'Rédiger vos deux textes',
-        detail:
-          'Composer individuellement « Je suis… » puis « Les mots que l’on n’ose pas dire » sans plagiat ni IA.',
+        kicker: 'Anonymat',
+        title: 'Vos copies sont lues sous code UCAEP',
+        description:
+          "Les membres du jury ne voient ni votre nom, ni votre filière, ni votre année d'études pendant l'évaluation. Ce code protège l'impartialité de la notation.",
       },
       {
-        step: 'Étape 02',
-        timing: 'Jours 2 à 3',
-        title: 'Filmer vos deux lectures',
-        detail:
-          'Enregistrer au calme (un téléphone suffit) la mise en voix de chacun de vos textes.',
+        kicker: 'Originalité',
+        title: 'Pourquoi l’IA et le plagiat sont interdits',
+        description:
+          "Le concours évalue votre propre écriture et votre voix. Un texte généré par intelligence artificielle ou recopié entraîne la disqualification dès la vérification.",
       },
       {
-        step: 'Étape 03',
-        timing: 'Avant clôture (J3)',
-        title: 'Déposer sous code UCAEP',
-        detail:
-          'Transmettre vos textes et vidéos ci-dessous avec votre code d’anonymat UCAEP-2026-XXXX.',
-      },
-      {
-        step: 'Étape 04',
-        timing: 'Jours 4 à 5',
-        title: 'Évaluation & qualification',
-        detail:
-          'Le jury évalue anonymement sur 20 points puis publie la liste des qualifiés pour La Connaissance.',
+        kicker: 'Langues',
+        title: 'Français et expressions béninoises',
+        description:
+          "La langue de rédaction est le français. Quelques mots ou proverbes en langue nationale peuvent être utilisés s'ils enrichissent naturellement le texte.",
       },
     ],
-    rulesCards: [
-      {
-        kicker: 'Anonymat & équité',
-        title: 'Évaluation sous code candidat',
-        description:
-          'Aucune identité nominative n’est communiquée aux correcteurs pendant l’examen des copies. Utilisez uniquement votre code UCAEP.',
-      },
-      {
-        kicker: 'Authenticité',
-        title: 'Créations strictement personnelles',
-        description:
-          'Les deux exercices doivent être réalisés individuellement et sans recours à l’intelligence artificielle ou au plagiat.',
-      },
-      {
-        kicker: 'Langues & expression',
-        title: 'Français et sensibilité culturelle',
-        description:
-          'Langue principale : le français, avec la possibilité d’intégrer avec justesse des expressions ou proverbes béninois.',
-      },
-    ],
-    criteria: [
-      { label: 'Sincérité et profondeur du propos', points: '6 pts' },
-      { label: 'Qualité de la langue et de l’écriture', points: '6 pts' },
-      { label: 'Originalité et créativité littéraire', points: '5 pts' },
-      { label: 'Cohérence, diction et interprétation', points: '3 pts' },
-    ],
-    deliverables: [
-      'Texte original n°1 (« Je suis… ») + sa vidéo de lecture ou d’interprétation.',
-      'Texte original n°2 (« Les mots que l’on n’ose pas dire ») + sa vidéo d’interprétation.',
-      'Enregistrement clair, audible et réalisé individuellement sous code d’anonymat UCAEP.',
+    checklistBeforeSend: [
+      'J’ai relu mes deux textes personnels et vérifié qu’aucun passage n’est copié.',
+      'J’ai vérifié que chaque vidéo dure moins de 5 minutes et que le son est audible.',
+      'Chaque vidéo lit fidèlement le texte correspondant soumis dans l’espace dépôt.',
+      'Mon code UCAEP-2026-XXXX est correctement renseigné (notamment si un Google Form est actif).',
     ],
     practicalNote:
-      'Phase qualificative évaluée sur 20 points sous anonymat strict. Un recours écrit reste possible dans les 24 heures suivant l’affichage des résultats pour toute erreur matérielle.',
+      'Notation sur 20 points en double correction anonyme. Après affichage des résultats sous code, vous disposez de 24 heures pour signaler par écrit toute erreur matérielle.',
   },
   'phase-2': {
-    sectionKicker: '01 · Présentation officielle — Phase 2',
+    sectionKicker: 'Étape 01 · Présentation de la phase',
     sectionTitle: 'Phase 2 — La Connaissance',
-    sectionSubtitle: 'Réflexion, vulgarisation scientifique et transmission du savoir',
-    introSummary:
-      "Consacrée à la réflexion et à la transmission du savoir, La Connaissance met en valeur la curiosité intellectuelle, la rigueur d'analyse et la capacité à rendre des notions complexes accessibles à tous.",
-    introHighlights: [
-      {
-        num: '01',
-        title: 'Vulgarisation scientifique',
-        detail: 'Expliquer simplement et avec exactitude un phénomène de la vie courante.',
-      },
-      {
-        num: '02',
-        title: 'Réflexion éducative',
-        detail: 'Construire une pensée argumentée sur l’école, le savoir et l’avenir.',
-      },
-      {
-        num: '03',
-        title: 'Pédagogie face caméra',
-        detail: 'Présenter vos deux productions en vidéo de manière claire et vivante.',
-      },
+    sectionSubtitle: 'Vulgariser un sujet scientifique et réfléchir sur l’éducation',
+    introParagraphs: [
+      "La Phase 2 s'adresse aux candidats qualifiés après La Plume. Après l'écriture personnelle, vous travaillez ici la précision des idées et l'art de faire comprendre : expliquer clairement un sujet scientifique du quotidien et développer une réflexion personnelle sur l'école et le savoir.",
+      "À l'ENSET de Lokossa, vous manipulez déjà des concepts techniques et pédagogiques. Cette phase vous demande d'en sortir avec rigueur : comment expliquer un mécanisme sans jargon inutile à quelqu'un qui ne connaît pas votre filière ?",
+      "Comme pour la Phase 1, vous déposez vos productions écrites et vos présentations vidéo en ligne (jusqu'à 5 minutes par épreuve), sous votre code d'anonymat UCAEP. Les meilleurs dossiers accèdent aux ateliers de la Grande Finale.",
     ],
-    introParagraph:
-      "Après avoir exploré leur créativité et leur capacité à exprimer des émotions à travers l'écriture lors de la première phase, les candidats entrent dans une nouvelle étape du concours : « LA CONNAISSANCE ». Cette deuxième phase est consacrée à la réflexion, à la compréhension et à la transmission du savoir. Elle invite les participants à démontrer qu'ils ne sont pas seulement capables de manier les mots pour raconter une histoire ou exprimer un sentiment, mais qu'ils peuvent également s'en servir pour expliquer le monde qui les entoure, partager des connaissances et faire réfléchir leur public. L'ambition de cette phase est de mettre en valeur la curiosité intellectuelle, la capacité d'analyse et l'aptitude à rendre des idées parfois complexes accessibles à tous. Car le savoir ne prend véritablement toute sa valeur que lorsqu'il peut être compris, partagé et utilisé pour éclairer les autres.",
-    timelineWindow: 'Jours 6 à 11 · Phase qualificative en ligne',
-    outcomeSummary: '2 productions écrites + 2 vidéos · Sélection des finalistes.',
-    epreuvesTitle: 'Les deux défis complémentaires',
-    epreuvesIntro:
-      'Deux exercices exigeants mêlant justesse scientifique, sens critique et art de la transmission.',
+    maskedSummary:
+      "La Phase 2 se déroule en ligne pour les qualifiés de La Plume. Elle porte sur la vulgarisation scientifique et la réflexion sur la transmission des savoirs, avec remise de contenus écrits et vidéo. Les intitulés précis restent masqués jusqu'à l'ouverture au Jour 6.",
+    timelineWindow: 'Jours 6 à 11 · En ligne',
+    deliverableSummary: '2 productions écrites + 2 vidéos (≤ 5 min chacune)',
+    outcomeSummary: 'Sélection des finalistes pour Phase 3 (présentiel)',
+    epreuvesHeading: 'Présentation des deux épreuves de La Connaissance',
+    epreuvesLead:
+      'Deux exercices complémentaires qui associent exactitude du fond, exemples concrets et aisance orale face caméra.',
     epreuves: [
       {
         number: '03',
-        tag: 'Premier défi · Vulgarisation scientifique',
-        duration: 'Production + vidéo pédagogique',
+        tag: 'Épreuve 03 · Vulgarisation scientifique',
+        duration: 'Texte explicatif + vidéo (≤ 5 min)',
         title: '« La science dans notre quotidien »',
         summary:
-          "Choisir un phénomène scientifique, une innovation ou un principe technique du quotidien et l'expliquer clairement à un public non spécialiste.",
-        keyPoints: [
-          {
-            label: 'Exemples possibles',
-            text: 'Couleur du coucher de soleil, fonctionnement d’un téléphone, flottabilité, réfrigérateur, ampoule…',
-          },
-          {
-            label: 'À éviter',
-            text: 'Réciter des formules ou empiler du jargon spécialisé sans explication progressive.',
-          },
-          {
-            label: 'Méthode conseillée',
-            text: 'S’appuyer sur des exemples concrets, objets du quotidien, schémas ou démonstrations simples.',
-          },
+          "Vous choisissez un phénomène, un objet technique ou un principe scientifique présent dans la vie courante et vous l'expliquez de façon progressive. Par exemple : pourquoi le ciel change de couleur le soir, comment fonctionne un téléphone, pourquoi un objet flotte ou coule, comment un réfrigérateur conserve les aliments ou comment une ampoule éclaire.",
+        concreteAdvice:
+          "Ces exemples sont là pour vous orienter, pas pour limiter votre choix : prenez un sujet qui vous intéresse vraiment, vérifiez son exactitude scientifique et bannissez la simple récitation de formules.",
+        extraParagraphs: [
+          "Imaginez que vous parlez à un étudiant d'une toute autre filière ou à un proche curieux : partez d'une question simple (« Qu'observe-t-on ? »), expliquez le mécanisme étape par étape, puis terminez par ce que cela change dans notre quotidien.",
+          "En vidéo, vous pouvez montrer un objet simple sur votre table ou dessiner un petit schéma à main levée sur une feuille si cela facilite la compréhension.",
         ],
-        paragraphs: [
-          "Pour cette deuxième phase, les candidats devront relever deux défis complémentaires, chacun reposant sur une thématique différente. Le premier défi, intitulé « La science dans notre quotidien », porte sur la vulgarisation scientifique. Il consiste à choisir un phénomène, un principe scientifique, une découverte, une innovation ou un concept technique, puis à l'expliquer de manière claire, accessible et captivante. Les candidats devront partir d'un sujet précis et montrer comment celui-ci se manifeste dans la vie de tous les jours, comment il fonctionne ou pourquoi il mérite notre attention. Ils pourront, par exemple, expliquer pourquoi le ciel change de couleur au coucher du soleil, comment fonctionne un téléphone portable, pourquoi certains objets flottent tandis que d'autres coulent, comment le réfrigérateur conserve les aliments, ce qui permet à une ampoule de produire de la lumière ou encore les principes scientifiques qui se cachent derrière certaines pratiques quotidiennes. Le choix du sujet est libre, à condition qu'il présente un véritable intérêt scientifique et que les explications proposées soient exactes. Le candidat devra éviter de simplement réciter des définitions ou d'accumuler des informations. Il lui faudra plutôt construire une explication progressive, illustrer ses propos avec des exemples concrets et trouver une manière intéressante de faire comprendre son sujet à une personne qui ne possède pas nécessairement de connaissances préalables dans le domaine.",
-          "Ce premier exercice ne vise donc pas à désigner celui qui connaît le plus de formules scientifiques ou qui maîtrise le vocabulaire le plus spécialisé. Il cherche plutôt à révéler la capacité des candidats à comprendre une notion et à la transmettre efficacement. Un bon exercice de vulgarisation doit permettre au public de découvrir quelque chose, de comprendre un mécanisme ou de regarder autrement une situation qu'il rencontre habituellement sans forcément en connaître l'explication. Le participant devra ainsi faire preuve de rigueur dans le contenu, de pédagogie dans sa démarche et de créativité dans sa présentation. Il pourra utiliser des objets du quotidien, des illustrations, des démonstrations simples ou des exemples pour rendre son explication plus vivante. L'essentiel est que le public puisse suivre son raisonnement et retenir quelque chose à l'issue de la présentation.",
-        ],
-        formatsLabel: 'Exigence pédagogique',
+        formatsLabel: 'Ce qui est attendu',
         formats:
-          'Explication progressive, rigueur scientifique, exemples concrets, objets du quotidien ou démonstrations simples.',
+          'Explication exacte et progressive, exemples tirés du réel et support visuel simple si utile.',
       },
       {
         number: '04',
-        tag: 'Deuxième défi · Réflexion éducative',
-        duration: 'Production + lecture expressive',
+        tag: 'Épreuve 04 · Réflexion éducative',
+        duration: 'Texte argumenté + vidéo (≤ 5 min)',
         title: "« L'école, le savoir et l'avenir »",
         summary:
-          "Interroger le rôle de l'éducation, la valeur du savoir et la responsabilité des apprenants et futurs enseignants dans l'avenir de la société.",
-        keyPoints: [
-          {
-            label: 'Pistes de réflexion',
-            text: 'Que signifie apprendre ? Quelle place pour l’esprit critique, la créativité et l’innovation à l’école ?',
-          },
-          {
-            label: 'À éviter',
-            text: 'Se limiter à énumérer les problèmes du système éducatif ou à répéter des généralités.',
-          },
-          {
-            label: 'Attente du jury',
-            text: 'Développer une pensée personnelle structurée, appuyée sur des arguments et des exemples précis.',
-          },
-        ],
-        paragraphs: [
-          "Le deuxième défi, intitulé « L'école, le savoir et l'avenir », invite les candidats à mener une réflexion sur la place de l'éducation et de la connaissance dans la construction de l'individu et de la société. L'école ne se limite pas à un lieu où l'on apprend des leçons, où l'on prépare des examens ou où l'on obtient des diplômes. Elle constitue également un espace de formation, de transmission, de découverte, de confrontation des idées et de préparation à la vie. À travers cet exercice, les participants devront proposer un texte qui interroge le rôle de l'école, la valeur du savoir, la responsabilité des enseignants et des apprenants, ainsi que les perspectives qu'offre l'éducation pour l'avenir. Que signifie réellement apprendre ? L'école prépare-t-elle suffisamment les jeunes aux réalités du monde actuel ? Quelle place faut-il accorder à la curiosité, à l'esprit critique, à la créativité et à l'innovation dans les apprentissages ? Le savoir peut-il transformer une société ? Quel rôle les futurs enseignants et les étudiants peuvent-ils jouer dans la construction d'un avenir meilleur ? Ces questions constituent des pistes de réflexion et non des sujets imposés. Chaque candidat pourra choisir l'angle qui l'inspire, développer son propre point de vue et défendre une idée à travers une production structurée et argumentée.",
-          "Pour ce deuxième défi, le candidat devra produire un texte personnel dans lequel il développe une réflexion cohérente, soutient ses idées et cherche à faire comprendre son regard sur l'éducation et le devenir de la société. Il pourra adopter la forme d'un discours, d'un essai, d'une lettre ouverte, d'un plaidoyer, d'un récit réflexif ou de toute autre forme d'expression pertinente. Il ne s'agira pas simplement d'énumérer les problèmes du système éducatif ou de répéter des idées générales sur l'importance de l'école. Le participant devra construire une véritable pensée, apporter des arguments, mobiliser des exemples et, si nécessaire, proposer des pistes de réflexion. Sa production devra témoigner de sa capacité à prendre du recul, à questionner une réalité et à communiquer une vision personnelle.",
+          "Vous construisez une réflexion structurée sur le rôle de l'éducation, la valeur de l'apprentissage et la responsabilité des apprenants et futurs enseignants. Vous pouvez par exemple interroger la place de l'esprit critique, l'écart entre théorie et pratique, ou ce qui donne sens aux études aujourd'hui.",
+        concreteAdvice:
+          "Évitez de simplement lister les difficultés du système éducatif ou d'enchaîner des phrases générales. Défendez une idée claire, appuyée sur deux ou trois arguments solides et des exemples précis.",
+        extraParagraphs: [
+          "Vous pouvez rédiger ce travail sous la forme d'un essai, d'un discours, d'une lettre ouverte ou d'un plaidoyer. Veillez à bien marquer l'enchaînement de vos idées pour que le lecteur suive votre raisonnement sans effort.",
+          "Dans la vidéo qui accompagne ce texte, il s'agit d'une présentation orale vivante : regardez l'objectif, marquez des pauses entre vos arguments et portez votre conviction avec calme.",
         ],
         formatsLabel: 'Formes d’expression admises',
         formats:
-          'Discours, essai, lettre ouverte, plaidoyer, récit réflexif ou toute autre forme structurée et argumentée.',
+          'Discours, essai, lettre ouverte, plaidoyer ou récit réflexif structuré et argumenté.',
       },
     ],
-    modalitiesHeading: 'Vidéos attendues, conditions techniques et soumission',
-    modalitiesSubheading:
-      'Consultez par onglet les attentes vidéo, les supports conseillés et les livrables de la phase.',
-    modalitiesBlocks: [
+    guideHeading: 'Produits attendus, méthode pédagogique et réalisation vidéo',
+    guideLead:
+      'Organisez votre préparation entre exactitude du contenu écrit et clarté de la présentation orale.',
+    guideTabs: [
       {
-        tabLabel: '01 · Les 2 vidéos attendues',
-        kicker: 'Présentations vidéo',
-        title: 'Deux formats vidéo adaptés à chaque défi',
-        summary:
-          "Chaque texte s'accompagne d'une vidéo : une présentation pédagogique accessible pour le sujet scientifique et une lecture expressive pour le texte éducatif.",
-        takeaways: [
-          'Défi 1 (Science) : vidéo pédagogique adressée à quelqu’un qui découvre la notion.',
-          'Défi 2 (École & avenir) : lecture expressive ou présentation orale mettant en relief vos convictions.',
-          'Évaluation de la maîtrise du sujet, de la clarté du discours et de la capacité à intéresser.',
-        ],
+        tabLabel: '01 · Ce que vous devez produire',
+        kicker: 'Étape 03 · Livrables attendus',
+        title: 'Deux écrits structurés et deux vidéos pédagogiques',
         paragraphs: [
-          "Comme lors de la première phase, les productions écrites devront être accompagnées de vidéos. Pour le défi « La science dans notre quotidien », chaque candidat devra réaliser une vidéo pédagogique dans laquelle il présente et explique le sujet scientifique qu'il a choisi. Il devra s'adresser à son public comme s'il cherchait à faire découvrir une notion à une personne qui ne la connaît pas. Il lui faudra donc organiser son explication, introduire progressivement les informations, employer un langage compréhensible et veiller à la justesse de ses propos.",
-          "Pour le défi « L'école, le savoir et l'avenir », le participant devra enregistrer une vidéo dans laquelle il donne vie à son texte à travers une lecture expressive ou une présentation orale. Il devra faire ressortir les idées importantes, transmettre ses convictions et capter l'attention par la qualité de son expression. Dans les deux cas, la vidéo devra permettre au jury d'apprécier la maîtrise du sujet, la clarté du discours, la qualité de la communication et la capacité du candidat à intéresser son auditoire.",
+          "Votre dossier de Phase 2 comprend deux textes personnels (le dossier de vulgarisation scientifique et le texte réflexif sur l'école et l'avenir) ainsi que leurs deux présentations vidéo correspondantes.",
+          "Les enregistrements doivent refléter fidèlement les textes soumis, tout en restant naturels à l'oral dans la limite stricte des 5 minutes par épreuve.",
+        ],
+        checklist: [
+          'Production 1 (« La science dans notre quotidien ») + sa vidéo explicative.',
+          'Production 2 (« L’école, le savoir et l’avenir ») + sa vidéo de présentation.',
+          'Exactitude des notions scientifiques et cohérence entre texte et vidéo.',
         ],
       },
       {
-        tabLabel: '02 · Supports & enregistrement',
-        kicker: 'Réalisation pratique',
-        title: 'Un téléphone portable et des supports visuels sobres',
-        summary:
-          "Tournez simplement avec votre téléphone dans un endroit calme ; des objets, schémas ou expériences simples peuvent appuyer la démonstration scientifique.",
-        takeaways: [
-          'Environnement calme, image nette et son audible avec un simple smartphone.',
-          'Objets, schémas ou illustrations bienvenus pour clarifier le sujet scientifique.',
-          'Les effets de montage restent secondaires : votre prestation reste centrale.',
-        ],
+        tabLabel: '02 · Comment vous y prendre',
+        kicker: 'Étape 04 · Méthode de préparation',
+        title: 'Vérifier les faits, puis simplifier le vocabulaire',
         paragraphs: [
-          "Les candidats n'ont pas besoin de disposer d'un équipement audiovisuel professionnel pour réaliser leurs productions. Un téléphone portable peut suffire, à condition de privilégier un environnement calme, une bonne qualité sonore et une image suffisamment claire.",
-          "Pour la vidéo scientifique, les participants peuvent intégrer des objets, des schémas, des expériences simples ou des illustrations afin de faciliter la compréhension de leur sujet. Pour la seconde vidéo, ils sont invités à soigner leur diction, leur articulation, leur intonation et leur posture afin de rendre leur réflexion plus vivante. Les supports visuels et les effets de montage peuvent accompagner la présentation, mais ils ne doivent jamais remplacer la prestation du candidat ni masquer la qualité réelle de son travail.",
+          "Pour l'épreuve scientifique, vérifiez d'abord chaque étape du phénomène dans un manuel ou un cours fiable afin qu'aucune approximation ne subsiste. Ensuite seulement, traduisez chaque terme technique par une comparaison accessible.",
+          "Pour la réflexion éducative, formulez votre thèse en une seule phrase avant de rédiger. Si vous ne pouvez pas résumer votre point de vue en une phrase, c'est que votre plan gagne encore à être resserré.",
+        ],
+        checklist: [
+          'Jour 6 : arrêter vos deux sujets et vérifier vos sources scientifiques.',
+          'Jours 7 à 8 : rédiger les deux textes et tester la clarté auprès d’un camarade.',
+          'Jour 9 : filmer dans un endroit calme et transmettre le dossier sous code UCAEP.',
         ],
       },
       {
-        tabLabel: '03 · Livrables à soumettre',
-        kicker: 'Dépôt complet',
-        title: 'Récapitulatif des productions de Phase 2',
-        summary:
-          "Chaque candidat qualifié dépose ses deux productions écrites personnelles et leurs deux vidéos correspondantes via l'espace sécurisé UCAEP.",
-        takeaways: [
-          'Production n°1 : vulgarisation scientifique ou technique + sa vidéo explicative.',
-          'Production n°2 : réflexion sur l’école, le savoir et l’avenir + sa vidéo de présentation.',
-          'Correspondance exacte entre les textes soumis et les enregistrements vidéo.',
-        ],
+        tabLabel: '03 · Enregistrer votre vidéo',
+        kicker: 'Étape 05 · Tournage au smartphone',
+        title: 'Privilégier la pédagogie plutôt que le montage',
         paragraphs: [
-          "À l'issue de cette deuxième phase, chaque participant devra donc soumettre deux productions écrites et deux vidéos correspondantes : une première production consacrée à la vulgarisation d'un sujet scientifique ou technique, accompagnée de sa vidéo explicative, puis une seconde production portant sur l'école, le savoir et l'avenir, accompagnée de sa vidéo de présentation ou de lecture expressive. Les textes devront être personnels, originaux et construits par les candidats eux-mêmes. Les vidéos devront correspondre aux productions soumises et permettre au jury d'apprécier concrètement les compétences mobilisées dans chaque exercice.",
+          "Tournez avec votre téléphone posé face à vous, à bonne lumière et sans bruit parasite. Si vous utilisez un objet courant (une bouteille d'eau, une lampe, un cahier) pour votre démonstration scientifique, vérifiez qu'il reste bien visible dans le cadre.",
+          "Parlez à un rythme légèrement plus lent que dans une conversation courante : celui qui découvre une notion scientifique a besoin d'une seconde de silence pour assimiler chaque idée.",
+        ],
+        checklist: [
+          'Son net, débit posé et explication progressive sans lire mécaniquement.',
+          'Accessoires ou schémas lisibles si vous illustrez le sujet scientifique.',
+          'Durée vérifiée sous 05:00 avec le calculateur ci-dessous.',
         ],
       },
     ],
-    closingKicker: 'Esprit de la Phase 2',
-    closingTitle: 'Expliquer pour faire comprendre, réfléchir pour faire avancer',
-    closingSummary:
-      "« LA CONNAISSANCE » met les candidats face à deux exigences essentielles : rendre la science accessible avec précision et interroger l'éducation avec recul.",
-    closingStatement:
-      "Car savoir quelque chose est une richesse, mais être capable de le transmettre aux autres est une compétence qui peut véritablement transformer les choses.",
-    workflowTitle: 'Ce que les candidats vont faire concrètement',
-    workflowIntro:
-      'De la sélection du sujet jusqu’au dépôt de vos vidéos pédagogiques.',
-    workflowSteps: [
+    equityRules: [
       {
-        step: 'Étape 01',
-        timing: 'Jour 6',
-        title: 'Choisir ses angles et sujets',
-        detail:
-          'Sélectionner un phénomène du quotidien et définir votre thèse sur l’école, le savoir et l’avenir.',
+        kicker: 'Rigueur & pédagogie',
+        title: 'Exactitude sans jargon inutile',
+        description:
+          'Simplifier pour être compris ne veut pas dire déformer les faits. Le jury note à la fois la justesse du contenu et votre capacité à le rendre clair.',
       },
       {
-        step: 'Étape 02',
-        timing: 'Jours 6 à 8',
-        title: 'Rédiger vos deux dossiers',
-        detail:
-          'Construire une explication progressive exacte et une réflexion personnelle structurée.',
+        kicker: 'Anonymat',
+        title: 'Correction sous référence UCAEP',
+        description:
+          'Vos travaux restent associés uniquement à votre code candidat pour assurer une évaluation impartiale entre toutes les filières de l’ENSET.',
       },
       {
-        step: 'Étape 03',
-        timing: 'Avant clôture (J9)',
-        title: 'Filmer et déposer en ligne',
-        detail:
-          'Enregistrer la démonstration scientifique et la lecture expressive, puis déposer sous code UCAEP.',
-      },
-      {
-        step: 'Étape 04',
-        timing: 'Jours 10 à 11',
-        title: 'Délibération & finalistes',
-        detail:
-          'Le jury pluridisciplinaire sélectionne les finalistes appelés à L’Éloquence.',
+        kicker: 'Suite du parcours',
+        title: 'Vers les ateliers et la finale',
+        description:
+          'Les finalistes retenus bénéficient de deux jours d’ateliers pratiques de diction sur le campus avant la Grande Finale en présentiel.',
       },
     ],
-    rulesCards: [
-      {
-        kicker: 'Rigueur & vulgarisation',
-        title: 'Exactitude du fond et pédagogie',
-        description:
-          'Les explications scientifiques doivent être exactes, progressives et compréhensibles par un public non spécialiste.',
-      },
-      {
-        kicker: 'Anonymat préservé',
-        title: 'Évaluation sous code UCAEP',
-        description:
-          'Les travaux sont examinés sous référence anonyme afin de garantir l’impartialité entre toutes les filières.',
-      },
-      {
-        kicker: 'Vers la finale',
-        title: 'Accès aux ateliers de L’Éloquence',
-        description:
-          'Les candidats retenus accèdent aux ateliers préparatoires et à la Grande Finale en présentiel.',
-      },
-    ],
-    criteria: [
-      { label: 'Exactitude scientifique et maîtrise des idées', points: '6 pts' },
-      { label: 'Clarté pédagogique et capacité de vulgarisation', points: '6 pts' },
-      { label: 'Qualité de l’expression orale et conviction', points: '5 pts' },
-      { label: 'Structure logique et argumentation', points: '3 pts' },
-    ],
-    deliverables: [
-      'Production écrite n°1 (« La science dans notre quotidien ») + sa vidéo pédagogique.',
-      'Production écrite n°2 (« L’école, le savoir et l’avenir ») + sa vidéo de présentation.',
-      'Textes personnels et originaux correspondant fidèlement aux vidéos soumises.',
+    checklistBeforeSend: [
+      'J’ai vérifié l’exactitude scientifique de mon explication « La science dans notre quotidien ».',
+      'Mon texte « L’école, le savoir et l’avenir » défend un point de vue clair et argumenté.',
+      'Mes deux vidéos durent moins de 5 minutes et s’entendent sans bruit de fond.',
+      'Mes envois respectent la date limite indiquée dans l’espace dépôt.',
     ],
     practicalNote:
-      'Phase qualificative sur 20 points réservée aux candidats qualifiés après La Plume. Les scores demeurent confidentiels jusqu’à publication officielle sous code.',
+      'Phase qualificative sur 20 points réservée aux qualifiés de La Plume. Les résultats sont publiés sous code candidat avec possibilité de recours matériel sous 24 heures.',
   },
   'phase-3': {
-    sectionKicker: '01 · Présentation officielle — Phase 3',
+    sectionKicker: 'Étape 01 · Présentation de la phase',
     sectionTitle: "Phase 3 — L'Éloquence",
-    sectionSubtitle: 'La grande finale en présentiel devant un public et un jury',
-    introSummary:
-      "Ultime étape du concours tenue en présentiel devant un public et un jury, L'Éloquence réunit tout ce que les finalistes ont développé : maîtrise des mots, construction des idées, confiance en soi et présence sur scène.",
-    introHighlights: [
-      {
-        num: '01',
-        title: '100 % en présentiel',
-        detail: 'Aucun dépôt vidéo en ligne : tout se joue en direct devant public et jury.',
-      },
-      {
-        num: '02',
-        title: 'Discours préparé libre',
-        detail: 'Défendre une conviction personnelle sur un thème de votre choix.',
-      },
-      {
-        num: '03',
-        title: 'Improvisation en direct',
-        detail: 'Réagir avec créativité et sang-froid sur un thème dévoilé le jour même.',
-      },
+    sectionSubtitle: 'Deux jours d’ateliers sur le campus puis la Grande Finale devant public',
+    introParagraphs: [
+      "La troisième et dernière phase se déroule entièrement en présentiel à l'ENSET de Lokossa. Il n'y a plus de fichier ni de vidéo à envoyer en ligne : vous défendez vos idées en direct devant le public étudiant et le jury.",
+      "Pour vous y préparer sereinement, l'organisation prévoit deux journées d'ateliers pratiques (Jours 12 et 13) encadrées par la Session Théâtre de l'UCAEP. Vous y travaillez la respiration, l'articulation, le regard, la gestion du trac et l'utilisation du micro sur scène.",
+      "Le Jour 14, lors de la finale, vous enchaînez deux exercices complémentaires : une prise de parole préparée chez vous sur un sujet libre, puis une courte improvisation à partir d'un thème découvert sur place.",
     ],
-    introParagraph:
-      "Après avoir exploré l'écriture et démontré leur capacité à transmettre des connaissances, les candidats accèdent à la dernière étape du concours : « L'ÉLOQUENCE ». Contrairement aux deux premières phases, qui se déroulent à distance à travers des productions vidéo, cette ultime étape se tiendra en présentiel, devant un public et un jury. Elle représente le moment où les candidats devront mettre en pratique tout ce qu'ils ont développé jusque-là : la maîtrise des mots, la construction des idées, la confiance en soi et la capacité à captiver un auditoire.",
-    timelineWindow: 'Jours 12 à 14 · En présentiel à l’ENSET de Lokossa',
-    outcomeSummary: '2 épreuves sur scène devant public et jury · Palmarès et distinctions.',
-    epreuvesTitle: 'Les deux épreuves de la Grande Finale',
-    epreuvesIntro:
-      'Deux prises de parole publiques complémentaires pour évaluer à la fois la conviction préparée et la spontanéité.',
+    maskedSummary:
+      "La Phase 3 (« L'Éloquence ») réunit les finalistes en présentiel à l'ENSET de Lokossa après deux journées d'ateliers de diction (Jours 12 et 13). Les intitulés exacts des deux épreuves finales sont publiés à l'approche de la finale.",
+    timelineWindow: 'Jours 12 à 14 · En présentiel',
+    deliverableSummary: 'Présence aux ateliers (J12–13) + 2 passages sur scène (J14)',
+    outcomeSummary: 'Palmarès final et remise des attestations officielles',
+    epreuvesHeading: 'Présentation des deux épreuves de L’Éloquence',
+    epreuvesLead:
+      'Deux passages complémentaires en direct devant jury et public, sans élimination en cours de soirée.',
     epreuves: [
       {
         number: '05',
-        tag: 'Première épreuve · Intervention préparée',
-        duration: 'Discours devant jury et public',
+        tag: 'Épreuve 05 · Discours préparé sur sujet libre',
+        duration: 'Passage sur scène (≤ 5 min)',
         title: '« La parole que le monde doit entendre »',
         summary:
-          "Préparer chez soi une intervention orale personnelle sur un sujet libre, puis la défendre sur scène le jour de la finale avec force d'argumentation.",
-        keyPoints: [
-          {
-            label: 'Sujet libre',
-            text: 'Domaine littéraire, social, scientifique, éducatif ou culturel au choix du finaliste.',
-          },
-          {
-            label: 'Construction',
-            text: 'Élaborer un discours personnel, défendre une idée ou porter une conviction importante.',
-          },
-          {
-            label: 'Évaluation en direct',
-            text: 'Pertinence du propos, qualité de l’argumentation et capacité à convaincre l’auditoire.',
-          },
-        ],
-        paragraphs: [
-          "Cette phase comportera deux épreuves. La première, « La parole que le monde doit entendre », consiste à préparer chez soi une intervention orale autour d'un sujet libre, pouvant être littéraire, social, scientifique, éducatif ou culturel. Chaque candidat devra construire un discours personnel, défendre une idée, partager une conviction ou porter un message qu'il juge important.",
-          "Le jour de la finale, il présentera son intervention devant le jury et le public, en veillant à la pertinence de son propos, à la qualité de son argumentation et à sa capacité à convaincre.",
+          "Vous préparez à l'avance une prise de parole personnelle sur le thème de votre choix (littéraire, éducatif, scientifique, social ou culturel), puis vous la présentez devant le jury et la salle le jour de la finale.",
+        concreteAdvice:
+          "Choisissez un sujet sur lequel vous avez une vraie conviction personnelle, pas un discours trop large qui cherche à tout dire en cinq minutes. Une idée forte bien défendue marque plus l'auditoire.",
+        extraParagraphs: [
+          "Votre discours gagne à être structuré clairement : une entrée en matière qui capte l'attention, deux ou trois arguments appuyés sur du concret, et une conclusion nette.",
+          "Durant les ateliers des Jours 12 et 13, vous pouvez répéter votre passage au micro avec l'encadrement de la Session Théâtre pour ajuster votre posture et vos silences.",
         ],
         formatsLabel: 'Champ du sujet',
         formats:
-          'Sujet libre — littéraire, social, scientifique, éducatif ou culturel — défendu en présentiel devant le jury et le public.',
+          'Thème libre (éducatif, scientifique, littéraire, social ou culturel) préparé en amont et prononcé en direct.',
       },
       {
         number: '06',
-        tag: 'Deuxième épreuve · Improvisation sur place',
-        duration: 'Préparation courte & prise de parole',
+        tag: 'Épreuve 06 · Improvisation sur thème tiré sur place',
+        duration: 'Temps de préparation court + parole sur scène',
         title: "« Le défi de l'inattendu »",
         summary:
-          "Découvrir un thème le jour de la finale, organiser ses idées en un temps limité puis prendre la parole sans discours préparé à l'avance.",
-        keyPoints: [
-          {
-            label: 'Thème sur place',
-            text: 'Sujet communiqué le jour même avec un court temps de préparation pour bâtir son plan.',
-          },
-          {
-            label: 'Prise de parole spontanée',
-            text: 'Prendre la parole sans texte rédigé au préalable devant le jury et la salle.',
-          },
-          {
-            label: 'Qualités évaluées',
-            text: 'Spontanéité, réactivité, créativité, structuration rapide d’une pensée et aisance.',
-          },
+          "Le jour de la finale, un sujet vous est communiqué sur place. Après un court moment de préparation pour organiser vos idées, vous prenez la parole sans texte rédigé au préalable.",
+        concreteAdvice:
+          "En improvisation, ne cherchez pas à parler vite dès la première seconde. Prenez cinq secondes pour respirer, annoncez votre idée principale en une phrase claire, donnez un exemple concret puis concluez posément.",
+        extraParagraphs: [
+          "Cet exercice évalue votre capacité d'écoute, votre sang-froid et votre manière d'organiser une pensée rapidement face à l'imprévu.",
+          "Aucun savoir encyclopédique caché n'est attendu : la pertinence du raisonnement, le contact avec le public et la clarté d'élocution comptent avant tout.",
         ],
-        paragraphs: [
-          "La seconde épreuve, « Le défi de l'inattendu », mettra les candidats face à une situation d'improvisation. Le thème leur sera communiqué le jour de la finale. Ils disposeront alors d'un temps de préparation pour organiser leurs idées, construire leur intervention et trouver la meilleure manière de traiter le sujet proposé.",
-          "Ils devront ensuite prendre la parole sans avoir préparé leur discours à l'avance. Cette épreuve permettra notamment d'évaluer leur spontanéité, leur réactivité, leur créativité, leur capacité à structurer rapidement une pensée et leur aisance face à l'imprévu.",
-        ],
-        formatsLabel: 'Compétences évaluées',
+        formatsLabel: 'Ce qui est évalué',
         formats:
-          'Spontanéité, réactivité, créativité, structuration rapide d’une pensée et aisance face à l’imprévu.',
+          'Écoute, réactivité d’argumentation, structuration rapide de la pensée et présence devant la salle.',
       },
     ],
-    modalitiesHeading: 'Organisation de la finale en présentiel',
-    modalitiesSubheading:
-      'Aucun fichier vidéo n’est à déposer en ligne : préparez votre venue sur le campus de l’ENSET de Lokossa.',
-    modalitiesBlocks: [
+    guideHeading: 'Comment se déroulent la préparation et la soirée finale',
+    guideLead:
+      'Retrouvez l’organisation concrète des Jours 12, 13 et 14 sur le campus de l’ENSET de Lokossa.',
+    guideTabs: [
       {
-        tabLabel: '01 · Ateliers de diction (J12–13)',
-        kicker: 'Préparation en amont',
-        title: 'Ateliers de diction et maîtrise scénique',
-        summary:
-          'Deux journées encadrées par la Session Théâtre UCAEP sur le campus pour travailler le souffle, la posture et la projection vocale avant le jour J.',
-        takeaways: [
-          'Exercices collectifs de respiration, articulation et gestion du trac (Jour 12).',
-          'Répétitions individuelles et calage technique au micro sur scène (Jour 13).',
-          'Accompagnement personnalisé de votre passage préparé sans dénaturer votre style.',
-        ],
+        tabLabel: '01 · Ce qu’il faut préparer',
+        kicker: 'Étape 03 · Avant le campus',
+        title: 'Votre discours préparé et votre présence aux ateliers',
         paragraphs: [
-          'En prélude à la Grande Finale, les finalistes participent sur le campus de l’ENSET de Lokossa à deux journées d’ateliers pratiques encadrées par la Session Théâtre UCAEP pour travailler la respiration, la posture, l’occupation de l’espace et la projection vocale.',
+          "Pour cette phase finale, vous n'avez aucun fichier à déposer sur la plateforme. Votre travail personnel en amont consiste à rédiger puis mémoriser les points clés de votre discours « La parole que le monde doit entendre ».",
+          "Veillez à ce que votre intervention reste confortable sous les 5 minutes : vous pourrez utiliser le minuteur de lecture sur cette page pour calibrer votre texte avant les ateliers.",
+        ],
+        checklist: [
+          'Aucun envoi en ligne requis pour la Phase 3.',
+          'Discours préparé sur sujet libre calibré sous 05:00.',
+          'Présence indispensable aux deux jours d’ateliers et au Jour 14.',
         ],
       },
       {
-        tabLabel: '02 · Finale devant jury (J14)',
-        kicker: 'Le jour de la finale',
-        title: 'Passages devant le jury et le public',
-        summary:
-          'Chaque finaliste enchaîne sur scène son discours préparé puis l’épreuve d’improvisation devant la communauté universitaire et le jury pluridisciplinaire.',
-        takeaways: [
-          'Acte 1 : « La parole que le monde doit entendre » — intervention préparée chez soi.',
-          'Acte 2 : « Le défi de l’inattendu » — thème remis sur place et improvisation.',
-          'Clôture : délibération en direct, palmarès et remise des attestations officielles.',
-        ],
+        tabLabel: '02 · Ateliers Jours 12–13',
+        kicker: 'Étape 04 · Encadrement Session Théâtre',
+        title: 'Travailler la voix, le souffle et l’espace scénique',
         paragraphs: [
-          'Chaque finaliste enchaîne la présentation de son discours préparé « La parole que le monde doit entendre » puis relève en direct « Le défi de l’inattendu » après communication du thème sur place et temps de préparation.',
+          "Les Jours 12 et 13 réunissent les finalistes à l'ENSET de Lokossa avec l'équipe de la Session Théâtre UCAEP. Le premier jour est consacré aux exercices collectifs : poser sa respiration, projeter la voix sans crier, gérer le trac et regarder la salle.",
+          "Le deuxième jour permet des passages d'essai individuels et des réglages techniques au microphone pour vous sentir à l'aise dans la salle de la finale.",
+        ],
+        checklist: [
+          'Jour 12 : respiration, articulation, gestion du trac et écoute.',
+          'Jour 13 : répétitions individuelles et calage technique au micro.',
+          'Retours bienveillants sans modifier votre style personnel.',
+        ],
+      },
+      {
+        tabLabel: '03 · Soirée finale Jour 14',
+        kicker: 'Étape 05 · Passage devant jury et public',
+        title: 'Enchaîner les deux épreuves sans élimination intermédiaire',
+        paragraphs: [
+          "Le Jour 14, tous les finalistes présentent successivement leur discours préparé puis l'épreuve d'improvisation devant le jury pluridisciplinaire et le public. Aucune élimination n'a lieu entre les deux épreuves de la soirée.",
+          "À l'issue des passages, le jury délibère pour proclamer le palmarès de l'édition 2026 et remettre les attestations officielles à chaque participant.",
+        ],
+        checklist: [
+          'Acte 1 : « La parole que le monde doit entendre ».',
+          'Acte 2 : « Le défi de l’inattendu » sur thème communiqué sur place.',
+          'Délibération finale, palmarès et remise des attestations.',
         ],
       },
     ],
-    closingKicker: 'Esprit de la Phase 3',
-    closingTitle: 'De la page écrite à la présence sur scène',
-    closingSummary:
-      "Bien plus que réciter un texte, les finalistes doivent penser, convaincre, émouvoir et défendre leurs idées face à un auditoire.",
-    closingStatement:
-      "« L'ÉLOQUENCE » constitue ainsi le grand rendez-vous final du concours, celui où les mots quittent définitivement la page pour prendre toute leur dimension sur scène.",
-    workflowTitle: 'Ce que les finalistes vont vivre étape par étape',
-    workflowIntro:
-      'De la préparation individuelle jusqu’au passage public sur la scène de l’ENSET.',
-    workflowSteps: [
+    equityRules: [
       {
-        step: 'Étape 01',
-        timing: 'En amont',
-        title: 'Préparer son discours libre',
-        detail:
-          'Construire « La parole que le monde doit entendre » sur le thème de votre choix.',
-      },
-      {
-        step: 'Étape 02',
-        timing: 'Jours 12 à 13',
-        title: 'Ateliers et calage scénique',
-        detail:
-          'Travail de diction, souffle, posture et essais micro avec la Session Théâtre.',
-      },
-      {
-        step: 'Étape 03',
-        timing: 'Jour 14 · Scène',
-        title: 'Discours & improvisation',
-        detail:
-          'Présenter votre discours préparé puis relever « Le défi de l’inattendu » en direct.',
-      },
-      {
-        step: 'Étape 04',
-        timing: 'Clôture (J14)',
-        title: 'Délibération et distinctions',
-        detail:
-          'Proclamation du palmarès et remise des prix et attestations aux finalistes.',
-      },
-    ],
-    rulesCards: [
-      {
-        kicker: 'Modalité 100 % présentielle',
+        kicker: '100 % présentiel',
         title: 'Aucun dépôt en ligne requis',
         description:
-          'Contrairement aux deux premières phases à distance, toute l’évaluation se tient physiquement devant le jury et le public.',
+          'Toutes les évaluations de Phase 3 se déroulent en direct sur le campus de l’ENSET de Lokossa devant la salle et le jury.',
       },
       {
         kicker: 'Jury pluridisciplinaire',
-        title: 'Évaluation en direct sur scène',
+        title: 'Évaluation globale de la soirée',
         description:
-          'Le jury apprécie conjointement la pertinence du propos, l’argumentation, l’émotion et la réactivité en improvisation.',
+          'Les deux passages (préparé et spontané) sont notés ensemble sur 20 points sans élimination au milieu de la finale.',
       },
       {
-        kicker: 'Valorisation',
-        title: 'Attestations et rayonnement',
+        kicker: 'Attestations',
+        title: 'Reconnaissance pour chaque participant',
         description:
-          'Tous les finalistes reçoivent une attestation officielle et participent au rayonnement de l’art oratoire à l’ENSET.',
+          'Tous les étudiants engagés dans le concours sont invités à la finale et reçoivent une attestation officielle UCAEP.',
       },
     ],
-    criteria: [
-      { label: 'Présence scénique, posture et diction', points: '6 pts' },
-      { label: 'Pertinence du propos et argumentation', points: '6 pts' },
-      { label: 'Spontanéité et maîtrise de l’imprévu', points: '5 pts' },
-      { label: 'Capacité à convaincre et captiver l’auditoire', points: '3 pts' },
-    ],
-    deliverables: [
-      'Discours préparé chez soi : « La parole que le monde doit entendre ».',
-      'Présence aux ateliers préparatoires et à la Grande Finale à l’ENSET de Lokossa.',
-      'Prise de parole spontanée sur place : « Le défi de l’inattendu ».',
+    checklistBeforeSend: [
+      'J’ai testé la durée de mon discours préparé pour rester en dessous de 5 minutes.',
+      'J’ai noté les dates et horaires des ateliers de diction (Jours 12 et 13) sur le campus.',
+      'Je prépare mes repères mentaux sans dépendre uniquement de feuilles lues mot à mot.',
+      'Je suis prêt à arriver en avance le Jour 14 pour le tirage de l’ordre de passage.',
     ],
     practicalNote:
-      'Grande Finale en présentiel à l’ENSET de Lokossa devant le jury et le public. Aucun dépôt de fichier en ligne n’est requis pour cette étape.',
+      'Grande Finale en présentiel à l’ENSET de Lokossa, notée sur 20 points sans élimination en cours de soirée. Aucun dépôt de fichier en ligne n’est demandé.',
   },
 };
 
@@ -745,21 +486,16 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   const { siteConfig, activePhase, phasesSummary, announcements } = useSiteConfig();
   const pageRef = useRef<HTMLDivElement>(null);
   const [expandedAnnId, setExpandedAnnId] = useState<string | null>(null);
-  const [showFullIntro, setShowFullIntro] = useState(false);
   const [expandedEpreuves, setExpandedEpreuves] = useState<Record<string, boolean>>({});
-  const [activeModalityIdx, setActiveModalityIdx] = useState(0);
-  const [showFullModality, setShowFullModality] = useState(false);
+  const [activeGuideTab, setActiveGuideTab] = useState(0);
 
   useEditorialScrollMotion(pageRef, [activePhase?.id]);
 
   useEffect(() => {
-    setShowFullIntro(false);
     setExpandedEpreuves({});
-    setActiveModalityIdx(0);
-    setShowFullModality(false);
+    setActiveGuideTab(0);
   }, [activePhase?.id]);
 
-  // Quick inline contact state
   const [contactOpen, setContactOpen] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -776,7 +512,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   usePageSeo(
     phaseTitle,
     activePhase?.shortDescription ||
-      'Toutes les informations, consignes et modalités de participation pour la phase en cours du concours UCAEP.',
+      'Guide complet du candidat : consignes, préparation vidéo, barème et espace de dépôt pour la phase en cours du concours UCAEP.',
   );
 
   useEffect(() => {
@@ -833,8 +569,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   const isPresentiel =
     activePhase.format === 'En présentiel' || activePhase.id === 'phase-3';
   const dossier =
-    PHASE_INSTITUTIONAL_DOSSIERS[activePhase.id] ||
-    PHASE_INSTITUTIONAL_DOSSIERS['phase-1'];
+    PHASE_EDITORIAL_DOSSIERS[activePhase.id] ||
+    PHASE_EDITORIAL_DOSSIERS['phase-1'];
   const deadlineLabel = formatDeadline(activePhase.submissionDeadline);
   const hasNotice = Boolean(siteConfig.customNotice && siteConfig.customNotice.trim());
 
@@ -875,7 +611,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 href="#informations"
                 className="text-xs font-semibold underline hover:text-ucaep-green shrink-0"
               >
-                Voir les annonces
+                Consulter les annonces
               </a>
             </div>
           )}
@@ -898,11 +634,11 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-[#171412]/85 leading-relaxed max-w-2xl">
+              <p className="text-base sm:text-lg text-[#171412]/85 leading-relaxed max-w-prose">
                 {activePhase.shortDescription}
               </p>
 
-              {/* Métadonnées épurées sans pilules */}
+              {/* Repères essentiels sans répétition */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-t border-b border-[#4E2A1E]/18 tabular-nums">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
@@ -922,10 +658,10 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
-                    Présentation
+                    Temps max
                   </p>
                   <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
-                    Jusqu&apos;à 5 min · / 20 pts
+                    5 min · / 20 pts
                   </p>
                 </div>
                 <div>
@@ -948,10 +684,10 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 >
                   <span>
                     {isPresentiel
-                      ? 'Programme en présentiel'
+                      ? 'Consulter le programme sur le campus'
                       : activePhase.submissionsOpen
-                        ? 'Déposer ma production'
-                        : 'Accéder à mon dossier'}
+                        ? 'Déposer mes productions'
+                        : 'Accéder à mon espace candidat'}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </a>
@@ -959,13 +695,13 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   href="#comprendre-phase"
                   className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#4E2A1E]/35 text-[#4E2A1E] hover:bg-[#4E2A1E]/6"
                 >
-                  <span>Présentation complète</span>
+                  <span>Consulter les consignes</span>
                   <ArrowDown className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
 
-            {/* Colonne droite : Visuel éditorial de la phase */}
+            {/* Colonne droite : Photographie documentaire */}
             <div className="lg:col-span-5">
               <div className="relative bg-[#4E2A1E] p-3 sm:p-4 rounded-sm shadow-xl">
                 <div className="aspect-[4/5] max-h-[540px] w-full overflow-hidden rounded-[2px]">
@@ -980,7 +716,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                     Phase {activePhase.number} · {activePhase.title}
                   </span>
                   <span className="font-mono uppercase tracking-widest text-[10px] text-ucaep-gold">
-                    Édition 2026
+                    ENSET Lokossa
                   </span>
                 </div>
               </div>
@@ -988,7 +724,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
           </div>
         </div>
 
-        {/* Bandeau inférieur brun profond : repère de progression des 3 phases */}
+        {/* Bandeau inférieur brun profond : repère des 3 phases */}
         <div className="relative z-10 bg-[#4E2A1E] text-[#F7E6C8] border-t border-ucaep-gold/25">
           <BrandPatternBand variant="obsidian" tileWidth={140} className="h-2 opacity-80" />
           <div className="max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
@@ -1014,7 +750,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               })}
             </div>
             <p className="text-[#F7E6C8]/75">
-              Présentation complète, consignes et espace de dépôt réunis sur cette page.
+              Guide complet du candidat : consignes, préparation, barème et dépôt réunis ici.
             </p>
           </div>
         </div>
@@ -1022,23 +758,23 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
 
       <SectionAnchorRail
         items={[
-          { id: 'comprendre-phase', num: '01', label: 'Présentation' },
+          { id: 'comprendre-phase', num: '01', label: 'Guide de la phase' },
           {
             id: 'atelier-video',
             num: '02',
-            label: isPresentiel ? 'Préparation scénique' : 'Atelier vidéo 5 min',
+            label: isPresentiel ? 'Préparer son passage' : 'Préparer sa vidéo',
           },
-          { id: 'consignes', num: '03', label: 'Consignes & barème' },
+          { id: 'consignes', num: '03', label: 'Vérifier & barème' },
           {
             id: 'depot-production',
             num: '04',
-            label: isPresentiel ? 'Finale présentiel' : 'Espace dépôt',
+            label: isPresentiel ? 'Finale présentiel' : 'Déposer',
           },
           { id: 'informations', num: '05', label: 'Annonces & contact' },
         ]}
       />
 
-      {/* SECTION 2 : PRÉSENTATION DYNAMIQUE ET STRUCTURÉE DE LA PHASE ACTIVE */}
+      {/* SECTION 2 : GUIDE PROGRESSIF DE LA PHASE ACTIVE (ÉTAPES 1 À 5 SANS RÉPÉTITION) */}
       <section
         id="comprendre-phase"
         className="relative scroll-mt-20 py-16 lg:py-24 bg-[#FBF9F5] paper-grain border-b border-ucaep-brown/14 overflow-hidden"
@@ -1049,8 +785,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
           opacityClass="opacity-[0.035]"
           blendMultiply
         />
-        <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-14">
-          {/* En-tête éditorial aéré + 3 repères immédiats */}
+        <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-16">
+          {/* ÉTAPE 1 : PRÉSENTATION EN PARAGRAPHES CONTINUS */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
             <div className="lg:col-span-8 space-y-6">
               <div className="space-y-2">
@@ -1065,56 +801,12 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </p>
               </div>
 
-              <div className="space-y-3 max-w-prose">
-                <p className="text-base sm:text-[17px] text-ucaep-ink/90 leading-relaxed">
-                  {dossier.introSummary}
-                </p>
-
-                {showFullIntro && (
-                  <p className="pt-3 border-t border-ucaep-brown/12 text-sm sm:text-[15px] text-ucaep-ink/82 leading-[1.75]">
-                    {dossier.introParagraph}
-                  </p>
+              <div className="space-y-4 max-w-prose text-base sm:text-[17px] text-ucaep-ink/88 leading-[1.75]">
+                {activePhase.isRevealed ? (
+                  dossier.introParagraphs.map((para, idx) => <p key={idx}>{para}</p>)
+                ) : (
+                  <p>{dossier.maskedSummary}</p>
                 )}
-
-                <button
-                  type="button"
-                  aria-expanded={showFullIntro}
-                  onClick={() => setShowFullIntro((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
-                >
-                  <span>
-                    {showFullIntro
-                      ? 'Masquer le texte complet'
-                      : 'Lire la présentation détaillée'}
-                  </span>
-                  {showFullIntro ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
-
-              {/* 3 repères visuels immédiats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                {dossier.introHighlights.map((item, idx) => (
-                  <div
-                    key={item.num}
-                    className="p-4 bg-white border border-ucaep-brown/14 rounded-sm space-y-1.5"
-                  >
-                    <span className="font-mono text-[11px] font-semibold text-ucaep-gold tabular-nums">
-                      {item.num}
-                    </span>
-                    <h3 className="font-serif text-base font-semibold text-ucaep-brown">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-ucaep-ink/78 leading-relaxed">
-                      {!activePhase.isRevealed && idx === 0
-                        ? "Deux épreuves complémentaires dont les intitulés exacts sont masqués jusqu'à l'ouverture officielle de cette phase."
-                        : item.detail}
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -1127,13 +819,13 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 ) : (
                   <Mic2 className="w-4 h-4" />
                 )}
-                <span>Fiche synthétique · Phase {activePhase.number}</span>
+                <span>En bref · Phase {activePhase.number}</span>
               </div>
 
               <dl className="divide-y divide-ucaep-brown/10 text-sm">
                 <div className="py-3 space-y-1">
                   <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    Fenêtre du parcours
+                    Calendrier
                   </dt>
                   <dd className="font-medium text-ucaep-brown tabular-nums">
                     {dossier.timelineWindow}
@@ -1141,15 +833,15 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </div>
                 <div className="py-3 space-y-1">
                   <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    Modalité d&apos;organisation
+                    À remettre
                   </dt>
                   <dd className="font-medium text-ucaep-ink">
-                    {activePhase.format} · 2 épreuves
+                    {dossier.deliverableSummary}
                   </dd>
                 </div>
                 <div className="py-3 space-y-1">
                   <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    Issue de l&apos;étape
+                    Suite du parcours
                   </dt>
                   <dd className="font-medium text-ucaep-green">
                     {dossier.outcomeSummary}
@@ -1159,19 +851,17 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
             </aside>
           </div>
 
-          {/* Sous-section A : Les deux défis / épreuves (Synthèse + Pistes clés + Note dépliable) */}
-          <div className="space-y-6 pt-6 border-t border-ucaep-brown/14">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-gold">
-                  Cahier des épreuves
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                  {dossier.epreuvesTitle}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-ucaep-ink/75 max-w-md">
-                {dossier.epreuvesIntro}
+          {/* ÉTAPE 2 : PRÉSENTATION DES ÉPREUVES (PROTÉGÉE PAR isRevealed) */}
+          <div className="space-y-6 pt-8 border-t border-ucaep-brown/14">
+            <div className="space-y-2 max-w-prose">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-gold">
+                Étape 02 · Présentation des épreuves
+              </p>
+              <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
+                {dossier.epreuvesHeading}
+              </h3>
+              <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
+                {dossier.epreuvesLead}
               </p>
             </div>
 
@@ -1197,39 +887,29 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                         {epreuve.title}
                       </h4>
 
-                      <p className="text-[15px] text-ucaep-ink/90 leading-relaxed">
+                      <p className="text-[15px] sm:text-base text-ucaep-ink/88 leading-[1.7] max-w-prose">
                         {epreuve.summary}
                       </p>
 
-                      <ul className="space-y-2.5 pt-1">
-                        {epreuve.keyPoints.map((kp) => (
-                          <li
-                            key={kp.label}
-                            className="flex items-start gap-2.5 text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed"
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
-                            <span>
-                              <strong className="font-semibold text-ucaep-brown">
-                                {kp.label} :
-                              </strong>{' '}
-                              {kp.text}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <div className="p-3.5 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1">
+                      <div className="p-4 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                          {epreuve.formatsLabel}
+                          Repère utile sans sujet imposé
                         </p>
-                        <p className="text-xs text-ucaep-ink/85 leading-relaxed">
-                          {epreuve.formats}
+                        <p className="text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
+                          {epreuve.concreteAdvice}
                         </p>
                       </div>
 
+                      <p className="text-xs text-ucaep-brown/80 leading-relaxed">
+                        <strong className="font-semibold text-ucaep-brown">
+                          {epreuve.formatsLabel} :
+                        </strong>{' '}
+                        {epreuve.formats}
+                      </p>
+
                       {isExpanded && (
-                        <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/82 leading-[1.75]">
-                          {epreuve.paragraphs.map((paragraph, pIdx) => (
+                        <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/84 leading-[1.75]">
+                          {epreuve.extraParagraphs.map((paragraph, pIdx) => (
                             <p key={pIdx}>{paragraph}</p>
                           ))}
                         </div>
@@ -1249,8 +929,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                         >
                           <span>
                             {isExpanded
-                              ? 'Réduire les consignes détaillées'
-                              : 'Lire les consignes détaillées'}
+                              ? 'Masquer les repères de préparation'
+                              : 'Lire les repères de préparation'}
                           </span>
                           {isExpanded ? (
                             <ChevronUp className="w-3.5 h-3.5" />
@@ -1283,7 +963,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                       Sujet et consignes en attente de publication
                     </h4>
                     <p className="text-sm text-ucaep-ink/80 leading-relaxed">
-                      L&apos;intitulé précis et le cahier des charges de cette épreuve sont masqués jusqu&apos;à l&apos;ouverture officielle par l&apos;équipe organisatrice de l&apos;UCAEP.
+                      L&apos;intitulé précis et le sujet de cette épreuve sont masqués jusqu&apos;à l&apos;ouverture officielle par l&apos;équipe organisatrice de l&apos;UCAEP.
                     </p>
                   </article>
                 ))}
@@ -1291,188 +971,94 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
             )}
           </div>
 
-          {/* Sous-section B : Onglets interactifs (Format, Vidéo & Livrables) */}
+          {/* ÉTAPES 3, 4 & 5 : CE QU'IL FAUT PRODUIRE, MÉTHODE ET PRÉPARATION */}
           {activePhase.isRevealed && (
-          <div className="space-y-6 pt-6 border-t border-ucaep-brown/14">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl">
+            <div className="space-y-6 pt-8 border-t border-ucaep-brown/14">
+              <div className="space-y-2 max-w-prose">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                  Guide pratique
+                  Étapes 03 à 05 · Méthode et réalisation
                 </p>
                 <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                  {dossier.modalitiesHeading}
+                  {dossier.guideHeading}
                 </h3>
+                <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
+                  {dossier.guideLead}
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-ucaep-ink/75 max-w-md">
-                {dossier.modalitiesSubheading}
-              </p>
-            </div>
 
-            {(() => {
-              const safeIdx =
-                activeModalityIdx < dossier.modalitiesBlocks.length
-                  ? activeModalityIdx
-                  : 0;
-              const currentBlock = dossier.modalitiesBlocks[safeIdx];
-              return (
-                <div className="bg-white border border-ucaep-brown/16 rounded-sm overflow-hidden">
-                  {/* Barre d'onglets */}
-                  <div
-                    role="tablist"
-                    aria-label={dossier.modalitiesHeading}
-                    className="flex flex-wrap border-b border-ucaep-brown/14 bg-[#F7E6C8]/28"
-                  >
-                    {dossier.modalitiesBlocks.map((block, idx) => {
-                      const isActive = idx === safeIdx;
-                      return (
-                        <button
-                          key={block.tabLabel}
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          onClick={() => {
-                            setActiveModalityIdx(idx);
-                            setShowFullModality(false);
-                          }}
-                          className={`px-5 py-4 text-xs sm:text-sm font-semibold transition-colors border-b-2 text-left whitespace-nowrap ${
-                            isActive
-                              ? 'border-ucaep-brown text-ucaep-brown bg-white'
-                              : 'border-transparent text-ucaep-brown/65 hover:text-ucaep-brown hover:bg-white/50'
-                          }`}
-                        >
-                          {block.tabLabel}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {(() => {
+                const safeIdx =
+                  activeGuideTab < dossier.guideTabs.length ? activeGuideTab : 0;
+                const currentTab = dossier.guideTabs[safeIdx];
+                return (
+                  <div className="bg-white border border-ucaep-brown/16 rounded-sm overflow-hidden">
+                    <div
+                      role="tablist"
+                      aria-label={dossier.guideHeading}
+                      className="flex flex-wrap border-b border-ucaep-brown/14 bg-[#F7E6C8]/28"
+                    >
+                      {dossier.guideTabs.map((tab, idx) => {
+                        const isActive = idx === safeIdx;
+                        return (
+                          <button
+                            key={tab.tabLabel}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => setActiveGuideTab(idx)}
+                            className={`px-5 py-4 text-xs sm:text-sm font-semibold transition-colors border-b-2 text-left whitespace-nowrap ${
+                              isActive
+                                ? 'border-ucaep-brown text-ucaep-brown bg-white'
+                                : 'border-transparent text-ucaep-brown/65 hover:text-ucaep-brown hover:bg-white/50'
+                            }`}
+                          >
+                            {tab.tabLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  {/* Contenu structuré de l'onglet actif */}
-                  <div className="p-6 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    <div className="lg:col-span-6 space-y-4">
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                          {currentBlock.kicker}
-                        </p>
-                        <h4 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                          {currentBlock.title}
-                        </h4>
-                      </div>
+                    <div className="p-6 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                      <div className="lg:col-span-7 space-y-4">
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                            {currentTab.kicker}
+                          </p>
+                          <h4 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                            {currentTab.title}
+                          </h4>
+                        </div>
 
-                      <p className="text-sm sm:text-[15.5px] text-ucaep-ink/88 leading-relaxed">
-                        {currentBlock.summary}
-                      </p>
-
-                      {showFullModality && (
-                        <div className="pt-3 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/82 leading-[1.75]">
-                          {currentBlock.paragraphs.map((p, pIdx) => (
+                        <div className="space-y-3 text-sm sm:text-[15.5px] text-ucaep-ink/86 leading-[1.75] max-w-prose">
+                          {currentTab.paragraphs.map((p, pIdx) => (
                             <p key={pIdx}>{p}</p>
                           ))}
                         </div>
-                      )}
+                      </div>
 
-                      <button
-                        type="button"
-                        aria-expanded={showFullModality}
-                        onClick={() => setShowFullModality((v) => !v)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
-                      >
-                        <span>
-                          {showFullModality
-                            ? 'Masquer le détail complet'
-                            : 'Afficher la note complète'}
-                        </span>
-                        {showFullModality ? (
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="lg:col-span-6 p-5 sm:p-6 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm space-y-3.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
-                        À retenir en un coup d&apos;œil
-                      </p>
-                      <ul className="space-y-3 text-xs sm:text-sm text-ucaep-ink/88 leading-relaxed">
-                        {currentBlock.takeaways.map((point) => (
-                          <li key={point} className="flex items-start gap-2.5">
-                            <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="lg:col-span-5 p-5 sm:p-6 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm space-y-3.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
+                          Points clés de cette étape
+                        </p>
+                        <ul className="space-y-3 text-xs sm:text-sm text-ucaep-ink/88 leading-relaxed">
+                          {currentTab.checklist.map((point) => (
+                            <li key={point} className="flex items-start gap-2.5">
+                              <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
-          </div>
+                );
+              })()}
+            </div>
           )}
 
-          {/* Sous-section C : Conclusion synthétique de la phase */}
-          <article className="bg-[#4E2A1E] text-[#FBF9F5] rounded-sm p-7 sm:p-10 space-y-4">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-gold">
-                {dossier.closingKicker}
-              </p>
-              <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[#F7E6C8]">
-                {dossier.closingTitle}
-              </h3>
-            </div>
-            <p className="text-sm sm:text-base text-[#FBF9F5]/85 leading-relaxed max-w-3xl">
-              {dossier.closingSummary}
-            </p>
-            <p className="font-serif italic text-lg sm:text-2xl text-ucaep-gold pt-3 border-t border-[#F7E6C8]/20">
-              {dossier.closingStatement}
-            </p>
-          </article>
-
-          {/* Sous-section D : Ce que les candidats vont faire concrètement (4 étapes séquentielles) */}
-          {activePhase.isRevealed && (
-          <div className="space-y-6 pt-4 border-t border-ucaep-brown/14">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                  Déroulement pratique
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                  {dossier.workflowTitle}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-ucaep-ink/75 max-w-md">
-                {dossier.workflowIntro}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {dossier.workflowSteps.map((item) => (
-                <div
-                  key={item.step}
-                  className="bg-white border border-ucaep-brown/15 rounded-sm p-6 space-y-3"
-                >
-                  <div className="flex items-baseline justify-between gap-2 border-b border-ucaep-brown/10 pb-2.5 tabular-nums">
-                    <span className="font-mono text-xs font-semibold text-ucaep-gold uppercase tracking-wider">
-                      {item.step}
-                    </span>
-                    <span className="text-[11px] font-medium text-ucaep-green">
-                      {item.timing}
-                    </span>
-                  </div>
-                  <h4 className="font-serif text-xl font-semibold text-ucaep-brown leading-snug">
-                    {item.title}
-                  </h4>
-                  <p className="text-xs sm:text-sm text-ucaep-ink/80 leading-relaxed">
-                    {item.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-          )}
-
-          {/* Sous-section E : Engagements institutionnels & Règles d'équité */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 border-t border-ucaep-brown/14">
-            {dossier.rulesCards.map((rule, idx) => {
+          {/* ENGAGEMENTS D'ÉQUITÉ ET UTILITÉ DES RÈGLES */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-6 border-t border-ucaep-brown/14">
+            {dossier.equityRules.map((rule, idx) => {
               const IconComp = idx === 0 ? Scale : idx === 1 ? ShieldCheck : Languages;
               return (
                 <div
@@ -1486,7 +1072,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   <h4 className="font-serif text-lg font-semibold text-ucaep-brown">
                     {rule.title}
                   </h4>
-                  <p className="text-xs sm:text-sm text-ucaep-ink/80 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-ucaep-ink/82 leading-relaxed">
                     {rule.description}
                   </p>
                 </div>
@@ -1502,44 +1088,49 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
         className="relative scroll-mt-20 py-16 lg:py-20 bg-[#F4EDE1] paper-grain border-b border-ucaep-brown/12 overflow-hidden"
       >
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8">
-          <div className="max-w-3xl space-y-2">
+          <div className="max-w-prose space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-              Accompagnement pas à pas · Limite 05:00
+              Étape 05 bis · Outil de préparation · Limite 05:00
             </p>
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown text-balance">
               {isPresentiel
-                ? 'Préparer votre passage et votre minuterie'
-                : 'Du texte à la vidéo : calculateur 5 min et checklist'}
+                ? 'Calibrer votre discours sous les 5 minutes'
+                : 'Tester votre temps de lecture avant d’enregistrer votre vidéo'}
             </h2>
+            <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
+              Collez votre brouillon dans le simulateur ci-dessous pour vérifier si votre texte tient confortablement sous la barre des 5 minutes, puis cochez les préparatifs matériels.
+            </p>
           </div>
 
           <VideoPrepWorkshop isPresentiel={isPresentiel} />
         </div>
       </section>
 
-      {/* SECTION 3 : CONSIGNES OFFICIELLES & BARÈME DE LA PHASE */}
+      {/* SECTION 3 : ÉTAPE 6 — VÉRIFIER AVANT L'ENVOI & BARÈME SUR 20 POINTS */}
       <section
         id="consignes"
         className="relative scroll-mt-20 py-16 lg:py-24 bg-ucaep-paper border-b border-ucaep-brown/12"
       >
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-12">
-          <div className="max-w-3xl space-y-3">
+          <div className="max-w-prose space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-              02 · Cahier des charges &amp; barème
+              Étape 06 · Vérifier avant l’envoi &amp; barème
             </p>
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-ucaep-brown text-balance">
-              Consignes officielles — {activePhase.title}
+              Règlement de phase et notation — {activePhase.title}
             </h2>
+            <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
+              Avant d&apos;envoyer votre dossier ou de passer sur scène, relisez les consignes officielles publiées par l&apos;équipe et consultez la grille exacte sur 20 points.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-            {/* Sujet & Consignes détaillées */}
             <div className="lg:col-span-7 space-y-8">
               {activePhase.isRevealed && activePhase.testDetails ? (
                 <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
                   <div className="space-y-2 border-b border-ucaep-brown/12 pb-5">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-ucaep-gold">
-                      Intitulé officiel
+                      Note officielle de la phase
                     </p>
                     <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
                       {activePhase.testDetails.instructionsTitle}
@@ -1549,7 +1140,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   {epreuveParts.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-brown/75">
-                        Thèmes et épreuves à préparer
+                        Intitulés retenus
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {epreuveParts.map((part, idx) => (
@@ -1571,7 +1162,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
 
                   <div className="space-y-3 max-w-prose">
                     <p className="text-xs font-semibold uppercase tracking-widest text-ucaep-brown/75">
-                      Directives aux candidats
+                      Directives officielles
                     </p>
                     <p className="text-base text-ucaep-ink/85 leading-relaxed whitespace-pre-line">
                       {activePhase.testDetails.instructions}
@@ -1588,38 +1179,36 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 <div className="p-6 sm:p-8 bg-ucaep-ivory/45 border border-ucaep-brown/18 rounded-sm space-y-4">
                   <div className="flex items-center gap-2.5 text-ucaep-brown font-semibold text-sm">
                     <Lock className="w-4 h-4 text-ucaep-gold" />
-                    <span>Consignes en cours de publication</span>
+                    <span>Consignes en attente de publication</span>
                   </div>
                   <p className="text-sm text-ucaep-ink/80 leading-relaxed">
                     Les sujets détaillés de la Phase {activePhase.number} ({activePhase.title})
-                    seront affichés à cet emplacement dès leur activation officielle par
+                    s&apos;afficheront ici automatiquement dès leur activation par
                     l&apos;équipe organisatrice de l&apos;UCAEP.
                   </p>
                   <p className="text-xs text-ucaep-brown/75">
-                    Format : {activePhase.format} · Durée maximale de présentation : jusqu&apos;à
-                    5 minutes.
+                    Format : {activePhase.format} · Durée maximale : jusqu&apos;à 5 minutes.
                   </p>
                 </div>
               )}
 
               {activePhase.isRevealed && (
-              <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4">
-                <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
-                  Liste de contrôle avant envoi ou passage
-                </h3>
-                <ul className="space-y-3 text-sm text-ucaep-ink/85">
-                  {dossier.deliverables.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4">
+                  <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
+                    Vérifications rapides avant {isPresentiel ? 'la finale' : 'l’envoi'}
+                  </h3>
+                  <ul className="space-y-3 text-sm text-ucaep-ink/85">
+                    {dossier.checklistBeforeSend.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 
-            {/* Colonne droite : Note pratique & Date limite */}
             <aside className="lg:col-span-5 space-y-6">
               <div
                 data-parallax-card="6"
@@ -1639,7 +1228,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </div>
 
                 <p className="text-xs text-ucaep-brown/75 leading-relaxed">
-                  Explorez chaque critère dans le barème interactif ci-dessous pour connaître précisément les attentes du jury et les erreurs à éviter.
+                  Cliquez sur chaque critère du barème interactif ci-dessous pour savoir précisément ce que le jury examine.
                 </p>
               </div>
 
@@ -1652,8 +1241,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                     </p>
                     <p className="text-sm font-semibold tabular-nums">{deadlineLabel}</p>
                     <p className="text-xs text-[#F7E6C8]/75">
-                      Pensez à déposer votre fichier à l&apos;avance ; vous pourrez le
-                      remplacer jusqu&apos;à la clôture.
+                      Déposez vos textes et vidéos sans attendre la dernière heure : tant qu&apos;un texte n&apos;est pas encore validé par le jury, vous pouvez le mettre à jour.
                     </p>
                   </div>
                 </div>
@@ -1665,7 +1253,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
         </div>
       </section>
 
-      {/* SECTION 4 : ESPACE DÉPÔT INTÉGRÉ OU MODALITÉS PRÉSENTIELLES */}
+      {/* SECTION 4 : ÉTAPE 7 — DÉPOSER VOS PRODUCTIONS OU PROGRAMME PRÉSENTIEL */}
       <section
         id="depot-production"
         className="relative scroll-mt-20 py-16 lg:py-24 bg-ucaep-paper paper-fiber border-b border-ucaep-brown/12 overflow-hidden"
@@ -1679,19 +1267,19 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
         />
 
         <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 space-y-8">
-          <div className="space-y-3">
+          <div className="space-y-3 max-w-prose">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-              03 · {isPresentiel ? 'Organisation sur le campus' : 'Dépôt en ligne'}
+              Étape 07 · {isPresentiel ? 'Sur le campus' : 'Déposer vos productions'}
             </p>
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
               {isPresentiel
-                ? 'Déroulement de la finale à l’ENSET de Lokossa'
-                : `Déposer votre production — Phase ${activePhase.number}`}
+                ? 'Ateliers et Grande Finale à l’ENSET de Lokossa'
+                : `Transmettre vos travaux — Phase ${activePhase.number}`}
             </h2>
-            <p className="text-sm sm:text-base text-ucaep-ink/75 max-w-2xl">
+            <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
               {isPresentiel
-                ? "La Phase 03 (L'Éloquence) se tient intégralement en présentiel devant le jury et le public. Retrouvez ci-dessous l'organisation pratique des ateliers et de la finale."
-                : 'Utilisez directement cet espace sans quitter la page : renseignez votre code d’anonymat UCAEP et votre adresse e-mail pour envoyer ou mettre à jour votre travail.'}
+                ? "Aucun fichier n'est à déposer en ligne pour cette phase : retrouvez ci-dessous les étapes de votre venue sur le campus."
+                : 'Identifiez-vous avec votre code d’anonymat UCAEP-2026-XXXX et votre adresse e-mail pour soumettre vos deux textes, suivre leur validation par le jury ou accéder au formulaire vidéo.'}
             </p>
           </div>
 
@@ -1703,12 +1291,10 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   <span>Jours 12 et 13 · Ateliers préparatoires</span>
                 </div>
                 <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
-                  Diction, souffle et posture scénique
+                  Diction, souffle et essais au micro
                 </h3>
-                <p className="text-sm text-ucaep-ink/80 leading-relaxed">
-                  Les finalistes sélectionnés à l&apos;issue des deux phases en ligne
-                  bénéficient de deux journées d&apos;accompagnement collectif et
-                  individuel avec la Session Théâtre UCAEP sur le campus.
+                <p className="text-sm text-ucaep-ink/82 leading-relaxed">
+                  Les finalistes bénéficient de deux journées d&apos;exercices collectifs et de répétitions individuelles avec la Session Théâtre UCAEP sur le campus de Lokossa.
                 </p>
               </div>
 
@@ -1718,12 +1304,12 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   <span>Jour 14 · Grande Finale publique</span>
                 </div>
                 <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
-                  Passages devant le jury et remise des prix
+                  Passages devant le jury et remise des attestations
                 </h3>
-                <p className="text-sm text-ucaep-ink/80 leading-relaxed">
+                <p className="text-sm text-ucaep-ink/82 leading-relaxed">
                   {activePhase.isRevealed
-                    ? "Chaque finaliste présente son discours préparé (« La parole que le monde doit entendre ») puis relève l'épreuve d'improvisation (« Le défi de l'inattendu »), suivis de la remise des attestations de participation."
-                    : "Chaque finaliste présente deux épreuves en présentiel devant le jury et le public (dont les intitulés précis sont communiqués à l'approche de la finale), suivies de la remise des attestations de participation."}
+                    ? "Chaque finaliste présente son discours préparé (« La parole que le monde doit entendre ») puis l'épreuve d'improvisation (« Le défi de l'inattendu »), avant la proclamation du palmarès et la remise des attestations."
+                    : "Chaque finaliste présente deux épreuves orales devant le jury et le public (intitulés communiqués à l'approche de la finale), suivies de la remise des attestations."}
                 </p>
               </div>
             </div>
@@ -1742,11 +1328,10 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
         className="scroll-mt-20 py-16 lg:py-24 bg-[#FBF9F5]"
       >
         <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Annonces */}
           <div className="lg:col-span-7 space-y-6">
             <div className="space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-                04 · Communications officielles
+                Informations officielles
               </p>
               <h2 className="font-serif text-3xl font-semibold text-ucaep-brown">
                 Annonces &amp; notes de l&apos;organisation
@@ -1797,7 +1382,6 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
             )}
           </div>
 
-          {/* Contact direct */}
           <div className="lg:col-span-5 space-y-6">
             <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
               <div className="space-y-2">
@@ -1807,9 +1391,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
                   Joindre l&apos;équipe UCAEP
                 </h2>
-                <p className="text-sm text-ucaep-ink/75">
-                  Un souci avec votre code d&apos;anonymat ou votre dépôt ? Contactez
-                  directement la Session Théâtre.
+                <p className="text-sm text-ucaep-ink/78 leading-relaxed">
+                  Un doute sur une consigne, votre code UCAEP ou l&apos;envoi de vos fichiers ? Écrivez directement à l&apos;équipe organisatrice en précisant votre code candidat si vous en avez déjà un.
                 </p>
               </div>
 
@@ -1843,13 +1426,13 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   className="w-full py-3 px-5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors inline-flex items-center justify-center gap-2"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Écrire un message à l&apos;équipe</span>
+                  <span>Écrire à l&apos;organisation</span>
                 </button>
               ) : contactSuccess ? (
                 <div className="p-4 bg-ucaep-green/10 border border-ucaep-green/30 rounded-sm text-sm text-ucaep-green space-y-2">
                   <p className="font-semibold">Message transmis à l&apos;UCAEP.</p>
                   <p className="text-xs">
-                    L&apos;équipe organisatrice vous répondra à l&apos;adresse indiquée.
+                    L&apos;équipe organisatrice vous répondra à l&apos;adresse e-mail que vous avez indiquée.
                   </p>
                 </div>
               ) : (
@@ -1896,7 +1479,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                       disabled={contactSending}
                       className="flex-1 py-2.5 px-4 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
                     >
-                      {contactSending ? 'Envoi...' : 'Envoyer'}
+                      {contactSending ? 'Envoi...' : 'Envoyer le message'}
                     </button>
                     <button
                       type="button"

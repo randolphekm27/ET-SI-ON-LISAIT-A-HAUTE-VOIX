@@ -71,10 +71,10 @@ function NewsMagazineView() {
     <div ref={pageRef} className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Journal"
-        section="Démarche et repères"
+        section="Vie du concours et repères"
         title="Actualités"
-        italicWord="et repères"
-        subtitle="Des articles pour comprendre les objectifs pédagogiques du concours, le fonctionnement des trois phases et la préparation des épreuves à l'ENSET de Lokossa."
+        italicWord="et préparatifs"
+        subtitle="Suivez les moments du concours sur le campus et lisez des articles pratiques pour mieux préparer vos textes, vos présentations vidéo et votre prise de parole à l'ENSET de Lokossa."
         aside={
           <div
             role="tablist"

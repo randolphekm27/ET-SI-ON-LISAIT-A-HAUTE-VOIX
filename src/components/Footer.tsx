@@ -40,9 +40,9 @@ export function Footer() {
               />
             </div>
             <p className="text-sm text-ucaep-ivory/75 max-w-sm leading-relaxed">
-              Concours culturel gratuit organisé par la Session Théâtre de l&apos;UCAEP pour les
-              étudiants de l&apos;ENSET de Lokossa autour de l&apos;écriture, de la transmission des
-              connaissances et de l&apos;expression orale.
+              Une initiative culturelle et pédagogique de la Session Théâtre de l&apos;UCAEP
+              destinée aux étudiants de l&apos;ENSET de Lokossa pour s&apos;exercer à l&apos;écriture, à
+              la vulgarisation des connaissances et à la prise de parole en public.
             </p>
             <p className="text-xs text-ucaep-ivory/65 tabular-nums">
               +229 01 68 62 46 00 · +229 01 96 11 80 37 · ucaeplokossa@gmail.com · @UCAEP
