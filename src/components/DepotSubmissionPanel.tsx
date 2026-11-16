@@ -489,9 +489,10 @@ export function DepotSubmissionPanel({
       selectedPhase?.externalForm?.googleFormUrl,
   );
 
-  const slotLabels = selectedPhase
-    ? getPhaseTextSlotLabels(selectedPhase.id)
-    : getPhaseTextSlotLabels('phase-1');
+  const slotLabels =
+    selectedPhase && selectedPhase.isRevealed
+      ? getPhaseTextSlotLabels(selectedPhase.id)
+      : getPhaseTextSlotLabels('hidden');
 
   const textSub =
     selectedPhase?.existingSubmission?.kind === 'text'

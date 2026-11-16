@@ -1562,11 +1562,13 @@ export function sanitizeAnnouncementForPublic(a: Announcement): PublicAnnounceme
 export function sanitizePhaseForPublic(phase: CompetitionPhase): CompetitionPhase {
   if (!phase.isRevealed) {
     const progressiveDescription =
-      phase.id === 'phase-2'
-        ? "À domicile (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves écrites dont les intitulés et sujets seront dévoilés au lancement de cette étape. Jusqu'à 5 minutes pour votre présentation."
-        : phase.id === 'phase-3'
-          ? "Grande Finale sur scène (Jour 14) · Notée sur 20 points (sans élimination). Deux jours d'ateliers de diction (J12–13) puis deux passages sur scène devant le public. Jusqu'à 5 minutes par présentation."
-          : phase.shortDescription;
+      phase.id === 'phase-1'
+        ? "En ligne (Jours 1 à 3) · Notée sur 20 points (phase qualificative). Deux épreuves d'écriture originale et d'interprétation vidéo dont les intitulés et sujets seront dévoilés au lancement officiel. Jusqu'à 5 minutes par présentation."
+        : phase.id === 'phase-2'
+          ? "En ligne (Jours 6 à 9) · Notée sur 20 points (phase qualificative). Deux épreuves de vulgarisation dont les intitulés et sujets seront dévoilés au lancement de cette étape. Jusqu'à 5 minutes pour votre présentation."
+          : phase.id === 'phase-3'
+            ? "Grande Finale en présentiel (Jour 14 à l'ENSET de Lokossa) · Notée sur 20 points (sans élimination). Deux jours d'ateliers de diction (J12–13) puis deux épreuves en présentiel dont les sujets seront révélés aux finalistes."
+            : phase.shortDescription;
 
     return {
       id: phase.id,

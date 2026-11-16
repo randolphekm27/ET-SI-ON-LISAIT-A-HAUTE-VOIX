@@ -72,41 +72,47 @@ const PHASE_1_RUBRIC = [
   { label: 'Cohérence et construction du texte', value: 3, points: '3 pts' },
 ];
 
-const CALENDAR_WEEKS = [
-  {
-    step: 'Semaine 0',
-    span: 'Jours -7 à -1',
-    title: 'Inscriptions et information sur le campus',
-    items: [
-      'Présentation du concours sur le campus de l’ENSET de Lokossa et dans les amphithéâtres.',
-      'Inscription gratuite en ligne ouverte à tous les étudiants de l’ENSET de Lokossa.',
-      'Attribution du code d’anonymat UCAEP et publication de la liste des participants.',
-    ],
-    Icon: Calendar,
-  },
-  {
-    step: 'Semaine 1',
-    span: 'Jours 1 à 6',
-    title: 'Phase 01 « La Plume » (en ligne) & ouverture Phase 02',
-    items: [
-      'Jours 1 à 3 : rédaction des textes originaux (« Je suis… » et « Les mots que l’on n’ose pas dire ») et dépôt avec interprétation vidéo.',
-      'Jours 4 à 5 : double correction anonyme par le jury et publication de la liste des qualifiés.',
-      'Jour 6 : lancement en ligne de la Phase 02 « La Connaissance » pour les candidats retenus.',
-    ],
-    Icon: Feather,
-  },
-  {
-    step: 'Semaine 2',
-    span: 'Jours 7 à 14',
-    title: 'Phase 02 « La Connaissance », ateliers & Finale en présentiel',
-    items: [
-      'Jours 7 à 9 : préparation des contenus explicatifs et prestations vidéo (« La science dans notre quotidien » et « L’école, le savoir et l’avenir »).',
-      'Jours 10 à 11 : évaluation et désignation des finalistes de la Phase 03.',
-      'Jours 12 à 13 : ateliers de diction et répétitions · Jour 14 : Phase 03 « L’Éloquence » en présentiel.',
-    ],
-    Icon: Mic2,
-  },
-];
+function buildCalendarWeeks(phase1Revealed: boolean, phase2Revealed: boolean) {
+  return [
+    {
+      step: 'Semaine 0',
+      span: 'Jours -7 à -1',
+      title: 'Inscriptions et information sur le campus',
+      items: [
+        'Présentation du concours sur le campus de l’ENSET de Lokossa et dans les amphithéâtres.',
+        'Inscription gratuite en ligne ouverte à tous les étudiants de l’ENSET de Lokossa.',
+        'Attribution du code d’anonymat UCAEP et publication de la liste des participants.',
+      ],
+      Icon: Calendar,
+    },
+    {
+      step: 'Semaine 1',
+      span: 'Jours 1 à 6',
+      title: 'Phase 01 « La Plume » (en ligne) & ouverture Phase 02',
+      items: [
+        phase1Revealed
+          ? 'Jours 1 à 3 : rédaction des textes originaux (« Je suis… » et « Les mots que l’on n’ose pas dire ») et dépôt avec interprétation vidéo.'
+          : 'Jours 1 à 3 : rédaction des deux textes originaux de la Phase 01 et dépôt avec interprétation vidéo (sujets dévoilés au lancement).',
+        'Jours 4 à 5 : double correction anonyme par le jury et publication de la liste des qualifiés.',
+        'Jour 6 : lancement en ligne de la Phase 02 « La Connaissance » pour les candidats retenus.',
+      ],
+      Icon: Feather,
+    },
+    {
+      step: 'Semaine 2',
+      span: 'Jours 7 à 14',
+      title: 'Phase 02 « La Connaissance », ateliers & Finale en présentiel',
+      items: [
+        phase2Revealed
+          ? 'Jours 7 à 9 : préparation des contenus explicatifs et prestations vidéo (« La science dans notre quotidien » et « L’école, le savoir et l’avenir »).'
+          : 'Jours 7 à 9 : préparation et dépôt en ligne des deux contenus explicatifs et prestations vidéo de la Phase 02 (sujets dévoilés au Jour 6).',
+        'Jours 10 à 11 : évaluation et désignation des finalistes de la Phase 03.',
+        'Jours 12 à 13 : ateliers de diction et répétitions · Jour 14 : Phase 03 « L’Éloquence » en présentiel.',
+      ],
+      Icon: Mic2,
+    },
+  ];
+}
 
 export function ParcoursPage() {
   usePageSeo(
@@ -141,8 +147,13 @@ export function ParcoursPage() {
   const activePhase = phases[activeIdx];
   const activeStyle = PHASE_ATMOSPHERES[activeIdx % PHASE_ATMOSPHERES.length];
   const hasOpenDeposits = phases.some((p) => Boolean(p.submissionsOpen));
+  const phase1 = phases.find((p) => p.id === 'phase-1' || p.number === '01');
   const phase2 = phases.find((p) => p.id === 'phase-2' || p.number === '02');
   const phase3 = phases.find((p) => p.id === 'phase-3' || p.number === '03');
+  const calendarWeeks = buildCalendarWeeks(
+    Boolean(phase1?.isRevealed),
+    Boolean(phase2?.isRevealed),
+  );
 
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
@@ -177,7 +188,6 @@ export function ParcoursPage() {
               >
                 {phases.map((phase, idx) => {
                   const isActive = idx === activeIdx;
-                  const isPhaseOne = phase.id === 'phase-1' || phase.number === '01';
                   return (
                     <button
                       key={phase.id}
@@ -200,7 +210,7 @@ export function ParcoursPage() {
                           {phase.number}
                         </span>
                         <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ucaep-green">
-                          {phase.format} · {isPhaseOne ? 'Consignes visibles' : phase.statusLabel}
+                          {phase.format} · {phase.isRevealed ? 'Consignes visibles' : phase.statusLabel}
                         </span>
                       </div>
                       <div className="mt-3 font-serif text-2xl font-semibold">
@@ -245,7 +255,7 @@ export function ParcoursPage() {
                         <EditorialMark
                           folio={`Chapitre ${activePhase.number}`}
                           label={`${activePhase.format} · ${
-                            activePhase.id === 'phase-1' || activePhase.number === '01'
+                            activePhase.isRevealed
                               ? 'Consignes visibles'
                               : activePhase.statusLabel
                           }`}
@@ -309,7 +319,6 @@ export function ParcoursPage() {
           <section className="lg:hidden divide-y divide-ucaep-brown/15">
             {phases.map((phase, idx) => {
               const style = PHASE_ATMOSPHERES[idx % PHASE_ATMOSPHERES.length];
-              const isPhaseOne = phase.id === 'phase-1' || phase.number === '01';
               return (
                 <article
                   key={phase.id}
@@ -323,7 +332,7 @@ export function ParcoursPage() {
                       <span
                         className={`text-xs font-semibold uppercase tracking-widest ${style.muted}`}
                       >
-                        {phase.format} · {isPhaseOne ? 'Consignes visibles' : phase.statusLabel}
+                        {phase.format} · {phase.isRevealed ? 'Consignes visibles' : phase.statusLabel}
                       </span>
                     </div>
 
@@ -401,6 +410,7 @@ export function ParcoursPage() {
             </div>
           </div>
 
+          {phase1?.isRevealed ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <article
               data-reveal
@@ -483,6 +493,45 @@ export function ParcoursPage() {
               </p>
             </article>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <article className="art-card relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-4">
+              <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                  Épreuve 01 · Texte original + vidéo
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown/75">
+                  <Lock className="w-3.5 h-3.5 text-ucaep-gold" aria-hidden="true" />
+                  Masquée
+                </span>
+              </div>
+              <h3 className="font-serif text-3xl font-semibold text-ucaep-brown">
+                Sujet dévoilé à l&apos;ouverture de La Plume
+              </h3>
+              <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
+                Les consignes et l&apos;intitulé précis de la première épreuve d&apos;écriture et d&apos;interprétation vidéo sont actuellement masqués. Ils seront publiés automatiquement dès l&apos;activation officielle de la Phase 01.
+              </p>
+            </article>
+
+            <article className="art-card relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-4">
+              <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                  Épreuve 02 · Texte original + vidéo
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown/75">
+                  <Lock className="w-3.5 h-3.5 text-ucaep-gold" aria-hidden="true" />
+                  Masquée
+                </span>
+              </div>
+              <h3 className="font-serif text-3xl font-semibold text-ucaep-brown">
+                Sujet dévoilé à l&apos;ouverture de La Plume
+              </h3>
+              <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
+                La seconde épreuve invite également à rédiger une création originale en français et à l&apos;interpréter en vidéo (jusqu&apos;à 5 minutes). Son intitulé exact reste masqué jusqu&apos;au lancement de la phase.
+              </p>
+            </article>
+          </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <article
@@ -622,13 +671,26 @@ export function ParcoursPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
           <div className="space-y-2 max-w-2xl" data-reveal>
-            <EditorialMark folio="Phases 02 & 03" label="Épreuves 03 à 06" tone="brown" />
+            <EditorialMark
+              folio="Phases 02 & 03"
+              label={
+                phase2?.isRevealed || phase3?.isRevealed
+                  ? 'Épreuves 03 à 06'
+                  : 'Dévoilement progressif'
+              }
+              tone="brown"
+            />
             <div className="overflow-hidden">
               <h2
                 data-mask-title
                 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
               >
-                Vulgarisation et scène : <em className="italic font-normal text-ucaep-brown">les quatre épreuves suivantes</em>
+                Vulgarisation et scène :{' '}
+                <em className="italic font-normal text-ucaep-brown">
+                  {phase2?.isRevealed || phase3?.isRevealed
+                    ? 'les quatre épreuves suivantes'
+                    : 'les prochaines étapes du concours'}
+                </em>
               </h2>
             </div>
           </div>
@@ -673,22 +735,15 @@ export function ParcoursPage() {
               ) : (
                 <>
                   <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    Contenus explicatifs et prestations vidéo
+                    Épreuves 03 &amp; 04 masquées jusqu&apos;au lancement
                   </h3>
-                  <ul className="relative z-10 space-y-2.5 text-sm text-ucaep-ink/80 leading-relaxed">
-                    <li>
-                      · <strong className="text-ucaep-brown">Épreuve 03 — « La science dans notre quotidien » :</strong>{' '}
-                      expliquer un phénomène ou une application scientifique courante avec rigueur et clarté.
-                    </li>
-                    <li>
-                      · <strong className="text-ucaep-brown">Épreuve 04 — « L&apos;école, le savoir et l&apos;avenir » :</strong>{' '}
-                      construire un exposé structuré et une prestation vidéo (jusqu&apos;à 5 minutes) sur le rôle de la transmission des savoirs.
-                    </li>
-                  </ul>
-                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/80 pt-3 border-t border-ucaep-brown/10 leading-relaxed">
+                  <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
+                    La Phase 02 (« La Connaissance ») se déroule en ligne et comprend deux exercices de vulgarisation accompagnés de prestations vidéo (jusqu&apos;à 5 minutes). Pour préserver l&apos;équité entre les candidats, les sujets et consignes détaillées sont masqués jusqu&apos;à l&apos;ouverture officielle.
+                  </p>
+                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
                     <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
                     <span>
-                      Phase en ligne notée sur 20 points : les modalités de dépôt s&apos;ouvrent au Jour 6 pour les qualifiés de La Plume.
+                      Consignes masquées · Déblocage prévu au Jour 6 pour les candidats qualifiés de La Plume.
                     </span>
                   </div>
                 </>
@@ -735,22 +790,15 @@ export function ParcoursPage() {
               ) : (
                 <>
                   <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    Prestations finales en présentiel
+                    Épreuves 05 &amp; 06 masquées jusqu&apos;à la finale
                   </h3>
-                  <ul className="relative z-10 space-y-2.5 text-sm text-ucaep-ink/80 leading-relaxed">
-                    <li>
-                      · <strong className="text-ucaep-brown">Épreuve 05 — « La parole que le monde doit entendre » :</strong>{' '}
-                      les finalistes présentent une prise de parole préparée devant le jury et le public (jusqu&apos;à 5 minutes), précédée de deux jours d&apos;ateliers de diction (J12–13).
-                    </li>
-                    <li>
-                      · <strong className="text-ucaep-brown">Épreuve 06 — « Le défi de l&apos;inattendu » :</strong>{' '}
-                      prestation en présentiel évaluant l&apos;écoute, la réactivité d&apos;argumentation et la présence scénique.
-                    </li>
-                  </ul>
-                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/80 pt-3 border-t border-ucaep-brown/10 leading-relaxed">
+                  <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
+                    La Grande Finale en présentiel à l&apos;ENSET de Lokossa réunit les finalistes après deux journées d&apos;ateliers de diction (Jours 12 et 13). Les intitulés et consignes des deux épreuves finales restent masqués jusqu&apos;à leur publication officielle.
+                  </p>
+                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
                     <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
                     <span>
-                      Phase en présentiel à l&apos;ENSET de Lokossa, notée sur 20 points sans élimination en cours de soirée.
+                      Consignes masquées · Phase en présentiel (Jour 14), notée sur 20 points sans élimination en cours de soirée.
                     </span>
                   </div>
                 </>
@@ -784,7 +832,7 @@ export function ParcoursPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {CALENDAR_WEEKS.map((week, idx) => {
+            {calendarWeeks.map((week, idx) => {
               const Icon = week.Icon;
               return (
                 <article
@@ -895,32 +943,19 @@ function PhaseDetailsBlock({
   headingColor: string;
   mutedColor: string;
 }) {
-  const isPhaseOne = phase.id === 'phase-1' || phase.number === '01';
-  const revealed = isPhaseOne || (phase.isRevealed && Boolean(phase.testDetails));
+  const revealed = Boolean(phase.isRevealed && phase.testDetails);
 
-  const title =
-    phase.testDetails?.instructionsTitle ||
-    (isPhaseOne
-      ? 'Phase 01 — La Plume : textes originaux et interprétation vidéo'
-      : phase.title);
+  const title = phase.testDetails?.instructionsTitle || phase.title;
   const theme =
     phase.testDetails?.theme && !phase.testDetails.theme.includes('communiqué uniquement')
       ? phase.testDetails.theme
-      : isPhaseOne
-        ? 'Épreuve 1 : « Je suis… » · Épreuve 2 : « Les mots que l’on n’ose pas dire »'
-        : '';
+      : '';
   const instructions =
     phase.testDetails?.instructions &&
     !phase.testDetails.instructions.includes('seront publiés sur la page Annonces')
       ? phase.testDetails.instructions
-      : isPhaseOne
-        ? "Épreuve 1 (« Je suis… ») et Épreuve 2 (« Les mots que l'on n'ose pas dire ») : les candidats rédigent des textes originaux puis les interprètent en vidéo. Chaque épreuve est notée sur 20 points dans la limite de 5 minutes par présentation."
-        : '';
-  const note =
-    phase.testDetails?.submissionNote ||
-    (isPhaseOne
-      ? 'Phase en ligne qualificative · Dépôt sous code anonyme UCAEP · Jusqu’à 5 minutes par prestation.'
-      : '');
+      : '';
+  const note = phase.testDetails?.submissionNote || '';
 
   return (
     <div className="space-y-4">
@@ -964,10 +999,10 @@ function PhaseDetailsBlock({
           <Lock className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
           <div className="space-y-1">
             <p className={`text-sm font-semibold ${headingColor}`}>
-              Ouverture progressive des dépôts et consignes pratiques
+              Épreuves et consignes masquées pour le moment
             </p>
             <p className={`text-xs leading-relaxed ${mutedColor}`}>
-              Les thématiques sont connues dès maintenant pour comprendre la progression du concours ; les consignes opérationnelles d&apos;ouverture et les liens de dépôt sont activés sur la page Annonces au lancement de la phase.
+              Les intitulés exacts des épreuves, les consignes détaillées et les liens de dépôt sont masqués jusqu&apos;à l&apos;ouverture officielle de cette phase par l&apos;équipe organisatrice.
             </p>
           </div>
         </div>

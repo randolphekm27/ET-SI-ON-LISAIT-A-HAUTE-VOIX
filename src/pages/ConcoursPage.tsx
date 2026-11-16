@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -7,6 +7,7 @@ import {
   Compass,
   GraduationCap,
   Languages,
+  Lock,
   Scale,
   ShieldCheck,
   Sparkles,
@@ -21,42 +22,63 @@ import {
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { ScenicStageAsset } from '../components/ScenicStageAsset';
+import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
 import { useEditorialScrollMotion } from '../lib/motion';
+import type { CompetitionPhase } from '../types/competition';
 
-const PILLARS = [
-  {
-    index: 'I',
-    number: '01',
-    keyPoint: 'En ligne · Qualificative · / 20 pts',
-    noteInfo: 'Notée sur 20 points · Phase qualificative',
-    title: 'La Plume — Écriture originale et interprétation vidéo',
-    imageKey: 'writing' as const,
-    caption: 'Fig. 01 — Rédaction des deux textes personnels avant l’interprétation vidéo',
-    text: "À travers deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — les candidats produisent des textes originaux et les interprètent en vidéo (jusqu'à 5 minutes par présentation). Cette phase évalue la sincérité, la maîtrise de la langue, l'originalité et la cohérence.",
-  },
-  {
-    index: 'II',
-    number: '02',
-    keyPoint: 'En ligne · Qualificative · / 20 pts',
-    noteInfo: 'Notée sur 20 points · Sélection des finalistes',
-    title: 'La Connaissance — Contenus explicatifs et vulgarisation',
-    imageKey: 'connaissance' as const,
-    caption: 'Fig. 02 — Vulgariser des sujets scientifiques et éducatifs en vidéo',
-    text: "Les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'objectif est de rendre des notions techniques ou éducatives claires, structurées et accessibles.",
-  },
-  {
-    index: 'III',
-    number: '03',
-    keyPoint: 'En présentiel (Jour 14) · Finale · / 20 pts',
-    noteInfo: 'Notée sur 20 points · Prestations en présentiel',
-    title: "L'Éloquence — Prise de parole en présentiel",
-    imageKey: 'eloquence' as const,
-    caption: 'Fig. 03 — Prestations finales devant le jury et la communauté universitaire',
-    text: "Après deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), les finalistes présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu ».",
-  },
-];
+function buildPillars(phases: CompetitionPhase[]) {
+  const p1 = phases.find((p) => p.id === 'phase-1' || p.number === '01');
+  const p2 = phases.find((p) => p.id === 'phase-2' || p.number === '02');
+  const p3 = phases.find((p) => p.id === 'phase-3' || p.number === '03');
+
+  const p1Revealed = Boolean(p1?.isRevealed);
+  const p2Revealed = Boolean(p2?.isRevealed);
+  const p3Revealed = Boolean(p3?.isRevealed);
+
+  return [
+    {
+      index: 'I',
+      number: '01',
+      keyPoint: 'En ligne · Qualificative · / 20 pts',
+      noteInfo: 'Notée sur 20 points · Phase qualificative',
+      title: 'La Plume — Écriture originale et interprétation vidéo',
+      imageKey: 'writing' as const,
+      caption: 'Fig. 01 — Rédaction des deux textes personnels avant l’interprétation vidéo',
+      revealed: p1Revealed,
+      text: p1Revealed
+        ? "À travers deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — les candidats produisent des textes originaux et les interprètent en vidéo (jusqu'à 5 minutes par présentation). Cette phase évalue la sincérité, la maîtrise de la langue, l'originalité et la cohérence."
+        : "Les candidats produisent deux textes originaux en français et les interprètent en vidéo (jusqu'à 5 minutes par présentation). Cette phase qualificative évalue la sincérité, la maîtrise de la langue, l'originalité et la cohérence ; les sujets précis sont dévoilés au lancement officiel.",
+    },
+    {
+      index: 'II',
+      number: '02',
+      keyPoint: 'En ligne · Qualificative · / 20 pts',
+      noteInfo: 'Notée sur 20 points · Sélection des finalistes',
+      title: 'La Connaissance — Contenus explicatifs et vulgarisation',
+      imageKey: 'connaissance' as const,
+      caption: 'Fig. 02 — Vulgariser des sujets scientifiques et éducatifs en vidéo',
+      revealed: p2Revealed,
+      text: p2Revealed
+        ? "Les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'objectif est de rendre des notions techniques ou éducatives claires, structurées et accessibles."
+        : "Les candidats retenus préparent deux contenus explicatifs et leurs prestations vidéo (jusqu'à 5 minutes) pour rendre des notions scientifiques, techniques ou éducatives claires, structurées et accessibles. Les deux sujets précis sont masqués et seront dévoilés au lancement de la Phase 02.",
+    },
+    {
+      index: 'III',
+      number: '03',
+      keyPoint: 'En présentiel (Jour 14) · Finale · / 20 pts',
+      noteInfo: 'Notée sur 20 points · Prestations en présentiel',
+      title: "L'Éloquence — Prise de parole en présentiel",
+      imageKey: 'eloquence' as const,
+      caption: 'Fig. 03 — Prestations finales devant le jury et la communauté universitaire',
+      revealed: p3Revealed,
+      text: p3Revealed
+        ? "Après deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), les finalistes présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu »."
+        : "Après deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), les finalistes présentent deux épreuves en présentiel devant le jury et le public. Les intitulés et modalités détaillées des épreuves finales restent masqués jusqu'à l'approche de la finale.",
+    },
+  ];
+}
 
 const PRACTICAL_RULES = [
   {
@@ -111,7 +133,22 @@ export function ConcoursPage() {
 
   const pageRef = useRef<HTMLDivElement>(null);
   const candidateSession = useCandidateSession();
-  useEditorialScrollMotion(pageRef);
+  const [phases, setPhases] = useState<CompetitionPhase[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchApiJson<{ phases: CompetitionPhase[] }>('/api/phases')
+      .then((data) => {
+        if (active) setPhases(data.phases || []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEditorialScrollMotion(pageRef, [phases.length]);
+  const pillars = buildPillars(phases);
 
   return (
     <div ref={pageRef} className="bg-ucaep-paper">
@@ -202,7 +239,7 @@ export function ConcoursPage() {
           </div>
 
           <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
-            {PILLARS.map((pillar, idx) => {
+            {pillars.map((pillar, idx) => {
               const reversed = idx % 2 === 1;
               const isEloquence = pillar.index === 'III';
               return (
@@ -259,6 +296,12 @@ export function ConcoursPage() {
                     <p className="text-base sm:text-lg text-ucaep-ink/80 leading-relaxed max-w-xl">
                       {pillar.text}
                     </p>
+                    {!pillar.revealed && (
+                      <div className="inline-flex items-center gap-2 text-xs font-medium text-ucaep-brown/80 bg-ucaep-linen/70 border border-ucaep-brown/15 px-3 py-2 rounded-[2px]">
+                        <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0" aria-hidden="true" />
+                        <span>Sujets des épreuves masqués jusqu&apos;au lancement de la phase</span>
+                      </div>
+                    )}
                   </div>
                 </article>
               );

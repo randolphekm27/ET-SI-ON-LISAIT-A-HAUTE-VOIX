@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Feather, MessageCircleQuestion, Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -8,7 +8,9 @@ import {
   BrandPatternWave,
 } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
+import type { CompetitionPhase } from '../types/competition';
 
 const QUICK_ANSWERS = [
   {
@@ -33,31 +35,46 @@ const QUICK_ANSWERS = [
   },
 ];
 
-const FAQ_ITEMS = [
-  {
-    q: "Qui peut participer au concours ?",
-    a: "La participation est ouverte à tous les étudiants inscrits à l'ENSET de Lokossa, quelle que soit leur filière ou leur année d'études. Aucune expérience préalable en théâtre, poésie ou prise de parole n'est exigée.",
-  },
-  {
-    q: "La participation est-elle payante ?",
-    a: "Non, l'inscription et la participation sont entièrement gratuites du début à la fin du parcours. Il suffit de remplir le formulaire d'inscription en ligne pour recevoir votre code d'anonymat.",
-  },
-  {
-    q: 'Comment se répartissent les épreuves en ligne et en présentiel ?',
-    a: "Les deux premières phases (Phase 1 « La Plume » et Phase 2 « La Connaissance ») se déroulent en ligne : les candidats transmettent leurs textes ou contenus explicatifs et leurs prestations vidéo depuis l'espace Dépôt candidat. La troisième phase (Phase 3 « L'Éloquence ») se tient en présentiel sur le campus devant le jury et le public.",
-  },
-  {
-    q: 'En quoi consiste la Phase 1 : La Plume ?',
-    a: "Lors de la Phase 1 (en ligne), les candidats produisent des textes originaux autour de deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — et les interprètent en vidéo (jusqu'à 5 minutes par prestation). L'évaluation porte sur la sincérité (6 pts), la qualité de la langue (6 pts), l'originalité (5 pts) et la cohérence (3 pts).",
-  },
-  {
-    q: 'En quoi consiste la Phase 2 : La Connaissance ?',
-    a: "Lors de la Phase 2 (en ligne), les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'épreuve évalue la capacité à vulgariser des idées scientifiques ou éducatives avec clarté.",
-  },
-  {
-    q: "En quoi consiste la Phase 3 : L'Éloquence ?",
-    a: "Lors de la Phase 3 (en présentiel), les finalistes participent d'abord à deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), puis présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu ».",
-  },
+function buildFaqItems(phases: CompetitionPhase[]) {
+  const p1 = phases.find((p) => p.id === 'phase-1' || p.number === '01');
+  const p2 = phases.find((p) => p.id === 'phase-2' || p.number === '02');
+  const p3 = phases.find((p) => p.id === 'phase-3' || p.number === '03');
+
+  const p1Revealed = Boolean(p1?.isRevealed);
+  const p2Revealed = Boolean(p2?.isRevealed);
+  const p3Revealed = Boolean(p3?.isRevealed);
+
+  return [
+    {
+      q: "Qui peut participer au concours ?",
+      a: "La participation est ouverte à tous les étudiants inscrits à l'ENSET de Lokossa, quelle que soit leur filière ou leur année d'études. Aucune expérience préalable en théâtre, poésie ou prise de parole n'est exigée.",
+    },
+    {
+      q: "La participation est-elle payante ?",
+      a: "Non, l'inscription et la participation sont entièrement gratuites du début à la fin du parcours. Il suffit de remplir le formulaire d'inscription en ligne pour recevoir votre code d'anonymat.",
+    },
+    {
+      q: 'Comment se répartissent les épreuves en ligne et en présentiel ?',
+      a: "Les deux premières phases (Phase 1 « La Plume » et Phase 2 « La Connaissance ») se déroulent en ligne : les candidats transmettent leurs textes ou contenus explicatifs et leurs prestations vidéo depuis l'espace Dépôt candidat. La troisième phase (Phase 3 « L'Éloquence ») se tient en présentiel sur le campus devant le jury et le public.",
+    },
+    {
+      q: 'En quoi consiste la Phase 1 : La Plume ?',
+      a: p1Revealed
+        ? "Lors de la Phase 1 (en ligne), les candidats produisent des textes originaux autour de deux épreuves — « Je suis… » et « Les mots que l'on n'ose pas dire » — et les interprètent en vidéo (jusqu'à 5 minutes par prestation). L'évaluation porte sur la sincérité (6 pts), la qualité de la langue (6 pts), l'originalité (5 pts) et la cohérence (3 pts)."
+        : "Lors de la Phase 1 (en ligne), les candidats produisent deux textes originaux en français et les interprètent en vidéo (jusqu'à 5 minutes par prestation). L'évaluation porte sur la sincérité (6 pts), la qualité de la langue (6 pts), l'originalité (5 pts) et la cohérence (3 pts). Les sujets précis des deux épreuves sont masqués jusqu'à l'ouverture officielle de la phase.",
+    },
+    {
+      q: 'En quoi consiste la Phase 2 : La Connaissance ?',
+      a: p2Revealed
+        ? "Lors de la Phase 2 (en ligne), les candidats retenus préparent des contenus explicatifs et des prestations vidéo autour de deux sujets précis : « La science dans notre quotidien » et « L'école, le savoir et l'avenir ». L'épreuve évalue la capacité à vulgariser des idées scientifiques ou éducatives avec clarté."
+        : "Lors de la Phase 2 (en ligne), les candidats retenus préparent deux contenus explicatifs et leurs prestations vidéo (jusqu'à 5 minutes) pour vulgariser des notions scientifiques ou éducatives avec clarté. Les sujets précis de cette phase sont masqués jusqu'à son lancement officiel au Jour 6.",
+    },
+    {
+      q: "En quoi consiste la Phase 3 : L'Éloquence ?",
+      a: p3Revealed
+        ? "Lors de la Phase 3 (en présentiel), les finalistes participent d'abord à deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), puis présentent leurs prestations en présentiel lors de deux épreuves : « La parole que le monde doit entendre » et « Le défi de l'inattendu »."
+        : "Lors de la Phase 3 (en présentiel), les finalistes participent d'abord à deux journées d'ateliers de diction et de préparation scénique (Jours 12 et 13), puis présentent deux épreuves orales devant le jury et le public à l'ENSET de Lokossa. Les intitulés précis des deux épreuves finales restent masqués jusqu'à l'approche de la finale.",
+    },
   {
     q: 'Quelle est la durée et quels formats sont acceptés pour les dépôts en ligne ?',
     a: "Chaque candidat dispose de jusqu'à 5 minutes par présentation. L'espace Dépôt candidat accepte les fichiers vidéo (MP4, MOV, WebM), audio, PDF, Word ou la saisie directe de texte en ligne (50 Mo maximum pour les fichiers).",
@@ -82,7 +99,8 @@ const FAQ_ITEMS = [
     q: 'Comment s’inscrire et suivre le calendrier officiel ?',
     a: "L'inscription s'effectue en ligne depuis la page S'inscrire avant le vendredi 20 novembre 2026 afin d'obtenir votre référence UCAEP. Toutes les ouvertures de phase et communications officielles sont publiées sur la page Annonces.",
   },
-];
+  ];
+}
 
 export function FaqPage() {
   usePageSeo(
@@ -91,6 +109,21 @@ export function FaqPage() {
   );
 
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [phases, setPhases] = useState<CompetitionPhase[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchApiJson<{ phases: CompetitionPhase[] }>('/api/phases')
+      .then((data) => {
+        if (active) setPhases(data.phases || []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const faqItems = buildFaqItems(phases);
 
   return (
     <div className="bg-ucaep-paper">
@@ -191,7 +224,7 @@ export function FaqPage() {
 
           <div className="lg:col-span-8">
             <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15 bg-ucaep-paper/85">
-              {FAQ_ITEMS.map((item, idx) => {
+              {faqItems.map((item, idx) => {
                 const isOpen = openIndex === idx;
                 const displayIdx = String(idx + 1).padStart(2, '0');
                 return (

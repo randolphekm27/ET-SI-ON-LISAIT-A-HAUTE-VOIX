@@ -1072,7 +1072,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
 
               {/* 3 repères visuels immédiats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                {dossier.introHighlights.map((item) => (
+                {dossier.introHighlights.map((item, idx) => (
                   <div
                     key={item.num}
                     className="p-4 bg-white border border-ucaep-brown/14 rounded-sm space-y-1.5"
@@ -1084,7 +1084,9 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                       {item.title}
                     </h3>
                     <p className="text-xs text-ucaep-ink/78 leading-relaxed">
-                      {item.detail}
+                      {!activePhase.isRevealed && idx === 0
+                        ? "Deux épreuves complémentaires dont les intitulés exacts sont masqués jusqu'à l'ouverture officielle de cette phase."
+                        : item.detail}
                     </p>
                   </div>
                 ))}
@@ -1148,96 +1150,124 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              {dossier.epreuves.map((epreuve) => {
-                const isExpanded = Boolean(expandedEpreuves[epreuve.number]);
-                return (
-                  <article
-                    key={epreuve.number}
-                    className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-8 space-y-5"
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ucaep-brown/12 pb-3 tabular-nums">
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                        {epreuve.tag}
-                      </span>
-                      <span className="text-xs font-semibold text-ucaep-green">
-                        {epreuve.duration}
-                      </span>
-                    </div>
-
-                    <h4 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                      {epreuve.title}
-                    </h4>
-
-                    <p className="text-[15px] text-ucaep-ink/90 leading-relaxed">
-                      {epreuve.summary}
-                    </p>
-
-                    <ul className="space-y-2.5 pt-1">
-                      {epreuve.keyPoints.map((kp) => (
-                        <li
-                          key={kp.label}
-                          className="flex items-start gap-2.5 text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
-                          <span>
-                            <strong className="font-semibold text-ucaep-brown">
-                              {kp.label} :
-                            </strong>{' '}
-                            {kp.text}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div className="p-3.5 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                        {epreuve.formatsLabel}
-                      </p>
-                      <p className="text-xs text-ucaep-ink/85 leading-relaxed">
-                        {epreuve.formats}
-                      </p>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/82 leading-[1.75]">
-                        {epreuve.paragraphs.map((paragraph, pIdx) => (
-                          <p key={pIdx}>{paragraph}</p>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t border-ucaep-brown/10">
-                      <button
-                        type="button"
-                        aria-expanded={isExpanded}
-                        onClick={() =>
-                          setExpandedEpreuves((prev) => ({
-                            ...prev,
-                            [epreuve.number]: !prev[epreuve.number],
-                          }))
-                        }
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
-                      >
-                        <span>
-                          {isExpanded
-                            ? 'Réduire les consignes détaillées'
-                            : 'Lire les consignes détaillées'}
+            {activePhase.isRevealed ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                {dossier.epreuves.map((epreuve) => {
+                  const isExpanded = Boolean(expandedEpreuves[epreuve.number]);
+                  return (
+                    <article
+                      key={epreuve.number}
+                      className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-8 space-y-5"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ucaep-brown/12 pb-3 tabular-nums">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                          {epreuve.tag}
                         </span>
-                        {isExpanded ? (
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        )}
-                      </button>
+                        <span className="text-xs font-semibold text-ucaep-green">
+                          {epreuve.duration}
+                        </span>
+                      </div>
+
+                      <h4 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
+                        {epreuve.title}
+                      </h4>
+
+                      <p className="text-[15px] text-ucaep-ink/90 leading-relaxed">
+                        {epreuve.summary}
+                      </p>
+
+                      <ul className="space-y-2.5 pt-1">
+                        {epreuve.keyPoints.map((kp) => (
+                          <li
+                            key={kp.label}
+                            className="flex items-start gap-2.5 text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
+                            <span>
+                              <strong className="font-semibold text-ucaep-brown">
+                                {kp.label} :
+                              </strong>{' '}
+                              {kp.text}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="p-3.5 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
+                          {epreuve.formatsLabel}
+                        </p>
+                        <p className="text-xs text-ucaep-ink/85 leading-relaxed">
+                          {epreuve.formats}
+                        </p>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/82 leading-[1.75]">
+                          {epreuve.paragraphs.map((paragraph, pIdx) => (
+                            <p key={pIdx}>{paragraph}</p>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-ucaep-brown/10">
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            setExpandedEpreuves((prev) => ({
+                              ...prev,
+                              [epreuve.number]: !prev[epreuve.number],
+                            }))
+                          }
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
+                        >
+                          <span>
+                            {isExpanded
+                              ? 'Réduire les consignes détaillées'
+                              : 'Lire les consignes détaillées'}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {['01', '02'].map((num) => (
+                  <article
+                    key={num}
+                    className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-8 space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-ucaep-brown/12 pb-3">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                        Épreuve {num} · Phase {activePhase.number}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown/75">
+                        <Lock className="w-3.5 h-3.5 text-ucaep-gold" />
+                        Masquée
+                      </span>
                     </div>
+                    <h4 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                      Sujet et consignes en attente de publication
+                    </h4>
+                    <p className="text-sm text-ucaep-ink/80 leading-relaxed">
+                      L&apos;intitulé précis et le cahier des charges de cette épreuve sont masqués jusqu&apos;à l&apos;ouverture officielle par l&apos;équipe organisatrice de l&apos;UCAEP.
+                    </p>
                   </article>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Sous-section B : Onglets interactifs (Format, Vidéo & Livrables) */}
+          {activePhase.isRevealed && (
           <div className="space-y-6 pt-6 border-t border-ucaep-brown/14">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-1.5 max-w-2xl">
@@ -1352,6 +1382,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               );
             })()}
           </div>
+          )}
 
           {/* Sous-section C : Conclusion synthétique de la phase */}
           <article className="bg-[#4E2A1E] text-[#FBF9F5] rounded-sm p-7 sm:p-10 space-y-4">
@@ -1372,6 +1403,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
           </article>
 
           {/* Sous-section D : Ce que les candidats vont faire concrètement (4 étapes séquentielles) */}
+          {activePhase.isRevealed && (
           <div className="space-y-6 pt-4 border-t border-ucaep-brown/14">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-1.5 max-w-2xl">
@@ -1411,6 +1443,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               ))}
             </div>
           </div>
+          )}
 
           {/* Sous-section E : Engagements institutionnels & Règles d'équité */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 border-t border-ucaep-brown/14">
@@ -1523,6 +1556,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </div>
               )}
 
+              {activePhase.isRevealed && (
               <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-4">
                 <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
                   Liste de contrôle avant envoi ou passage
@@ -1536,6 +1570,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   ))}
                 </ul>
               </div>
+              )}
             </div>
 
             {/* Colonne droite : Barème & Règles pratiques */}
@@ -1645,10 +1680,9 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   Passages devant le jury et remise des prix
                 </h3>
                 <p className="text-sm text-ucaep-ink/80 leading-relaxed">
-                  Chaque finaliste présente son discours préparé (« La parole que le
-                  monde doit entendre ») puis relève l&apos;épreuve d&apos;improvisation
-                  (« Le défi de l&apos;inattendu »), suivis de la remise des
-                  attestations de participation.
+                  {activePhase.isRevealed
+                    ? "Chaque finaliste présente son discours préparé (« La parole que le monde doit entendre ») puis relève l'épreuve d'improvisation (« Le défi de l'inattendu »), suivis de la remise des attestations de participation."
+                    : "Chaque finaliste présente deux épreuves en présentiel devant le jury et le public (dont les intitulés précis sont communiqués à l'approche de la finale), suivies de la remise des attestations de participation."}
                 </p>
               </div>
             </div>
