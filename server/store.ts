@@ -26,6 +26,7 @@ import {
   isPgFallbackEligibleError,
   markPreferSupabaseRest,
   markRegistrationSyncedViaSupabaseRest,
+  parseSiteDisplayValue,
   readStoreViaSupabaseRest,
   saveContactViaSupabaseRest,
   saveRegistrationViaSupabaseRest,
@@ -55,25 +56,7 @@ import type {
 } from '../src/types/competition';
 
 export function normalizeSiteDisplayConfig(raw: unknown): SiteDisplayConfig {
-  let obj: Record<string, unknown> | null = null;
-  if (typeof raw === 'string' && raw.trim()) {
-    try {
-      obj = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      obj = null;
-    }
-  } else if (raw && typeof raw === 'object') {
-    obj = raw as Record<string, unknown>;
-  }
-  const mode = obj?.mode === 'phase_single_page' ? 'phase_single_page' : 'multi_page';
-  const activePhaseId =
-    typeof obj?.activePhaseId === 'string' &&
-    ['phase-1', 'phase-2', 'phase-3'].includes(obj.activePhaseId)
-      ? obj.activePhaseId
-      : 'phase-1';
-  const customNotice =
-    typeof obj?.customNotice === 'string' ? obj.customNotice.trim().slice(0, 400) : '';
-  return { mode, activePhaseId, customNotice };
+  return parseSiteDisplayValue(raw);
 }
 
 export interface LocalSubmissionRecord {
@@ -125,6 +108,7 @@ const DEFAULT_STORE: StoreData = {
       mode: 'multi_page',
       activePhaseId: 'phase-1',
       customNotice: '',
+      externalForms: {},
     },
   },
   phases: [
@@ -1475,6 +1459,16 @@ export async function updateSettingsRecord(googleAppsScriptUrl: string) {
       store.settings.googleAppsScriptUrl = cleanUrl;
       return store.settings;
     });
+  }
+}
+
+export async function getSiteDisplayConfig(): Promise<SiteDisplayConfig> {
+  try {
+    const store = await readStore();
+    return normalizeSiteDisplayConfig(store.settings?.siteDisplay);
+  } catch {
+    const jsonStore = await readJsonStore();
+    return normalizeSiteDisplayConfig(jsonStore.settings?.siteDisplay);
   }
 }
 

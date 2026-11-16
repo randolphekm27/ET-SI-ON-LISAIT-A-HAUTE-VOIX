@@ -47,6 +47,12 @@ export interface CompetitionPhase {
   testDetails?: PhaseTestDetails | null;
 }
 
+export interface PhaseExternalFormConfig {
+  enabled: boolean;
+  googleFormUrl: string;
+  instructions?: string;
+}
+
 export interface CandidateSubmissionSummary {
   id: string;
   phaseId: string;
@@ -56,6 +62,12 @@ export interface CandidateSubmissionSummary {
   sizeBytes: number | null;
   textExcerpt?: string | null;
   textContent?: string | null;
+  text1Content?: string | null;
+  text2Content?: string | null;
+  text1Status?: SubmissionStatus;
+  text2Status?: SubmissionStatus;
+  text1Note?: string;
+  text2Note?: string;
   status: SubmissionStatus;
   organizerNote?: string;
   createdAt: string;
@@ -74,6 +86,7 @@ export interface SubmissionPublicPhaseStatus {
   acceptingNow: boolean;
   closedReason: string | null;
   testDetails: PhaseTestDetails | null;
+  externalForm?: PhaseExternalFormConfig | null;
   existingSubmission: CandidateSubmissionSummary | null;
 }
 
@@ -92,6 +105,8 @@ export interface AdminSubmissionItem {
   mimeType: string | null;
   sizeBytes: number | null;
   textPreview: string | null;
+  text1Status?: SubmissionStatus;
+  text2Status?: SubmissionStatus;
   status: SubmissionStatus;
   organizerNote: string;
   createdAt: string;
@@ -107,6 +122,12 @@ export interface AdminSubmissionAccess {
   signedUrl: string | null;
   expiresInSeconds: number | null;
   textContent: string | null;
+  text1Content?: string | null;
+  text2Content?: string | null;
+  text1Status?: SubmissionStatus;
+  text2Status?: SubmissionStatus;
+  text1Note?: string;
+  text2Note?: string;
 }
 
 export interface NewsArticle {
@@ -167,6 +188,7 @@ export interface SiteDisplayConfig {
   mode: SiteDisplayMode;
   activePhaseId: string;
   customNotice?: string;
+  externalForms?: Record<string, PhaseExternalFormConfig>;
 }
 
 export interface PublicSiteConfigPayload {

@@ -3,8 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
+  ExternalLink,
   FileText,
   FileUp,
   Lock,
@@ -22,6 +25,7 @@ import {
   ACCEPT_ATTRIBUTE,
   MAX_TEXT_SUBMISSION_LENGTH,
   formatFileSize,
+  getPhaseTextSlotLabels,
   validateSubmissionFileClient,
 } from '../lib/submissions-config';
 import { uploadFileToSignedStorageUrl } from '../lib/supabase';
@@ -45,19 +49,22 @@ interface StatusResponse {
 
 const SUBMISSION_STATUS_BADGE: Record<
   SubmissionStatus,
-  { label: string; className: string }
+  { label: string; className: string; pillClass: string }
 > = {
   received: {
-    label: 'Reçu',
+    label: 'Reçu · En attente de validation',
     className: 'text-amber-800',
+    pillClass: 'bg-amber-50 text-amber-900 border-amber-300',
   },
   validated: {
     label: 'Validé par le jury',
     className: 'text-ucaep-green',
+    pillClass: 'bg-emerald-50 text-emerald-900 border-emerald-300',
   },
   rejected: {
     label: 'À reprendre',
     className: 'text-red-800',
+    pillClass: 'bg-red-50 text-red-900 border-red-300',
   },
 };
 
@@ -101,8 +108,9 @@ export function DepotSubmissionPanel({
 
   const [sessionData, setSessionData] = useState<StatusResponse | null>(null);
   const [selectedPhaseId, setSelectedPhaseId] = useState(lockedPhaseId || '');
-  const [activeKind, setActiveKind] = useState<SubmissionKind>('file');
-  const [replaceMode, setReplaceMode] = useState(false);
+  const [activeKind, setActiveKind] = useState<SubmissionKind>('text');
+  const [replaceFileMode, setReplaceFileMode] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
 
   // File upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -110,15 +118,23 @@ export function DepotSubmissionPanel({
   const [fileError, setFileError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [fileSubmitLoading, setFileSubmitLoading] = useState(false);
+  const [fileSubmitError, setFileSubmitError] = useState('');
+  const [fileJustSubmitted, setFileJustSubmitted] =
+    useState<CandidateSubmissionSummary | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Text submission state
-  const [textContent, setTextContent] = useState('');
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-  const [justSubmitted, setJustSubmitted] = useState<CandidateSubmissionSummary | null>(
-    null,
-  );
+  // Dual-Text submission state (Texte 1 & Texte 2)
+  const [text1Draft, setText1Draft] = useState('');
+  const [text2Draft, setText2Draft] = useState('');
+  const [editingSlot1, setEditingSlot1] = useState(true);
+  const [editingSlot2, setEditingSlot2] = useState(true);
+  const [slot1Loading, setSlot1Loading] = useState(false);
+  const [slot2Loading, setSlot2Loading] = useState(false);
+  const [slot1Error, setSlot1Error] = useState('');
+  const [slot2Error, setSlot2Error] = useState('');
+  const [slot1Success, setSlot1Success] = useState('');
+  const [slot2Success, setSlot2Success] = useState('');
 
   useEffect(() => {
     if (lockedPhaseId) {
@@ -149,21 +165,44 @@ export function DepotSubmissionPanel({
 
   useEffect(() => {
     if (!selectedPhase) return;
-    setSubmitError('');
+    setFileSubmitError('');
     setFileError('');
     setUploadProgress(null);
-    setJustSubmitted(null);
+    setFileJustSubmitted(null);
+    setSlot1Error('');
+    setSlot2Error('');
+    setSlot1Success('');
+    setSlot2Success('');
 
-    if (selectedPhase.existingSubmission) {
-      setReplaceMode(false);
-      if (selectedPhase.existingSubmission.kind === 'text') {
+    const sub = selectedPhase.existingSubmission;
+    const hasGoogleForm = Boolean(
+      selectedPhase.externalForm?.enabled && selectedPhase.externalForm?.googleFormUrl,
+    );
+
+    if (sub) {
+      if (sub.kind === 'text') {
         setActiveKind('text');
-        setTextContent(selectedPhase.existingSubmission.textContent || '');
+        const t1 = sub.text1Content || '';
+        const t2 = sub.text2Content || '';
+        setText1Draft(t1);
+        setText2Draft(t2);
+        setEditingSlot1(!t1.trim());
+        setEditingSlot2(!t2.trim());
       } else {
-        setActiveKind('file');
+        setActiveKind(hasGoogleForm ? 'text' : 'file');
+        setReplaceFileMode(false);
+        setText1Draft('');
+        setText2Draft('');
+        setEditingSlot1(true);
+        setEditingSlot2(true);
       }
     } else {
-      setReplaceMode(true);
+      setActiveKind('text');
+      setReplaceFileMode(true);
+      setText1Draft('');
+      setText2Draft('');
+      setEditingSlot1(true);
+      setEditingSlot2(true);
     }
   }, [selectedPhase?.id]);
 
@@ -190,9 +229,11 @@ export function DepotSubmissionPanel({
       createdAt: initialStored?.createdAt || new Date().toISOString(),
       syncedToGoogleSheets: initialStored?.syncedToGoogleSheets,
     });
+    const targetPhaseId = lockedPhaseId || selectedPhaseId;
+    const matchedPhase = res.phases.find((p) => p.id === targetPhaseId);
     if (lockedPhaseId) {
       setSelectedPhaseId(lockedPhaseId);
-    } else if (!selectedPhaseId || !res.phases.some((p) => p.id === selectedPhaseId)) {
+    } else if (!selectedPhaseId || !matchedPhase) {
       const firstOpen = res.phases.find((p) => p.acceptingNow) || res.phases[0];
       if (firstOpen) setSelectedPhaseId(firstOpen.id);
     }
@@ -231,7 +272,7 @@ export function DepotSubmissionPanel({
 
   function handleFileSelection(file: File | null) {
     setFileError('');
-    setSubmitError('');
+    setFileSubmitError('');
     if (!file) {
       setSelectedFile(null);
       setValidatedMime('');
@@ -259,6 +300,15 @@ export function DepotSubmissionPanel({
 
   async function handleSubmitFile() {
     if (!sessionData || !selectedPhase || !selectedPhase.acceptingNow) return;
+    if (
+      selectedPhase.existingSubmission?.kind === 'file' &&
+      selectedPhase.existingSubmission.status === 'validated'
+    ) {
+      setFileSubmitError(
+        'Votre dépôt a déjà été validé par le jury : la resoumission est désactivée.',
+      );
+      return;
+    }
     if (!selectedFile) {
       setFileError('Choisissez d’abord un fichier à envoyer.');
       return;
@@ -270,8 +320,8 @@ export function DepotSubmissionPanel({
       return;
     }
 
-    setSubmitLoading(true);
-    setSubmitError('');
+    setFileSubmitLoading(true);
+    setFileSubmitError('');
     setUploadProgress(2);
 
     try {
@@ -324,42 +374,59 @@ export function DepotSubmissionPanel({
         }),
       });
 
-      setJustSubmitted(done.submission);
-      setReplaceMode(false);
+      setFileJustSubmitted(done.submission);
+      setReplaceFileMode(false);
       setSelectedFile(null);
       setUploadProgress(100);
       await refreshCandidateStatus(sessionData.candidate.referenceCode, email);
     } catch (err) {
       setUploadProgress(null);
-      setSubmitError(
+      setFileSubmitError(
         err instanceof Error
           ? err.message
           : 'L’envoi a été interrompu. Votre sélection est conservée : vous pouvez réessayer.',
       );
     } finally {
-      setSubmitLoading(false);
+      setFileSubmitLoading(false);
     }
   }
 
-  async function handleSubmitText(e: FormEvent) {
+  async function handleSubmitTextSlot(slot: 1 | 2, e: FormEvent) {
     e.preventDefault();
     if (!sessionData || !selectedPhase || !selectedPhase.acceptingNow) return;
 
-    const cleanText = textContent.trim();
-    if (!cleanText) {
-      setSubmitError('Écrivez votre texte avant de valider le dépôt.');
-      return;
-    }
-    if (cleanText.length > MAX_TEXT_SUBMISSION_LENGTH) {
-      setSubmitError(
-        `Votre texte dépasse la limite de ${MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères.`,
+    const rawDraft = slot === 1 ? text1Draft : text2Draft;
+    const cleanText = rawDraft.trim();
+    const setErr = slot === 1 ? setSlot1Error : setSlot2Error;
+    const setOk = slot === 1 ? setSlot1Success : setSlot2Success;
+    const setLoading = slot === 1 ? setSlot1Loading : setSlot2Loading;
+    const setEditing = slot === 1 ? setEditingSlot1 : setEditingSlot2;
+
+    setErr('');
+    setOk('');
+
+    const existingSub = selectedPhase.existingSubmission;
+    const slotStatus =
+      slot === 1 ? existingSub?.text1Status : existingSub?.text2Status;
+    if (existingSub?.kind === 'text' && slotStatus === 'validated') {
+      setErr(
+        `Le Texte ${slot} a déjà été validé par le jury : la resoumission est désactivée.`,
       );
       return;
     }
 
-    setSubmitLoading(true);
-    setSubmitError('');
+    if (!cleanText) {
+      setErr(`Écrivez votre Texte ${slot} avant de valider l’envoi.`);
+      return;
+    }
+    if (cleanText.length > MAX_TEXT_SUBMISSION_LENGTH) {
+      setErr(
+        `Votre Texte ${slot} dépasse la limite de ${MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères.`,
+      );
+      return;
+    }
 
+    setLoading(true);
     try {
       await fetchApiJson('/api/submissions/init', {
         method: 'POST',
@@ -369,10 +436,11 @@ export function DepotSubmissionPanel({
           email,
           phaseId: selectedPhase.id,
           kind: 'text',
+          textSlot: slot,
         }),
       });
 
-      const done = await fetchApiJson<{
+      await fetchApiJson<{
         ok: true;
         submission: CandidateSubmissionSummary;
       }>('/api/submissions/complete', {
@@ -383,26 +451,262 @@ export function DepotSubmissionPanel({
           email,
           phaseId: selectedPhase.id,
           kind: 'text',
+          textSlot: slot,
           textContent: cleanText,
         }),
       });
 
-      setJustSubmitted(done.submission);
-      setReplaceMode(false);
+      setEditing(false);
+      setOk(`Texte ${slot} enregistré avec succès.`);
       await refreshCandidateStatus(sessionData.candidate.referenceCode, email);
     } catch (err) {
-      setSubmitError(
+      setErr(
         err instanceof Error
           ? err.message
-          : 'Impossible d’enregistrer votre texte. Vos mots sont conservés, réessayez.',
+          : `Impossible d’enregistrer le Texte ${slot}. Vos mots sont conservés, réessayez.`,
       );
     } finally {
-      setSubmitLoading(false);
+      setLoading(false);
     }
   }
 
-  const displayedSubmission =
-    justSubmitted || selectedPhase?.existingSubmission || null;
+  function handleCopyRef(code: string) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).catch(() => {});
+      setCopiedRef(true);
+      setTimeout(() => setCopiedRef(false), 2200);
+    }
+  }
+
+  const displayedFileSubmission =
+    fileJustSubmitted ||
+    (selectedPhase?.existingSubmission?.kind === 'file'
+      ? selectedPhase.existingSubmission
+      : null);
+
+  const hasGoogleForm = Boolean(
+    selectedPhase?.externalForm?.enabled &&
+      selectedPhase?.externalForm?.googleFormUrl,
+  );
+
+  const slotLabels = selectedPhase
+    ? getPhaseTextSlotLabels(selectedPhase.id)
+    : getPhaseTextSlotLabels('phase-1');
+
+  const textSub =
+    selectedPhase?.existingSubmission?.kind === 'text'
+      ? selectedPhase.existingSubmission
+      : null;
+  const submittedText1 = (textSub?.text1Content || '').trim();
+  const submittedText2 = (textSub?.text2Content || '').trim();
+  const text1Status: SubmissionStatus | null = submittedText1
+    ? textSub?.text1Status || textSub?.status || 'received'
+    : null;
+  const text2Status: SubmissionStatus | null = submittedText2
+    ? textSub?.text2Status || 'received'
+    : null;
+  const isText1Locked = text1Status === 'validated';
+  const isText2Locked = text2Status === 'validated';
+  const isFileLocked = displayedFileSubmission?.status === 'validated';
+
+  function renderTextSlotCard(slot: 1 | 2) {
+    if (!selectedPhase) return null;
+    const isSlot1 = slot === 1;
+    const title = isSlot1 ? slotLabels.slot1Title : slotLabels.slot2Title;
+    const subtitle = isSlot1 ? slotLabels.slot1Subtitle : slotLabels.slot2Subtitle;
+    const submittedText = isSlot1 ? submittedText1 : submittedText2;
+    const slotStatus = isSlot1 ? text1Status : text2Status;
+    const slotNote = isSlot1 ? textSub?.text1Note : textSub?.text2Note;
+    const isLocked = isSlot1 ? isText1Locked : isText2Locked;
+    const draft = isSlot1 ? text1Draft : text2Draft;
+    const setDraft = isSlot1 ? setText1Draft : setText2Draft;
+    const editing = isSlot1 ? editingSlot1 : editingSlot2;
+    const setEditing = isSlot1 ? setEditingSlot1 : setEditingSlot2;
+    const loading = isSlot1 ? slot1Loading : slot2Loading;
+    const errMsg = isSlot1 ? slot1Error : slot2Error;
+    const okMsg = isSlot1 ? slot1Success : slot2Success;
+
+    const statusMeta = slotStatus ? SUBMISSION_STATUS_BADGE[slotStatus] : null;
+    const showEditor =
+      selectedPhase.acceptingNow && !isLocked && (!submittedText || editing);
+
+    return (
+      <div
+        key={`text-slot-${slot}`}
+        className={`p-5 sm:p-6 bg-white border rounded-sm space-y-4 ${
+          isLocked
+            ? 'border-ucaep-green/45 bg-emerald-50/15'
+            : 'border-ucaep-brown/15'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-ucaep-brown/10 pb-3.5">
+          <div className="space-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+              Production écrite · 0{slot}
+            </span>
+            <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+              {title}
+            </h4>
+            <p className="text-xs text-ucaep-ink/65">{subtitle}</p>
+          </div>
+
+          {statusMeta ? (
+            <span
+              className={`self-start shrink-0 px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${statusMeta.pillClass}`}
+            >
+              {statusMeta.label}
+            </span>
+          ) : (
+            <span className="self-start shrink-0 px-2.5 py-1 text-[11px] font-medium border border-ucaep-brown/20 bg-ucaep-paper text-ucaep-ink/65 rounded-sm">
+              Non soumis
+            </span>
+          )}
+        </div>
+
+        {okMsg && (
+          <div
+            role="status"
+            className="p-3 bg-emerald-50 border border-emerald-300 rounded-sm text-xs text-emerald-950 flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0" />
+            <span>{okMsg}</span>
+          </div>
+        )}
+
+        {errMsg && (
+          <div
+            role="alert"
+            className="p-3 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errMsg}</span>
+          </div>
+        )}
+
+        {submittedText && (!editing || isLocked || !selectedPhase.acceptingNow) && (
+          <div className="space-y-3">
+            <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm">
+              <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto">
+                {submittedText}
+              </p>
+            </div>
+
+            {slotNote && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
+                <strong>Observation du jury (Texte {slot}) :</strong> {slotNote}
+              </div>
+            )}
+
+            {isLocked ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <p className="text-xs text-ucaep-green font-medium flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Validé par le jury : votre Texte {slot} est définitivement
+                    verrouillé.
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/20 bg-ucaep-linen/70 text-ucaep-ink/50 cursor-not-allowed"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Resoumission désactivée (Validé)</span>
+                </button>
+              </div>
+            ) : selectedPhase.acceptingNow ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <p className="text-xs text-ucaep-ink/65">
+                  {slotStatus === 'rejected'
+                    ? 'Le jury demande une reprise de ce texte. Modifiez-le puis renvoyez-le.'
+                    : 'Vous pouvez modifier ce texte tant que le jury ne l’a pas encore validé.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft(submittedText);
+                    setEditing(true);
+                    isSlot1 ? setSlot1Success('') : setSlot2Success('');
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Remplacer / Mettre à jour</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {showEditor && (
+          <form onSubmit={(e) => handleSubmitTextSlot(slot, e)} className="space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <label
+                  htmlFor={`depot-text-area-${slot}`}
+                  className="font-semibold uppercase tracking-wider text-ucaep-brown"
+                >
+                  Rédaction — Texte {slot} *
+                </label>
+                <span className="tabular-nums text-ucaep-ink/65">
+                  {draft.length.toLocaleString('fr-FR')} /{' '}
+                  {MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères
+                </span>
+              </div>
+              <textarea
+                id={`depot-text-area-${slot}`}
+                rows={8}
+                required
+                maxLength={MAX_TEXT_SUBMISSION_LENGTH}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={`Rédigez ou collez ici votre Texte ${slot} (${title})...`}
+                className="w-full px-4 py-3 text-sm leading-relaxed border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={loading || !draft.trim()}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
+              >
+                <span>
+                  {loading
+                    ? 'Enregistrement...'
+                    : submittedText
+                      ? `Mettre à jour le Texte ${slot}`
+                      : `Soumettre le Texte ${slot}`}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              {submittedText && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(submittedText);
+                  }}
+                  className="px-4 py-2.5 text-xs font-medium text-ucaep-brown/80 hover:text-ucaep-brown underline"
+                >
+                  Annuler
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        {!submittedText && !selectedPhase.acceptingNow && (
+          <p className="text-xs text-ucaep-ink/65 italic">
+            Aucun Texte {slot} soumis et les dépôts ne sont pas ouverts pour cette phase.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -522,9 +826,10 @@ export function DepotSubmissionPanel({
               onClick={() => {
                 setSessionData(null);
                 setSelectedFile(null);
-                setTextContent('');
-                setJustSubmitted(null);
-                setSubmitError('');
+                setText1Draft('');
+                setText2Draft('');
+                setFileJustSubmitted(null);
+                setFileSubmitError('');
               }}
               className="text-xs font-medium text-ucaep-brown hover:text-ucaep-gold underline self-start sm:self-center"
             >
@@ -618,7 +923,7 @@ export function DepotSubmissionPanel({
             </div>
           )}
 
-          {/* ÉTAPE 3 : DÉPÔT OU CONFIRMATION POUR LA PHASE SÉLECTIONNÉE */}
+          {/* ÉTAPE 3 : DÉPÔT POUR LA PHASE SÉLECTIONNÉE */}
           {selectedPhase && (
             <div className="space-y-6">
               {!lockedPhaseId && selectedPhase.isRevealed && selectedPhase.testDetails && (
@@ -638,352 +943,443 @@ export function DepotSubmissionPanel({
                 </div>
               )}
 
-              {/* DÉPÔT DÉJÀ REÇU / CONFIRMATION */}
-              {displayedSubmission && !replaceMode && (
-                <div
-                  aria-live="polite"
-                  className="p-6 sm:p-8 bg-white border border-ucaep-green/35 rounded-sm space-y-5"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
-                      <div>
-                        <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                          {justSubmitted
-                            ? 'Votre dépôt a bien été reçu'
-                            : 'Dépôt enregistré pour cette phase'}
-                        </h3>
-                        <p className="text-xs text-ucaep-ink/65 tabular-nums">
-                          Dernière mise à jour le{' '}
-                          {formatFrenchDate(displayedSubmission.updatedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`self-start text-xs font-semibold uppercase tracking-wider ${
-                        SUBMISSION_STATUS_BADGE[displayedSubmission.status].className
-                      }`}
-                    >
-                      Statut :{' '}
-                      {SUBMISSION_STATUS_BADGE[displayedSubmission.status].label}
-                    </span>
+              {!selectedPhase.acceptingNow &&
+                !selectedPhase.existingSubmission &&
+                selectedPhase.format !== 'En présentiel' && (
+                  <div className="p-6 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/75">
+                    {selectedPhase.closedReason ||
+                      'Les dépôts ne sont pas ouverts pour cette phase.'}
                   </div>
+                )}
 
-                  <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm text-sm space-y-2">
-                    {displayedSubmission.kind === 'file' ? (
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <FileUp className="w-4 h-4 text-ucaep-brown shrink-0" />
-                          <span className="font-medium text-ucaep-ink truncate">
-                            {displayedSubmission.fileName || 'Fichier déposé'}
-                          </span>
-                        </div>
-                        <span className="text-xs text-ucaep-ink/65 tabular-nums shrink-0">
-                          {formatFileSize(displayedSubmission.sizeBytes)}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-ucaep-brown/75">
-                          Texte écrit envoyé
-                        </p>
-                        <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                          {displayedSubmission.textContent ||
-                            displayedSubmission.textExcerpt}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {displayedSubmission.organizerNote && (
-                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
-                      <strong>Note de l&apos;équipe UCAEP :</strong>{' '}
-                      {displayedSubmission.organizerNote}
-                    </div>
-                  )}
-
-                  {selectedPhase.acceptingNow && (
-                    <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs text-ucaep-ink/70">
-                        Vous pouvez encore modifier ou remplacer ce dépôt tant que la
-                        phase reste ouverte.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplaceMode(true);
-                          setJustSubmitted(null);
-                          setSubmitError('');
-                          setUploadProgress(null);
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Remplacer mon dépôt</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* FORMULAIRE DE DÉPÔT */}
-              {selectedPhase.acceptingNow && (!displayedSubmission || replaceMode) && (
-                <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                        Envoi de votre production
-                      </p>
-                      <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                        Phase {selectedPhase.number} — {selectedPhase.title}
-                      </h3>
-                    </div>
-
-                    {displayedSubmission && (
-                      <button
-                        type="button"
-                        onClick={() => setReplaceMode(false)}
-                        className="text-xs font-medium text-ucaep-brown/75 hover:text-ucaep-brown underline self-start sm:self-center"
-                      >
-                        Annuler le remplacement
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Onglets Fichier / Texte */}
-                  <div
-                    role="tablist"
-                    aria-label="Mode de dépôt"
-                    className="inline-flex p-1 bg-ucaep-linen/70 border border-ucaep-brown/15 rounded-sm gap-1"
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={activeKind === 'file'}
-                      onClick={() => {
-                        setActiveKind('file');
-                        setSubmitError('');
-                      }}
-                      className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
-                        activeKind === 'file'
-                          ? 'bg-ucaep-brown text-ucaep-paper'
-                          : 'text-ucaep-brown hover:bg-white/70'
-                      }`}
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Envoyer un fichier</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={activeKind === 'text'}
-                      onClick={() => {
-                        setActiveKind('text');
-                        setSubmitError('');
-                        setFileError('');
-                      }}
-                      className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
-                        activeKind === 'text'
-                          ? 'bg-ucaep-brown text-ucaep-paper'
-                          : 'text-ucaep-brown hover:bg-white/70'
-                      }`}
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Écrire mon texte</span>
-                    </button>
-                  </div>
-
-                  {submitError && (
-                    <div
-                      role="alert"
-                      className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
-                    >
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p>{submitError}</p>
-                        <p className="text-xs text-red-800/80">
-                          Votre fichier ou votre texte est toujours prêt ci-dessous :
-                          corrigez si besoin et relancez l&apos;envoi.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeKind === 'file' ? (
-                    <div className="space-y-5">
-                      <div
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setIsDragging(true);
-                        }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={handleDrop}
-                        className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors ${
-                          isDragging
-                            ? 'border-ucaep-gold bg-ucaep-ivory/40'
-                            : 'border-ucaep-brown/25 bg-ucaep-paper/60 hover:border-ucaep-brown/45'
-                        }`}
-                      >
-                        <input
-                          ref={fileInputRef}
-                          id="depot-file-input"
-                          type="file"
-                          accept={ACCEPT_ATTRIBUTE}
-                          onChange={(e) =>
-                            handleFileSelection(e.target.files?.[0] || null)
-                          }
-                          className="sr-only"
-                        />
-                        <Upload
-                          className="w-7 h-7 mx-auto text-ucaep-brown/60 mb-3"
-                          aria-hidden="true"
-                        />
-                        <p className="text-sm font-medium text-ucaep-brown">
-                          Glissez votre fichier ici ou{' '}
-                          <label
-                            htmlFor="depot-file-input"
-                            className="text-ucaep-green font-semibold underline cursor-pointer hover:text-ucaep-gold"
-                          >
-                            choisissez-le sur votre appareil
-                          </label>
-                        </p>
-                        <p className="mt-2 text-xs text-ucaep-ink/65">
-                          Vidéo (MP4, MOV, WebM) · Audio (MP3, M4A, WAV, OGG) · Document (PDF, DOCX, DOC)
-                        </p>
-                        <p className="mt-1 text-[11px] font-medium text-ucaep-brown/75">
-                          Taille maximale : 50 Mo (conseil vidéo : exportez en MP4 720p).
-                        </p>
-                      </div>
-
-                      {fileError && (
-                        <div
-                          role="alert"
-                          className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
-                        >
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{fileError}</span>
-                        </div>
-                      )}
-
-                      {selectedFile && (
-                        <div className="p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm flex items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-ucaep-brown truncate">
-                              {selectedFile.name}
-                            </p>
-                            <p className="text-xs text-ucaep-ink/70 tabular-nums">
-                              {formatFileSize(selectedFile.size)}
-                            </p>
-                          </div>
-                          {!submitLoading && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedFile(null);
-                                if (fileInputRef.current) fileInputRef.current.value = '';
-                              }}
-                              aria-label="Retirer ce fichier"
-                              className="p-1.5 text-ucaep-brown/70 hover:text-red-800 rounded-sm"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {uploadProgress !== null && (
-                        <div className="space-y-1.5" aria-live="polite">
-                          <div className="flex items-center justify-between text-xs font-medium text-ucaep-brown tabular-nums">
-                            <span>
-                              {uploadProgress < 100
-                                ? 'Envoi sécurisé vers le stockage...'
-                                : 'Finalisation du dépôt...'}
-                            </span>
-                            <span>{uploadProgress}%</span>
-                          </div>
-                          <div
-                            role="progressbar"
-                            aria-valuenow={uploadProgress}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            className="w-full h-2.5 bg-ucaep-linen rounded-sm overflow-hidden border border-ucaep-brown/15"
-                          >
-                            <div
-                              className="h-full bg-ucaep-green transition-all duration-150"
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        disabled={!selectedFile || submitLoading || !uploadReady}
-                        onClick={handleSubmitFile}
-                        className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
-                      >
-                        <span>
-                          {submitLoading
-                            ? 'Envoi en cours...'
-                            : displayedSubmission
-                              ? 'Remplacer avec ce fichier'
-                              : 'Envoyer mon fichier'}
-                        </span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmitText} className="space-y-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <label
-                            htmlFor="depot-text-area"
-                            className="font-semibold uppercase tracking-wider text-ucaep-brown"
-                          >
-                            Votre texte *
-                          </label>
-                          <span className="tabular-nums text-ucaep-ink/65">
-                            {textContent.length.toLocaleString('fr-FR')} /{' '}
-                            {MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères
-                          </span>
-                        </div>
-                        <textarea
-                          id="depot-text-area"
-                          rows={10}
-                          required
-                          maxLength={MAX_TEXT_SUBMISSION_LENGTH}
-                          value={textContent}
-                          onChange={(e) => setTextContent(e.target.value)}
-                          placeholder="Rédigez ou collez votre texte ici..."
-                          className="w-full px-4 py-3 text-sm leading-relaxed border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={submitLoading || !textContent.trim()}
-                        className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
-                      >
-                        <span>
-                          {submitLoading
-                            ? 'Enregistrement en cours...'
-                            : displayedSubmission
-                              ? 'Mettre à jour mon texte'
-                              : 'Envoyer mon texte'}
-                        </span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </form>
-                  )}
-                </div>
-              )}
-
-              {!selectedPhase.acceptingNow && !displayedSubmission && (
-                <div className="p-6 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/75">
+              {selectedPhase.format === 'En présentiel' && (
+                <div className="p-6 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/80">
                   {selectedPhase.closedReason ||
-                    'Les dépôts ne sont pas ouverts pour cette phase.'}
+                    'Épreuve en présentiel sur le campus : aucun dépôt en ligne n’est demandé.'}
                 </div>
               )}
+
+              {/* CAS 1 : GOOGLE FORM ACTIVÉ PAR L'ORGANISATEUR POUR LES VIDÉOS / FICHIERS */}
+              {selectedPhase.format !== 'En présentiel' && hasGoogleForm && (
+                <div className="space-y-6">
+                  {selectedPhase.acceptingNow && (
+                    <div className="p-6 sm:p-8 bg-white border-2 border-ucaep-gold/45 rounded-sm space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                            Envoi des vidéos &amp; fichiers · Google Form officiel
+                          </p>
+                          <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                            Déposer vos vidéos d&apos;interprétation
+                          </h3>
+                        </div>
+                        <span className="self-start px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider bg-[#F7E6C8]/65 text-ucaep-brown rounded-sm">
+                          Lien actif
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-ucaep-ink/80 leading-relaxed">
+                        {selectedPhase.externalForm?.instructions ||
+                          'Pour cette phase, l’envoi de vos vidéos de lecture et pièces jointes s’effectue exclusivement via le formulaire Google Form officiel ci-dessous. Renseignez-y exactement votre code d’anonymat UCAEP.'}
+                      </p>
+
+                      <div className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/75">
+                            Votre code d&apos;anonymat à indiquer dans le Google Form
+                          </p>
+                          <p className="font-mono text-lg font-bold text-ucaep-brown">
+                            {sessionData.candidate.referenceCode}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyRef(sessionData.candidate.referenceCode)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-ivory/40 transition-colors self-start sm:self-center"
+                        >
+                          {copiedRef ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-ucaep-green" />
+                              <span>Code copié</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copier mon code</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="pt-1">
+                        <a
+                          href={selectedPhase.externalForm!.googleFormUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                        >
+                          <span>Ouvrir le formulaire Google Form de soumission</span>
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {(selectedPhase.acceptingNow || textSub) && (
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                          Épreuves écrites · Phase {selectedPhase.number}
+                        </p>
+                        <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                          Soumettre vos deux textes (Texte 1 et Texte 2)
+                        </h3>
+                        <p className="text-xs text-ucaep-ink/70 leading-relaxed">
+                          Déposez ci-dessous le texte intégral de chacune des deux épreuves.
+                          Une fois qu&apos;un texte est validé par le jury, sa modification
+                          est automatiquement verrouillée.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-5">
+                        {renderTextSlotCard(1)}
+                        {renderTextSlotCard(2)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CAS 2 : GOOGLE FORM NON ACTIVÉ — TEXTES (T1 & T2) OU FICHIER SUPABASE */}
+              {selectedPhase.format !== 'En présentiel' &&
+                !hasGoogleForm &&
+                (selectedPhase.acceptingNow || selectedPhase.existingSubmission) && (
+                  <div className="space-y-6">
+                    {/* Onglets Textes vs Fichier */}
+                    {selectedPhase.acceptingNow && (
+                      <div
+                        role="tablist"
+                        aria-label="Mode de dépôt"
+                        className="inline-flex p-1 bg-ucaep-linen/70 border border-ucaep-brown/15 rounded-sm gap-1"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={activeKind === 'text'}
+                          onClick={() => {
+                            setActiveKind('text');
+                            setFileSubmitError('');
+                            setFileError('');
+                          }}
+                          className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
+                            activeKind === 'text'
+                              ? 'bg-ucaep-brown text-ucaep-paper'
+                              : 'text-ucaep-brown hover:bg-white/70'
+                          }`}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Mes textes (Texte 1 &amp; Texte 2)</span>
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={activeKind === 'file'}
+                          onClick={() => {
+                            setActiveKind('file');
+                            setFileSubmitError('');
+                          }}
+                          className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
+                            activeKind === 'file'
+                              ? 'bg-ucaep-brown text-ucaep-paper'
+                              : 'text-ucaep-brown hover:bg-white/70'
+                          }`}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Envoyer un fichier</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Vue Textes (Texte 1 & Texte 2) */}
+                    {(activeKind === 'text' || textSub) && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-5">
+                          {renderTextSlotCard(1)}
+                          {renderTextSlotCard(2)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vue Fichier Supabase */}
+                    {(activeKind === 'file' || displayedFileSubmission) && (
+                      <div className="space-y-5">
+                        {displayedFileSubmission && !replaceFileMode && (
+                          <div
+                            aria-live="polite"
+                            className="p-6 sm:p-8 bg-white border border-ucaep-green/35 rounded-sm space-y-5"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
+                                <div>
+                                  <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                                    {fileJustSubmitted
+                                      ? 'Votre fichier a bien été reçu'
+                                      : 'Fichier enregistré pour cette phase'}
+                                  </h3>
+                                  <p className="text-xs text-ucaep-ink/65 tabular-nums">
+                                    Dernière mise à jour le{' '}
+                                    {formatFrenchDate(displayedFileSubmission.updatedAt)}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`self-start px-2.5 py-1 text-xs font-semibold border rounded-sm ${
+                                  SUBMISSION_STATUS_BADGE[displayedFileSubmission.status]
+                                    .pillClass
+                                }`}
+                              >
+                                {
+                                  SUBMISSION_STATUS_BADGE[displayedFileSubmission.status]
+                                    .label
+                                }
+                              </span>
+                            </div>
+
+                            <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm text-sm">
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <FileUp className="w-4 h-4 text-ucaep-brown shrink-0" />
+                                  <span className="font-medium text-ucaep-ink truncate">
+                                    {displayedFileSubmission.fileName || 'Fichier déposé'}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-ucaep-ink/65 tabular-nums shrink-0">
+                                  {formatFileSize(displayedFileSubmission.sizeBytes)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {displayedFileSubmission.organizerNote && (
+                              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
+                                <strong>Note de l&apos;équipe UCAEP :</strong>{' '}
+                                {displayedFileSubmission.organizerNote}
+                              </div>
+                            )}
+
+                            {selectedPhase.acceptingNow && (
+                              <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
+                                {isFileLocked ? (
+                                  <>
+                                    <p className="text-xs text-ucaep-green font-medium flex items-center gap-1.5">
+                                      <Lock className="w-3.5 h-3.5" />
+                                      <span>
+                                        Dépôt validé par le jury : la resoumission est
+                                        désactivée.
+                                      </span>
+                                    </p>
+                                    <button
+                                      type="button"
+                                      disabled
+                                      aria-disabled="true"
+                                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/20 bg-ucaep-linen/70 text-ucaep-ink/50 cursor-not-allowed"
+                                    >
+                                      <Lock className="w-3.5 h-3.5" />
+                                      <span>Resoumission désactivée (Validé)</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-xs text-ucaep-ink/70">
+                                      Vous pouvez encore remplacer ce fichier tant que le
+                                      jury ne l&apos;a pas validé.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setReplaceFileMode(true);
+                                        setFileJustSubmitted(null);
+                                        setFileSubmitError('');
+                                        setUploadProgress(null);
+                                      }}
+                                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                      <span>Remplacer mon dépôt</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {activeKind === 'file' &&
+                          selectedPhase.acceptingNow &&
+                          !isFileLocked &&
+                          (!displayedFileSubmission || replaceFileMode) && (
+                            <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+                                <div className="space-y-1">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                                    Envoi de fichier
+                                  </p>
+                                  <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                                    Phase {selectedPhase.number} — {selectedPhase.title}
+                                  </h3>
+                                </div>
+                                {displayedFileSubmission && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setReplaceFileMode(false)}
+                                    className="text-xs font-medium text-ucaep-brown/75 hover:text-ucaep-brown underline self-start sm:self-center"
+                                  >
+                                    Annuler le remplacement
+                                  </button>
+                                )}
+                              </div>
+
+                              {fileSubmitError && (
+                                <div
+                                  role="alert"
+                                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                                >
+                                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                  <span>{fileSubmitError}</span>
+                                </div>
+                              )}
+
+                              <div
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  setIsDragging(true);
+                                }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={handleDrop}
+                                className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors ${
+                                  isDragging
+                                    ? 'border-ucaep-gold bg-ucaep-ivory/40'
+                                    : 'border-ucaep-brown/25 bg-ucaep-paper/60 hover:border-ucaep-brown/45'
+                                }`}
+                              >
+                                <input
+                                  ref={fileInputRef}
+                                  id="depot-file-input"
+                                  type="file"
+                                  accept={ACCEPT_ATTRIBUTE}
+                                  onChange={(e) =>
+                                    handleFileSelection(e.target.files?.[0] || null)
+                                  }
+                                  className="sr-only"
+                                />
+                                <Upload
+                                  className="w-7 h-7 mx-auto text-ucaep-brown/60 mb-3"
+                                  aria-hidden="true"
+                                />
+                                <p className="text-sm font-medium text-ucaep-brown">
+                                  Glissez votre fichier ici ou{' '}
+                                  <label
+                                    htmlFor="depot-file-input"
+                                    className="text-ucaep-green font-semibold underline cursor-pointer hover:text-ucaep-gold"
+                                  >
+                                    choisissez-le sur votre appareil
+                                  </label>
+                                </p>
+                                <p className="mt-2 text-xs text-ucaep-ink/65">
+                                  Vidéo (MP4, MOV, WebM) · Audio (MP3, M4A, WAV, OGG) ·
+                                  Document (PDF, DOCX, DOC)
+                                </p>
+                                <p className="mt-1 text-[11px] font-medium text-ucaep-brown/75">
+                                  Taille maximale : 50 Mo (conseil vidéo : exportez en
+                                  MP4 720p).
+                                </p>
+                              </div>
+
+                              {fileError && (
+                                <div
+                                  role="alert"
+                                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                                >
+                                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                  <span>{fileError}</span>
+                                </div>
+                              )}
+
+                              {selectedFile && (
+                                <div className="p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm flex items-center justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-ucaep-brown truncate">
+                                      {selectedFile.name}
+                                    </p>
+                                    <p className="text-xs text-ucaep-ink/70 tabular-nums">
+                                      {formatFileSize(selectedFile.size)}
+                                    </p>
+                                  </div>
+                                  {!fileSubmitLoading && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedFile(null);
+                                        if (fileInputRef.current)
+                                          fileInputRef.current.value = '';
+                                      }}
+                                      aria-label="Retirer ce fichier"
+                                      className="p-1.5 text-ucaep-brown/70 hover:text-red-800 rounded-sm"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+
+                              {uploadProgress !== null && (
+                                <div className="space-y-1.5" aria-live="polite">
+                                  <div className="flex items-center justify-between text-xs font-medium text-ucaep-brown tabular-nums">
+                                    <span>
+                                      {uploadProgress < 100
+                                        ? 'Envoi sécurisé vers le stockage...'
+                                        : 'Finalisation du dépôt...'}
+                                    </span>
+                                    <span>{uploadProgress}%</span>
+                                  </div>
+                                  <div
+                                    role="progressbar"
+                                    aria-valuenow={uploadProgress}
+                                    aria-valuemin={0}
+                                    aria-valuemax={100}
+                                    className="w-full h-2.5 bg-ucaep-linen rounded-sm overflow-hidden border border-ucaep-brown/15"
+                                  >
+                                    <div
+                                      className="h-full bg-ucaep-green transition-all duration-150"
+                                      style={{ width: `${uploadProgress}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                disabled={
+                                  !selectedFile || fileSubmitLoading || !uploadReady
+                                }
+                                onClick={handleSubmitFile}
+                                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
+                              >
+                                <span>
+                                  {fileSubmitLoading
+                                    ? 'Envoi en cours...'
+                                    : displayedFileSubmission
+                                      ? 'Remplacer avec ce fichier'
+                                      : 'Envoyer mon fichier'}
+                                </span>
+                                <ArrowRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ import type {
   ContactPayload,
   MediaAssetKey,
   NewsArticle,
+  PhaseExternalFormConfig,
   PhaseTestDetails,
   PublicationStatus,
   RegistrationPayload,
@@ -31,7 +32,39 @@ export interface SupabaseStoreSnapshot {
   };
 }
 
-function parseSiteDisplayValue(raw: unknown): SiteDisplayConfig {
+function normalizeExternalForms(
+  raw: unknown,
+): Record<string, PhaseExternalFormConfig> {
+  if (!raw || typeof raw !== 'object') return {};
+  const src = raw as Record<string, unknown>;
+  const out: Record<string, PhaseExternalFormConfig> = {};
+  for (const phaseId of ['phase-1', 'phase-2']) {
+    const entry = src[phaseId];
+    if (!entry || typeof entry !== 'object') continue;
+    const rec = entry as Record<string, unknown>;
+    const rawUrl =
+      typeof rec.googleFormUrl === 'string'
+        ? rec.googleFormUrl.trim().slice(0, 1000)
+        : '';
+    const isHttpUrl = /^https?:\/\/.+/i.test(rawUrl);
+    const googleFormUrl = isHttpUrl ? rawUrl : '';
+    const enabled = Boolean(rec.enabled) && Boolean(googleFormUrl);
+    const instructions =
+      typeof rec.instructions === 'string'
+        ? rec.instructions.trim().slice(0, 500)
+        : '';
+    if (enabled || googleFormUrl || instructions) {
+      out[phaseId] = {
+        enabled,
+        googleFormUrl,
+        ...(instructions ? { instructions } : {}),
+      };
+    }
+  }
+  return out;
+}
+
+export function parseSiteDisplayValue(raw: unknown): SiteDisplayConfig {
   let obj: Record<string, unknown> | null = null;
   if (typeof raw === 'string' && raw.trim()) {
     try {
@@ -49,7 +82,8 @@ function parseSiteDisplayValue(raw: unknown): SiteDisplayConfig {
       : 'phase-1';
   const customNotice =
     typeof obj?.customNotice === 'string' ? obj.customNotice.trim().slice(0, 400) : '';
-  return { mode, activePhaseId, customNotice };
+  const externalForms = normalizeExternalForms(obj?.externalForms);
+  return { mode, activePhaseId, customNotice, externalForms };
 }
 
 export interface DbPhaseRowLike {
@@ -1199,16 +1233,25 @@ export async function updateSubmissionReviewViaSupabaseRest(
   patch: {
     status: SubmissionStatus;
     organizerNote: string;
+    textContent?: string | null;
+    sizeBytes?: number | null;
   },
 ): Promise<DbSubmissionRowLike> {
   const admin = getSupabaseAdmin();
+  const payload: Record<string, unknown> = {
+    status: patch.status,
+    organizer_note: patch.organizerNote,
+    updated_at: new Date().toISOString(),
+  };
+  if (patch.textContent !== undefined) {
+    payload.text_content = patch.textContent;
+  }
+  if (patch.sizeBytes !== undefined) {
+    payload.size_bytes = patch.sizeBytes;
+  }
   const { data, error } = await admin
     .from('submissions')
-    .update({
-      status: patch.status,
-      organizer_note: patch.organizerNote,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq('id', submissionId)
     .select('*')
     .single();

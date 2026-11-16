@@ -533,16 +533,20 @@ export function registerApiRoutes(app: express.Express) {
         email?: string;
         phaseId?: string;
         kind?: SubmissionKind;
+        textSlot?: number;
         fileName?: string;
         mimeType?: string;
         sizeBytes?: number;
       };
       enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
+      const textSlot =
+        body.textSlot === 1 || body.textSlot === 2 ? body.textSlot : undefined;
       const result = await initCandidateSubmission({
         referenceCode: body.referenceCode || '',
         email: body.email || '',
         phaseId: body.phaseId || '',
         kind: body.kind || 'file',
+        textSlot,
         fileName: body.fileName,
         mimeType: body.mimeType,
         sizeBytes: body.sizeBytes,
@@ -568,6 +572,7 @@ export function registerApiRoutes(app: express.Express) {
         email?: string;
         phaseId?: string;
         kind?: SubmissionKind;
+        textSlot?: number;
         storagePath?: string;
         fileName?: string;
         mimeType?: string;
@@ -575,11 +580,14 @@ export function registerApiRoutes(app: express.Express) {
         textContent?: string;
       };
       enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
+      const textSlot =
+        body.textSlot === 1 || body.textSlot === 2 ? body.textSlot : undefined;
       const submission = await completeCandidateSubmission({
         referenceCode: body.referenceCode || '',
         email: body.email || '',
         phaseId: body.phaseId || '',
         kind: body.kind || 'file',
+        textSlot,
         storagePath: body.storagePath,
         fileName: body.fileName,
         mimeType: body.mimeType,
@@ -757,13 +765,17 @@ export function registerApiRoutes(app: express.Express) {
 
   app.patch('/api/admin/submissions/:id', requireAdmin, async (req, res) => {
     try {
-      const { status, organizerNote } = (req.body || {}) as {
+      const { status, organizerNote, textSlot } = (req.body || {}) as {
         status?: SubmissionStatus;
         organizerNote?: string;
+        textSlot?: number;
       };
+      const normalizedSlot =
+        textSlot === 1 || textSlot === 2 ? textSlot : undefined;
       const updated = await updateAdminSubmissionReview(String(req.params.id), {
         status,
         organizerNote,
+        textSlot: normalizedSlot,
       });
       res.json({ submission: updated });
     } catch (error) {
@@ -846,14 +858,27 @@ export function registerApiRoutes(app: express.Express) {
         mode?: string;
         activePhaseId?: string;
         customNotice?: string;
+        externalForms?: Record<string, unknown>;
         alsoRevealPhase?: boolean;
         alsoOpenSubmissions?: boolean;
       };
 
+      const existingStore = await readStore();
+      const existingConfig = normalizeSiteDisplayConfig(
+        existingStore.settings?.siteDisplay,
+      );
+
       const nextConfig = normalizeSiteDisplayConfig({
-        mode: body.mode,
-        activePhaseId: body.activePhaseId,
-        customNotice: body.customNotice,
+        mode: body.mode ?? existingConfig.mode,
+        activePhaseId: body.activePhaseId ?? existingConfig.activePhaseId,
+        customNotice:
+          body.customNotice !== undefined
+            ? body.customNotice
+            : existingConfig.customNotice,
+        externalForms:
+          body.externalForms !== undefined
+            ? body.externalForms
+            : existingConfig.externalForms,
       });
 
       const savedConfig = await updateSiteDisplayRecord(nextConfig);
@@ -884,6 +909,70 @@ export function registerApiRoutes(app: express.Express) {
       const err = error as Error;
       res.status(500).json({
         error: err.message || "Impossible de mettre à jour le mode d'affichage du site.",
+      });
+    }
+  });
+
+  // Organizer CMS: Configure Google Form Submission Link per Phase (replaces Supabase file upload)
+  app.patch('/api/admin/external-forms', requireAdmin, async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        phaseId?: string;
+        enabled?: boolean;
+        googleFormUrl?: string;
+        instructions?: string;
+      };
+
+      const phaseId = (body.phaseId || '').trim();
+      if (!['phase-1', 'phase-2'].includes(phaseId)) {
+        res.status(400).json({
+          error:
+            'Seules les phases en ligne (Phase 01 et Phase 02) acceptent un lien Google Form.',
+        });
+        return;
+      }
+
+      const cleanUrl = (body.googleFormUrl || '').trim().slice(0, 1000);
+      const enabled = Boolean(body.enabled);
+      const cleanInstructions = (body.instructions || '').trim().slice(0, 500);
+
+      if (cleanUrl && !/^https?:\/\/.+/i.test(cleanUrl)) {
+        res.status(400).json({
+          error: 'Le lien Google Form doit commencer par https:// ou http://.',
+        });
+        return;
+      }
+
+      if (enabled && !cleanUrl) {
+        res.status(400).json({
+          error: "Veuillez renseigner l'URL du formulaire Google Form avant de l'activer.",
+        });
+        return;
+      }
+
+      const existingStore = await readStore();
+      const existingConfig = normalizeSiteDisplayConfig(
+        existingStore.settings?.siteDisplay,
+      );
+
+      const nextConfig = normalizeSiteDisplayConfig({
+        ...existingConfig,
+        externalForms: {
+          ...(existingConfig.externalForms || {}),
+          [phaseId]: {
+            enabled,
+            googleFormUrl: cleanUrl,
+            ...(cleanInstructions ? { instructions: cleanInstructions } : {}),
+          },
+        },
+      });
+
+      const saved = await updateSiteDisplayRecord(nextConfig);
+      res.json({ siteDisplay: saved });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        error: err.message || "Impossible d'enregistrer le lien Google Form.",
       });
     }
   });

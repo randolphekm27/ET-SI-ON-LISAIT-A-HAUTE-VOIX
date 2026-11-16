@@ -13,9 +13,12 @@ import {
   MAX_TEXT_SUBMISSION_LENGTH,
   MAX_UPLOAD_BYTES,
   normalizeSubmissionMimeType,
+  parseDualTextContent,
+  serializeDualTextContent,
 } from '../src/lib/submissions-config.ts';
 import {
   getLocalDataDir,
+  getSiteDisplayConfig,
   readJsonStore,
   withJsonStoreLock,
   type LocalSubmissionRecord,
@@ -358,15 +361,29 @@ function evaluatePhaseAcceptance(phase: DbPhaseRowLike): {
   return { acceptingNow: true, closedReason: null };
 }
 
+function buildTextSummaryPreview(rawText: string | null | undefined, fallbackStatus: SubmissionStatus): string | null {
+  if (!rawText) return null;
+  const dual = parseDualTextContent(rawText, fallbackStatus);
+  const parts: string[] = [];
+  if (dual.text1.trim()) {
+    const snippet = dual.text1.trim().slice(0, 75).replace(/\s+/g, ' ');
+    parts.push(`T1 : ${snippet}${dual.text1.trim().length > 75 ? '…' : ''}`);
+  }
+  if (dual.text2.trim()) {
+    const snippet = dual.text2.trim().slice(0, 75).replace(/\s+/g, ' ');
+    parts.push(`T2 : ${snippet}${dual.text2.trim().length > 75 ? '…' : ''}`);
+  }
+  if (parts.length === 0) return null;
+  const joined = parts.join(' · ');
+  return joined.length > 180 ? `${joined.slice(0, 177).trim()}...` : joined;
+}
+
 function mapCandidateSubmissionSummary(
   row: DbSubmissionRowLike | LocalSubmissionRecord,
 ): CandidateSubmissionSummary {
-  const excerpt =
-    row.kind === 'text' && row.textContent
-      ? row.textContent.length > 240
-        ? `${row.textContent.slice(0, 240).trim()}...`
-        : row.textContent
-      : null;
+  const isText = row.kind === 'text';
+  const dual = isText ? parseDualTextContent(row.textContent, row.status) : null;
+  const excerpt = isText ? buildTextSummaryPreview(row.textContent, row.status) : null;
 
   return {
     id: row.id,
@@ -376,7 +393,13 @@ function mapCandidateSubmissionSummary(
     mimeType: row.mimeType ?? null,
     sizeBytes: row.sizeBytes ?? null,
     textExcerpt: excerpt,
-    textContent: row.kind === 'text' ? row.textContent ?? null : null,
+    textContent: dual ? dual.text1 || null : null,
+    text1Content: dual ? dual.text1 || null : null,
+    text2Content: dual ? dual.text2 || null : null,
+    text1Status: dual && dual.text1.trim() ? dual.text1Status : undefined,
+    text2Status: dual && dual.text2.trim() ? dual.text2Status : undefined,
+    text1Note: dual ? dual.text1Note || '' : undefined,
+    text2Note: dual ? dual.text2Note || '' : undefined,
     status: row.status,
     organizerNote: row.organizerNote || '',
     createdAt:
@@ -431,31 +454,33 @@ export async function getCandidateSubmissionStatus(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const [phaseRows, submissionRows] = await withDbMode<
-    [DbPhaseRowLike[], DbSubmissionRowLike[]]
-  >({
-    pg: () =>
-      Promise.all([
-        db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
-        db
-          .select()
-          .from(submissionsTable)
-          .where(eq(submissionsTable.registrationId, candidate.id)),
-      ]),
-    rest: () =>
-      Promise.all([
-        listPhasesViaSupabaseRest(),
-        getCandidateSubmissionsViaSupabaseRest(candidate.id),
-      ]),
-    local: async () => {
-      const store = await readJsonStore();
-      return [
-        store.phases.map((p, idx) => toDbPhaseLikeFromLocal(p, idx)),
-        (store.submissions || []).filter((s) => s.registrationId === candidate.id),
-      ];
-    },
-  });
+  const [siteDisplay, dbData] = await Promise.all([
+    getSiteDisplayConfig(),
+    withDbMode<[DbPhaseRowLike[], DbSubmissionRowLike[]]>({
+      pg: () =>
+        Promise.all([
+          db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
+          db
+            .select()
+            .from(submissionsTable)
+            .where(eq(submissionsTable.registrationId, candidate.id)),
+        ]),
+      rest: () =>
+        Promise.all([
+          listPhasesViaSupabaseRest(),
+          getCandidateSubmissionsViaSupabaseRest(candidate.id),
+        ]),
+      local: async () => {
+        const store = await readJsonStore();
+        return [
+          store.phases.map((p, idx) => toDbPhaseLikeFromLocal(p, idx)),
+          (store.submissions || []).filter((s) => s.registrationId === candidate.id),
+        ];
+      },
+    }),
+  ]);
 
+  const [phaseRows, submissionRows] = dbData;
   const byPhase = new Map<string, DbSubmissionRowLike>(
     submissionRows.map((s) => [s.phaseId, s]),
   );
@@ -463,6 +488,12 @@ export async function getCandidateSubmissionStatus(input: {
   const phaseStatuses: SubmissionPublicPhaseStatus[] = phaseRows.map((phase) => {
     const acceptance = evaluatePhaseAcceptance(phase);
     const existing = byPhase.get(phase.id);
+    const isPresentiel = phase.id === 'phase-3' || phase.format === 'En présentiel';
+    const rawExternal = !isPresentiel ? siteDisplay.externalForms?.[phase.id] : undefined;
+    const externalForm =
+      rawExternal && (rawExternal.enabled || rawExternal.googleFormUrl)
+        ? rawExternal
+        : null;
 
     return {
       id: phase.id,
@@ -480,6 +511,7 @@ export async function getCandidateSubmissionStatus(input: {
       acceptingNow: acceptance.acceptingNow,
       closedReason: acceptance.closedReason,
       testDetails: phase.isRevealed ? phase.testDetails || null : null,
+      externalForm,
       existingSubmission: existing ? mapCandidateSubmissionSummary(existing) : null,
     };
   });
@@ -517,11 +549,42 @@ async function getPhaseForSubmission(phaseId: string): Promise<DbPhaseRowLike | 
   });
 }
 
+async function getExistingSubmissionForCandidatePhase(
+  registrationId: string,
+  phaseId: string,
+): Promise<DbSubmissionRowLike | null> {
+  return withDbMode<DbSubmissionRowLike | null>({
+    pg: async () => {
+      const existingRows = await db
+        .select()
+        .from(submissionsTable)
+        .where(
+          and(
+            eq(submissionsTable.registrationId, registrationId),
+            eq(submissionsTable.phaseId, phaseId),
+          ),
+        )
+        .limit(1);
+      return existingRows[0] || null;
+    },
+    rest: () => getSubmissionForCandidatePhaseViaSupabaseRest(registrationId, phaseId),
+    local: async () => {
+      const store = await readJsonStore();
+      return (
+        (store.submissions || []).find(
+          (s) => s.registrationId === registrationId && s.phaseId === phaseId,
+        ) || null
+      );
+    },
+  });
+}
+
 export async function initCandidateSubmission(input: {
   referenceCode: string;
   email: string;
   phaseId: string;
   kind: SubmissionKind;
+  textSlot?: 1 | 2;
   fileName?: string;
   mimeType?: string;
   sizeBytes?: number;
@@ -551,7 +614,35 @@ export async function initCandidateSubmission(input: {
     );
   }
 
+  const [siteDisplay, previous] = await Promise.all([
+    getSiteDisplayConfig(),
+    getExistingSubmissionForCandidatePhase(candidate.id, phase.id),
+  ]);
+
+  if (previous?.kind === 'file' && previous.status === 'validated') {
+    throw new SubmissionHttpError(
+      403,
+      'Votre dépôt pour cette phase a déjà été validé par le jury : la resoumission est désactivée.',
+    );
+  }
+
   if (input.kind === 'text') {
+    if (previous?.kind === 'text') {
+      const dual = parseDualTextContent(previous.textContent, previous.status);
+      const slot = input.textSlot === 2 ? 2 : 1;
+      if (slot === 1 && dual.text1.trim() && dual.text1Status === 'validated') {
+        throw new SubmissionHttpError(
+          403,
+          'Votre Texte 1 a déjà été validé par le jury : la resoumission est désactivée.',
+        );
+      }
+      if (slot === 2 && dual.text2.trim() && dual.text2Status === 'validated') {
+        throw new SubmissionHttpError(
+          403,
+          'Votre Texte 2 a déjà été validé par le jury : la resoumission est désactivée.',
+        );
+      }
+    }
     return {
       kind: 'text',
       maxBytes: MAX_UPLOAD_BYTES,
@@ -561,6 +652,14 @@ export async function initCandidateSubmission(input: {
 
   if (input.kind !== 'file') {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide (fichier ou texte requis).');
+  }
+
+  const externalForm = siteDisplay.externalForms?.[phase.id];
+  if (externalForm?.enabled && externalForm.googleFormUrl) {
+    throw new SubmissionHttpError(
+      403,
+      'Le dépôt de fichiers pour cette phase est redirigé vers le formulaire Google Form officiel.',
+    );
   }
 
   const rawFileName = (input.fileName || '').trim();
@@ -698,6 +797,7 @@ export async function completeCandidateSubmission(input: {
   email: string;
   phaseId: string;
   kind: SubmissionKind;
+  textSlot?: 1 | 2;
   storagePath?: string;
   fileName?: string;
   mimeType?: string;
@@ -720,33 +820,39 @@ export async function completeCandidateSubmission(input: {
     );
   }
 
-  const previous = await withDbMode<DbSubmissionRowLike | null>({
-    pg: async () => {
-      const existingRows = await db
-        .select()
-        .from(submissionsTable)
-        .where(
-          and(
-            eq(submissionsTable.registrationId, candidate.id),
-            eq(submissionsTable.phaseId, phase.id),
-          ),
-        )
-        .limit(1);
-      return existingRows[0] || null;
-    },
-    rest: () => getSubmissionForCandidatePhaseViaSupabaseRest(candidate.id, phase.id),
-    local: async () => {
-      const store = await readJsonStore();
-      return (
-        (store.submissions || []).find(
-          (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
-        ) || null
-      );
-    },
-  });
+  const [siteDisplay, previous] = await Promise.all([
+    getSiteDisplayConfig(),
+    getExistingSubmissionForCandidatePhase(candidate.id, phase.id),
+  ]);
   const oldStoragePath = previous?.storagePath || null;
 
+  if (previous?.kind === 'file' && previous.status === 'validated') {
+    throw new SubmissionHttpError(
+      403,
+      'Votre dépôt pour cette phase a déjà été validé par le jury : la resoumission est désactivée.',
+    );
+  }
+
   if (input.kind === 'text') {
+    const slot: 1 | 2 = input.textSlot === 2 ? 2 : 1;
+    const existingDual =
+      previous?.kind === 'text'
+        ? parseDualTextContent(previous.textContent, previous.status)
+        : null;
+
+    if (slot === 1 && existingDual?.text1.trim() && existingDual.text1Status === 'validated') {
+      throw new SubmissionHttpError(
+        403,
+        'Votre Texte 1 a déjà été validé par le jury : la resoumission est désactivée.',
+      );
+    }
+    if (slot === 2 && existingDual?.text2.trim() && existingDual.text2Status === 'validated') {
+      throw new SubmissionHttpError(
+        403,
+        'Votre Texte 2 a déjà été validé par le jury : la resoumission est désactivée.',
+      );
+    }
+
     const cleanText = (input.textContent || '').trim();
     if (!cleanText) {
       throw new SubmissionHttpError(400, 'Écrivez votre texte avant d’envoyer votre dépôt.');
@@ -758,9 +864,41 @@ export async function completeCandidateSubmission(input: {
       );
     }
 
+    const nextText1 = slot === 1 ? cleanText : existingDual?.text1 || '';
+    const nextText2 = slot === 2 ? cleanText : existingDual?.text2 || '';
+    const nextText1Status: SubmissionStatus =
+      slot === 1 ? 'received' : existingDual?.text1Status || 'received';
+    const nextText2Status: SubmissionStatus =
+      slot === 2 ? 'received' : existingDual?.text2Status || 'received';
+    const nextText1Note = slot === 1 ? '' : existingDual?.text1Note || '';
+    const nextText2Note = slot === 2 ? '' : existingDual?.text2Note || '';
+
+    const has1 = Boolean(nextText1.trim());
+    const has2 = Boolean(nextText2.trim());
+    const overallStatus: SubmissionStatus =
+      has1 && has2 && nextText1Status === 'validated' && nextText2Status === 'validated'
+        ? 'validated'
+        : (has1 && nextText1Status === 'rejected') || (has2 && nextText2Status === 'rejected')
+          ? 'rejected'
+          : 'received';
+
+    const noteParts: string[] = [];
+    if (nextText1Note) noteParts.push(`T1 : ${nextText1Note}`);
+    if (nextText2Note) noteParts.push(`T2 : ${nextText2Note}`);
+    const combinedNote = noteParts.join(' | ').slice(0, 1500);
+
+    const serializedText = serializeDualTextContent({
+      text1: nextText1,
+      text2: nextText2,
+      text1Status: nextText1Status,
+      text2Status: nextText2Status,
+      text1Note: nextText1Note,
+      text2Note: nextText2Note,
+    });
+
     const now = new Date();
     const nowIso = now.toISOString();
-    const byteSize = Buffer.byteLength(cleanText, 'utf8');
+    const byteSize = Buffer.byteLength(serializedText, 'utf8');
     const savedRow = await withDbMode<DbSubmissionRowLike>({
       pg: async () => {
         const savedRows = await db
@@ -774,9 +912,9 @@ export async function completeCandidateSubmission(input: {
             fileName: null,
             mimeType: 'text/plain',
             sizeBytes: byteSize,
-            textContent: cleanText,
-            status: 'received',
-            organizerNote: '',
+            textContent: serializedText,
+            status: overallStatus,
+            organizerNote: combinedNote,
             createdAt: now,
             updatedAt: now,
           })
@@ -788,9 +926,9 @@ export async function completeCandidateSubmission(input: {
               fileName: null,
               mimeType: 'text/plain',
               sizeBytes: byteSize,
-              textContent: cleanText,
-              status: 'received',
-              organizerNote: '',
+              textContent: serializedText,
+              status: overallStatus,
+              organizerNote: combinedNote,
               updatedAt: now,
             },
           })
@@ -807,9 +945,9 @@ export async function completeCandidateSubmission(input: {
           fileName: null,
           mimeType: 'text/plain',
           sizeBytes: byteSize,
-          textContent: cleanText,
-          status: 'received',
-          organizerNote: '',
+          textContent: serializedText,
+          status: overallStatus,
+          organizerNote: combinedNote,
         }),
       local: () =>
         withJsonStoreLock((store) => {
@@ -826,9 +964,9 @@ export async function completeCandidateSubmission(input: {
             fileName: null,
             mimeType: 'text/plain',
             sizeBytes: byteSize,
-            textContent: cleanText,
-            status: 'received',
-            organizerNote: '',
+            textContent: serializedText,
+            status: overallStatus,
+            organizerNote: combinedNote,
             createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
             updatedAt: nowIso,
           };
@@ -850,6 +988,14 @@ export async function completeCandidateSubmission(input: {
 
   if (input.kind !== 'file') {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide.');
+  }
+
+  const externalForm = siteDisplay.externalForms?.[phase.id];
+  if (externalForm?.enabled && externalForm.googleFormUrl) {
+    throw new SubmissionHttpError(
+      403,
+      'Le dépôt de fichiers pour cette phase est redirigé vers le formulaire Google Form officiel.',
+    );
   }
 
   const storagePath = (input.storagePath || '').trim();
@@ -1097,37 +1243,44 @@ export async function listAdminSubmissions(filters?: {
     },
   });
 
-  const items: AdminSubmissionItem[] = rows.map(({ submission, registration, phase }) => ({
-    id: submission.id,
-    registrationId: registration.id,
-    referenceCode: registration.referenceCode,
-    candidateName: `${registration.firstName} ${registration.lastName}`,
-    candidateDepartment: registration.department,
-    candidateStudyLevel: registration.studyLevel,
-    phaseId: phase.id,
-    phaseNumber: String(phase.number).padStart(2, '0'),
-    phaseTitle: phase.title,
-    kind: submission.kind,
-    fileName: submission.fileName ?? null,
-    mimeType: submission.mimeType ?? null,
-    sizeBytes: submission.sizeBytes ?? null,
-    textPreview:
-      submission.kind === 'text' && submission.textContent
-        ? submission.textContent.length > 160
-          ? `${submission.textContent.slice(0, 160).trim()}...`
-          : submission.textContent
-        : null,
-    status: submission.status,
-    organizerNote: submission.organizerNote || '',
-    createdAt:
-      submission.createdAt instanceof Date
-        ? submission.createdAt.toISOString()
-        : String(submission.createdAt),
-    updatedAt:
-      submission.updatedAt instanceof Date
-        ? submission.updatedAt.toISOString()
-        : String(submission.updatedAt),
-  }));
+  const items: AdminSubmissionItem[] = rows.map(({ submission, registration, phase }) => {
+    const dual =
+      submission.kind === 'text'
+        ? parseDualTextContent(submission.textContent, submission.status)
+        : null;
+
+    return {
+      id: submission.id,
+      registrationId: registration.id,
+      referenceCode: registration.referenceCode,
+      candidateName: `${registration.firstName} ${registration.lastName}`,
+      candidateDepartment: registration.department,
+      candidateStudyLevel: registration.studyLevel,
+      phaseId: phase.id,
+      phaseNumber: String(phase.number).padStart(2, '0'),
+      phaseTitle: phase.title,
+      kind: submission.kind,
+      fileName: submission.fileName ?? null,
+      mimeType: submission.mimeType ?? null,
+      sizeBytes: submission.sizeBytes ?? null,
+      textPreview:
+        submission.kind === 'text'
+          ? buildTextSummaryPreview(submission.textContent, submission.status)
+          : null,
+      text1Status: dual && dual.text1.trim() ? dual.text1Status : undefined,
+      text2Status: dual && dual.text2.trim() ? dual.text2Status : undefined,
+      status: submission.status,
+      organizerNote: submission.organizerNote || '',
+      createdAt:
+        submission.createdAt instanceof Date
+          ? submission.createdAt.toISOString()
+          : String(submission.createdAt),
+      updatedAt:
+        submission.updatedAt instanceof Date
+          ? submission.updatedAt.toISOString()
+          : String(submission.updatedAt),
+    };
+  });
 
   return {
     storageConfigured: true,
@@ -1161,6 +1314,7 @@ export async function getAdminSubmissionAccess(
   }
 
   if (submission.kind === 'text') {
+    const dual = parseDualTextContent(submission.textContent, submission.status);
     return {
       id: submission.id,
       kind: 'text',
@@ -1169,7 +1323,13 @@ export async function getAdminSubmissionAccess(
       sizeBytes: submission.sizeBytes ?? null,
       signedUrl: null,
       expiresInSeconds: null,
-      textContent: submission.textContent || '',
+      textContent: dual.text1 || '',
+      text1Content: dual.text1 || null,
+      text2Content: dual.text2 || null,
+      text1Status: dual.text1.trim() ? dual.text1Status : undefined,
+      text2Status: dual.text2.trim() ? dual.text2Status : undefined,
+      text1Note: dual.text1Note || '',
+      text2Note: dual.text2Note || '',
     };
   }
 
@@ -1266,12 +1426,17 @@ export async function updateAdminSubmissionReview(
   patch: {
     status?: SubmissionStatus;
     organizerNote?: string;
+    textSlot?: 1 | 2;
   },
 ): Promise<{
   id: string;
   status: SubmissionStatus;
   organizerNote: string;
   updatedAt: string;
+  text1Status?: SubmissionStatus;
+  text2Status?: SubmissionStatus;
+  text1Note?: string;
+  text2Note?: string;
 }> {
   await assertDatabaseReady();
 
@@ -1293,6 +1458,135 @@ export async function updateAdminSubmissionReview(
 
   if (!current) {
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
+  }
+
+  if (current.kind === 'text' && (patch.textSlot === 1 || patch.textSlot === 2)) {
+    const dual = parseDualTextContent(current.textContent, current.status);
+
+    if (patch.textSlot === 1 && !dual.text1.trim()) {
+      throw new SubmissionHttpError(
+        400,
+        "Le Texte 1 n'a pas encore été soumis par ce candidat.",
+      );
+    }
+    if (patch.textSlot === 2 && !dual.text2.trim()) {
+      throw new SubmissionHttpError(
+        400,
+        "Le Texte 2 n'a pas encore été soumis par ce candidat.",
+      );
+    }
+
+    if (
+      patch.textSlot === 2 &&
+      patch.status === 'validated' &&
+      dual.text1Status !== 'validated'
+    ) {
+      throw new SubmissionHttpError(
+        400,
+        "Validation séquentielle requise : validez d'abord le Texte 1 avant de valider le Texte 2.",
+      );
+    }
+
+    const nextText1Status: SubmissionStatus =
+      patch.textSlot === 1 &&
+      patch.status &&
+      ['received', 'validated', 'rejected'].includes(patch.status)
+        ? patch.status
+        : dual.text1Status;
+
+    const nextText2Status: SubmissionStatus =
+      patch.textSlot === 2 &&
+      patch.status &&
+      ['received', 'validated', 'rejected'].includes(patch.status)
+        ? patch.status
+        : dual.text2Status;
+
+    const nextText1Note =
+      patch.textSlot === 1 && typeof patch.organizerNote === 'string'
+        ? patch.organizerNote.trim().slice(0, 700)
+        : dual.text1Note;
+
+    const nextText2Note =
+      patch.textSlot === 2 && typeof patch.organizerNote === 'string'
+        ? patch.organizerNote.trim().slice(0, 700)
+        : dual.text2Note;
+
+    const has1 = Boolean(dual.text1.trim());
+    const has2 = Boolean(dual.text2.trim());
+    const overallStatus: SubmissionStatus =
+      has1 && has2 && nextText1Status === 'validated' && nextText2Status === 'validated'
+        ? 'validated'
+        : (has1 && nextText1Status === 'rejected') || (has2 && nextText2Status === 'rejected')
+          ? 'rejected'
+          : 'received';
+
+    const noteParts: string[] = [];
+    if (nextText1Note) noteParts.push(`T1 : ${nextText1Note}`);
+    if (nextText2Note) noteParts.push(`T2 : ${nextText2Note}`);
+    const combinedNote = noteParts.join(' | ').slice(0, 1500);
+
+    const nextSerialized = serializeDualTextContent({
+      text1: dual.text1,
+      text2: dual.text2,
+      text1Status: nextText1Status,
+      text2Status: nextText2Status,
+      text1Note: nextText1Note,
+      text2Note: nextText2Note,
+    });
+    const byteSize = Buffer.byteLength(nextSerialized, 'utf8');
+
+    const row = await withDbMode<DbSubmissionRowLike>({
+      pg: async () => {
+        const updated = await db
+          .update(submissionsTable)
+          .set({
+            status: overallStatus,
+            organizerNote: combinedNote,
+            textContent: nextSerialized,
+            sizeBytes: byteSize,
+            updatedAt: new Date(),
+          })
+          .where(eq(submissionsTable.id, submissionId))
+          .returning();
+        return updated[0];
+      },
+      rest: () =>
+        updateSubmissionReviewViaSupabaseRest(submissionId, {
+          status: overallStatus,
+          organizerNote: combinedNote,
+          textContent: nextSerialized,
+          sizeBytes: byteSize,
+        }),
+      local: () =>
+        withJsonStoreLock((store) => {
+          const list = store.submissions || [];
+          const idx = list.findIndex((s) => s.id === submissionId);
+          if (idx === -1) {
+            throw new SubmissionHttpError(404, 'Dépôt introuvable.');
+          }
+          list[idx] = {
+            ...list[idx],
+            status: overallStatus,
+            organizerNote: combinedNote,
+            textContent: nextSerialized,
+            sizeBytes: byteSize,
+            updatedAt: new Date().toISOString(),
+          };
+          return list[idx];
+        }),
+    });
+
+    return {
+      id: row.id,
+      status: row.status,
+      organizerNote: row.organizerNote,
+      updatedAt:
+        row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+      text1Status: has1 ? nextText1Status : undefined,
+      text2Status: has2 ? nextText2Status : undefined,
+      text1Note: nextText1Note,
+      text2Note: nextText2Note,
+    };
   }
 
   const nextStatus: SubmissionStatus =

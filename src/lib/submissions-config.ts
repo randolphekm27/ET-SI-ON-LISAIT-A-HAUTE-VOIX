@@ -120,3 +120,119 @@ export function validateSubmissionFileClient(file: File):
 
   return { ok: true, mimeType: normalizedMime };
 }
+
+export interface PhaseTextSlotLabels {
+  slot1Title: string;
+  slot1Subtitle: string;
+  slot2Title: string;
+  slot2Subtitle: string;
+}
+
+export const PHASE_TEXT_SLOTS: Record<string, PhaseTextSlotLabels> = {
+  'phase-1': {
+    slot1Title: 'Texte 1 — « Je suis… »',
+    slot1Subtitle: 'Autoportrait littéraire personnel',
+    slot2Title: "Texte 2 — « Les mots que l'on n'ose pas dire »",
+    slot2Subtitle: 'Expression libre d’une pensée ou émotion retenue',
+  },
+  'phase-2': {
+    slot1Title: 'Texte 1 — « La science dans notre quotidien »',
+    slot1Subtitle: 'Vulgarisation scientifique accessible et rigoureuse',
+    slot2Title: "Texte 2 — « L'école, le savoir et l'avenir »",
+    slot2Subtitle: 'Réflexion structurée et argumentée sur l’éducation',
+  },
+};
+
+export function getPhaseTextSlotLabels(phaseId: string): PhaseTextSlotLabels {
+  return (
+    PHASE_TEXT_SLOTS[phaseId] || {
+      slot1Title: 'Texte 1 — Première épreuve',
+      slot1Subtitle: 'Première production écrite de la phase',
+      slot2Title: 'Texte 2 — Deuxième épreuve',
+      slot2Subtitle: 'Deuxième production écrite de la phase',
+    }
+  );
+}
+
+export interface DualTextSubmissionPayload {
+  __ucaepDualText: 1;
+  text1: string;
+  text2: string;
+  text1Status: 'received' | 'validated' | 'rejected';
+  text2Status: 'received' | 'validated' | 'rejected';
+  text1Note: string;
+  text2Note: string;
+}
+
+function normalizeTextStatus(
+  val: unknown,
+  fallback: 'received' | 'validated' | 'rejected' = 'received',
+): 'received' | 'validated' | 'rejected' {
+  if (val === 'received' || val === 'validated' || val === 'rejected') {
+    return val;
+  }
+  return fallback;
+}
+
+export function parseDualTextContent(
+  raw: string | null | undefined,
+  fallbackStatus: 'received' | 'validated' | 'rejected' = 'received',
+): {
+  isStructured: boolean;
+  text1: string;
+  text2: string;
+  text1Status: 'received' | 'validated' | 'rejected';
+  text2Status: 'received' | 'validated' | 'rejected';
+  text1Note: string;
+  text2Note: string;
+} {
+  const trimmed = (raw || '').trim();
+  if (trimmed.startsWith('{') && trimmed.includes('__ucaepDualText')) {
+    try {
+      const parsed = JSON.parse(trimmed) as Partial<DualTextSubmissionPayload>;
+      if (parsed && parsed.__ucaepDualText === 1) {
+        return {
+          isStructured: true,
+          text1: typeof parsed.text1 === 'string' ? parsed.text1 : '',
+          text2: typeof parsed.text2 === 'string' ? parsed.text2 : '',
+          text1Status: normalizeTextStatus(parsed.text1Status, fallbackStatus),
+          text2Status: normalizeTextStatus(parsed.text2Status, 'received'),
+          text1Note: typeof parsed.text1Note === 'string' ? parsed.text1Note : '',
+          text2Note: typeof parsed.text2Note === 'string' ? parsed.text2Note : '',
+        };
+      }
+    } catch {
+      // Fallback en texte simple
+    }
+  }
+
+  return {
+    isStructured: false,
+    text1: trimmed,
+    text2: '',
+    text1Status: trimmed ? fallbackStatus : 'received',
+    text2Status: 'received',
+    text1Note: '',
+    text2Note: '',
+  };
+}
+
+export function serializeDualTextContent(input: {
+  text1: string;
+  text2: string;
+  text1Status: 'received' | 'validated' | 'rejected';
+  text2Status: 'received' | 'validated' | 'rejected';
+  text1Note?: string;
+  text2Note?: string;
+}): string {
+  const payload: DualTextSubmissionPayload = {
+    __ucaepDualText: 1,
+    text1: (input.text1 || '').trim(),
+    text2: (input.text2 || '').trim(),
+    text1Status: input.text1Status,
+    text2Status: input.text2Status,
+    text1Note: (input.text1Note || '').trim(),
+    text2Note: (input.text2Note || '').trim(),
+  };
+  return JSON.stringify(payload);
+}

@@ -22,7 +22,7 @@ import {
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { useSiteConfig } from '../lib/site-config';
-import { formatFileSize } from '../lib/submissions-config';
+import { formatFileSize, getPhaseTextSlotLabels } from '../lib/submissions-config';
 import type {
   AdminSubmissionAccess,
   AdminSubmissionItem,
@@ -31,6 +31,7 @@ import type {
   ContactMessageRecord,
   MediaAssetKey,
   NewsArticle,
+  PhaseExternalFormConfig,
   PublicationStatus,
   RegistrationRecord,
   SiteDisplayConfig,
@@ -158,6 +159,9 @@ export function GestionPage() {
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspectError, setInspectError] = useState('');
   const [reviewNoteDraft, setReviewNoteDraft] = useState('');
+  const [reviewNote1Draft, setReviewNote1Draft] = useState('');
+  const [reviewNote2Draft, setReviewNote2Draft] = useState('');
+  const [reviewError, setReviewError] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
   const [phaseDeadlines, setPhaseDeadlines] = useState<Record<string, string>>({});
   const [phaseSavingId, setPhaseSavingId] = useState<string | null>(null);
@@ -241,6 +245,17 @@ export function GestionPage() {
   const [siteConfigError, setSiteConfigError] = useState('');
   const siteDraftInitializedRef = useRef(false);
 
+  // Google Form external submission link configurator state
+  const [externalFormsDraft, setExternalFormsDraft] = useState<
+    Record<string, { enabled: boolean; googleFormUrl: string; instructions: string }>
+  >({
+    'phase-1': { enabled: false, googleFormUrl: '', instructions: '' },
+    'phase-2': { enabled: false, googleFormUrl: '', instructions: '' },
+  });
+  const [externalFormSavingId, setExternalFormSavingId] = useState<string | null>(null);
+  const [externalFormError, setExternalFormError] = useState('');
+  const externalFormsInitializedRef = useRef(false);
+
   function buildAuthHeaders(
     extraHeaders?: Record<string, string>,
     overrideAdminToken?: string,
@@ -274,6 +289,22 @@ export function GestionPage() {
         setDraftSiteMode(json.settings.siteDisplay.mode);
         setDraftActivePhaseId(json.settings.siteDisplay.activePhaseId || 'phase-1');
         setDraftCustomNotice(json.settings.siteDisplay.customNotice || '');
+      }
+      if (!externalFormsInitializedRef.current && json.settings?.siteDisplay) {
+        externalFormsInitializedRef.current = true;
+        const forms = json.settings.siteDisplay.externalForms || {};
+        setExternalFormsDraft({
+          'phase-1': {
+            enabled: Boolean(forms['phase-1']?.enabled),
+            googleFormUrl: forms['phase-1']?.googleFormUrl || '',
+            instructions: forms['phase-1']?.instructions || '',
+          },
+          'phase-2': {
+            enabled: Boolean(forms['phase-2']?.enabled),
+            googleFormUrl: forms['phase-2']?.googleFormUrl || '',
+            instructions: forms['phase-2']?.instructions || '',
+          },
+        });
       }
       setPhaseDeadlines((prev) => {
         const next = { ...prev };
@@ -673,7 +704,10 @@ export function GestionPage() {
     setInspectingItem(item);
     setInspectingAccess(null);
     setInspectError('');
+    setReviewError('');
     setReviewNoteDraft(item.organizerNote || '');
+    setReviewNote1Draft('');
+    setReviewNote2Draft('');
     setInspectLoading(true);
     try {
       const access = await fetchApiJson<AdminSubmissionAccess>(
@@ -683,6 +717,8 @@ export function GestionPage() {
         },
       );
       setInspectingAccess(access);
+      setReviewNote1Draft(access.text1Note || '');
+      setReviewNote2Draft(access.text2Note || '');
     } catch (err) {
       setInspectError(
         err instanceof Error
@@ -696,9 +732,10 @@ export function GestionPage() {
 
   async function handleUpdateSubmissionReview(
     submissionId: string,
-    patch: { status?: SubmissionStatus; organizerNote?: string },
+    patch: { status?: SubmissionStatus; organizerNote?: string; textSlot?: 1 | 2 },
   ) {
     setReviewSaving(true);
+    setReviewError('');
     try {
       const res = await fetchApiJson<{
         submission: {
@@ -706,6 +743,10 @@ export function GestionPage() {
           status: SubmissionStatus;
           organizerNote: string;
           updatedAt: string;
+          text1Status?: SubmissionStatus;
+          text2Status?: SubmissionStatus;
+          text1Note?: string;
+          text2Note?: string;
         };
       }>(`/api/admin/submissions/${submissionId}`, {
         method: 'PATCH',
@@ -720,6 +761,12 @@ export function GestionPage() {
                 status: res.submission.status,
                 organizerNote: res.submission.organizerNote,
                 updatedAt: res.submission.updatedAt,
+                ...(res.submission.text1Status !== undefined
+                  ? { text1Status: res.submission.text1Status }
+                  : {}),
+                ...(res.submission.text2Status !== undefined
+                  ? { text2Status: res.submission.text2Status }
+                  : {}),
               }
             : s,
         ),
@@ -731,14 +778,124 @@ export function GestionPage() {
               status: res.submission.status,
               organizerNote: res.submission.organizerNote,
               updatedAt: res.submission.updatedAt,
+              ...(res.submission.text1Status !== undefined
+                ? { text1Status: res.submission.text1Status }
+                : {}),
+              ...(res.submission.text2Status !== undefined
+                ? { text2Status: res.submission.text2Status }
+                : {}),
             }
           : prev,
       );
-      setNotice('Évaluation du dépôt enregistrée.');
+      setInspectingAccess((prev) =>
+        prev && prev.id === submissionId
+          ? {
+              ...prev,
+              ...(res.submission.text1Status !== undefined
+                ? { text1Status: res.submission.text1Status }
+                : {}),
+              ...(res.submission.text2Status !== undefined
+                ? { text2Status: res.submission.text2Status }
+                : {}),
+              ...(res.submission.text1Note !== undefined
+                ? { text1Note: res.submission.text1Note }
+                : {}),
+              ...(res.submission.text2Note !== undefined
+                ? { text2Note: res.submission.text2Note }
+                : {}),
+            }
+          : prev,
+      );
+      setNotice(
+        patch.textSlot
+          ? `Évaluation du Texte ${patch.textSlot} enregistrée.`
+          : 'Évaluation du dépôt enregistrée.',
+      );
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Mise à jour impossible.');
+      const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
+      setReviewError(msg);
+      setNotice(msg);
     } finally {
       setReviewSaving(false);
+    }
+  }
+
+  async function handleSaveExternalForm(
+    phaseId: 'phase-1' | 'phase-2',
+    overrideEnabled?: boolean,
+  ) {
+    const draft = externalFormsDraft[phaseId] || {
+      enabled: false,
+      googleFormUrl: '',
+      instructions: '',
+    };
+    const nextEnabled =
+      overrideEnabled !== undefined ? overrideEnabled : draft.enabled;
+
+    setExternalFormSavingId(phaseId);
+    setExternalFormError('');
+    setNotice('');
+
+    try {
+      const res = await fetchApiJson<{ siteDisplay: SiteDisplayConfig }>(
+        '/api/admin/external-forms',
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            phaseId,
+            enabled: nextEnabled,
+            googleFormUrl: draft.googleFormUrl,
+            instructions: draft.instructions,
+          }),
+        },
+      );
+
+      const savedForm: PhaseExternalFormConfig = res.siteDisplay.externalForms?.[
+        phaseId
+      ] || {
+        enabled: false,
+        googleFormUrl: '',
+        instructions: '',
+      };
+
+      setExternalFormsDraft((prev) => ({
+        ...prev,
+        [phaseId]: {
+          enabled: savedForm.enabled,
+          googleFormUrl: savedForm.googleFormUrl || '',
+          instructions: savedForm.instructions || '',
+        },
+      }));
+      externalFormsInitializedRef.current = true;
+
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: {
+                ...prev.settings,
+                siteDisplay: res.siteDisplay,
+              },
+            }
+          : prev,
+      );
+
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
+      setNotice(
+        savedForm.enabled
+          ? `Lien Google Form activé pour la Phase ${phaseId === 'phase-1' ? '01' : '02'} (remplace les dépôts de fichiers Supabase).`
+          : `Configuration Google Form enregistrée pour la Phase ${phaseId === 'phase-1' ? '01' : '02'}.`,
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Impossible d'enregistrer le lien Google Form.";
+      setExternalFormError(msg);
+      setNotice(msg);
+    } finally {
+      setExternalFormSavingId(null);
     }
   }
 
@@ -1474,8 +1631,16 @@ export function GestionPage() {
                   </span>
                 </button>
                 <p className="text-xs text-ucaep-ink/65">
-                  Vous pouvez modifier les consignes et dates limites de chaque phase à
-                  tout moment dans l&apos;onglet <strong>Phases</strong>.
+                  Vous pouvez modifier les consignes et dates limites de chaque phase dans{' '}
+                  <strong>Phases</strong>, et activer un lien Google Form de soumission dans{' '}
+                  <button
+                    type="button"
+                    onClick={() => selectTab('depots')}
+                    className="font-semibold text-ucaep-brown underline hover:text-ucaep-gold"
+                  >
+                    Dépôts
+                  </button>
+                  .
                 </p>
               </div>
             </div>
@@ -2194,6 +2359,173 @@ export function GestionPage() {
         {/* ONGLET DÉPÔTS */}
         {tab === 'depots' && (
           <div className="space-y-6">
+            {/* CONFIGURATEUR GOOGLE FORM PAR PHASE (REMPLACE LES FICHIERS SUPABASE) */}
+            <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-ucaep-brown/12 pb-4">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                    Mode de réception des vidéos &amp; fichiers
+                  </p>
+                  <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                    Activer un lien Google Form de soumission
+                  </h2>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Lorsqu&apos;un lien Google Form est activé pour une phase, les
+                    candidats sont redirigés vers ce formulaire pour envoyer leurs vidéos et
+                    fichiers (au lieu du stockage Supabase), tout en soumettant leurs deux
+                    textes écrits (Texte 1 et Texte 2) ici pour validation séquentielle.
+                  </p>
+                </div>
+              </div>
+
+              {externalFormError && (
+                <div
+                  role="alert"
+                  className="p-3.5 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{externalFormError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {(['phase-1', 'phase-2'] as const).map((phaseId) => {
+                  const phaseInfo = data.phases.find((p) => p.id === phaseId);
+                  const draft = externalFormsDraft[phaseId] || {
+                    enabled: false,
+                    googleFormUrl: '',
+                    instructions: '',
+                  };
+                  const liveForm =
+                    data.settings?.siteDisplay?.externalForms?.[phaseId];
+                  const isBusy = externalFormSavingId === phaseId;
+
+                  return (
+                    <div
+                      key={phaseId}
+                      className={`p-5 border rounded-sm space-y-4 ${
+                        liveForm?.enabled
+                          ? 'border-ucaep-green/45 bg-emerald-50/20'
+                          : 'border-ucaep-brown/15 bg-ucaep-paper/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-ucaep-brown/70">
+                            Phase {phaseInfo?.number || (phaseId === 'phase-1' ? '01' : '02')}
+                          </span>
+                          <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
+                            {phaseInfo?.title || phaseId}
+                          </h3>
+                        </div>
+                        <span
+                          className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
+                            liveForm?.enabled
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                              : 'bg-white text-ucaep-ink/70 border-ucaep-brown/20'
+                          }`}
+                        >
+                          {liveForm?.enabled
+                            ? 'Google Form actif'
+                            : 'Stockage Supabase'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor={`gform-url-${phaseId}`}
+                          className="block text-xs font-semibold text-ucaep-brown"
+                        >
+                          Lien du formulaire Google Form
+                        </label>
+                        <input
+                          id={`gform-url-${phaseId}`}
+                          type="url"
+                          value={draft.googleFormUrl}
+                          onChange={(e) =>
+                            setExternalFormsDraft((prev) => ({
+                              ...prev,
+                              [phaseId]: { ...draft, googleFormUrl: e.target.value },
+                            }))
+                          }
+                          placeholder="https://docs.google.com/forms/d/e/.../viewform"
+                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor={`gform-note-${phaseId}`}
+                          className="block text-xs font-semibold text-ucaep-brown"
+                        >
+                          Consigne rapide aux candidats (optionnel)
+                        </label>
+                        <input
+                          id={`gform-note-${phaseId}`}
+                          type="text"
+                          maxLength={500}
+                          value={draft.instructions}
+                          onChange={(e) =>
+                            setExternalFormsDraft((prev) => ({
+                              ...prev,
+                              [phaseId]: { ...draft, instructions: e.target.value },
+                            }))
+                          }
+                          placeholder="Ex. : Déposez vos deux vidéos MP4 dans le Google Form avec votre code UCAEP."
+                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                        />
+                      </div>
+
+                      <label className="flex items-center gap-2.5 text-xs font-medium text-ucaep-brown cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draft.enabled}
+                          onChange={(e) =>
+                            setExternalFormsDraft((prev) => ({
+                              ...prev,
+                              [phaseId]: { ...draft, enabled: e.target.checked },
+                            }))
+                          }
+                          className="accent-ucaep-brown"
+                        />
+                        <span>
+                          Activer ce lien Google Form pour remplacer l&apos;envoi de
+                          fichiers via Supabase
+                        </span>
+                      </label>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => handleSaveExternalForm(phaseId)}
+                          className="px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
+                        >
+                          {isBusy ? 'Enregistrement...' : 'Enregistrer'}
+                        </button>
+                        {draft.googleFormUrl.trim() && (
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() =>
+                              handleSaveExternalForm(phaseId, !draft.enabled)
+                            }
+                            className={`px-4 py-2 text-xs font-semibold rounded-sm border transition-colors disabled:opacity-50 ${
+                              draft.enabled
+                                ? 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'
+                                : 'border-ucaep-green/40 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {draft.enabled ? 'Désactiver le lien' : 'Activer le lien'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {!submissionsStorageReady && (
               <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 leading-relaxed">
                 Les variables serveur <code className="font-mono font-bold">SUPABASE_URL</code> et{' '}
@@ -2355,10 +2687,36 @@ export function GestionPage() {
                                 </div>
                               </div>
                             ) : (
-                              <div className="space-y-0.5">
+                              <div className="space-y-1">
                                 <div className="inline-flex items-center gap-1 text-xs font-medium text-ucaep-brown">
                                   <FileText className="w-3.5 h-3.5" />
-                                  <span>Texte écrit</span>
+                                  <span>Textes (1 &amp; 2)</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                      item.text1Status
+                                        ? SUBMISSION_STATUS_META[item.text1Status].badgeClass
+                                        : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                    }`}
+                                  >
+                                    T1 :{' '}
+                                    {item.text1Status
+                                      ? SUBMISSION_STATUS_META[item.text1Status].label
+                                      : 'Vide'}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                      item.text2Status
+                                        ? SUBMISSION_STATUS_META[item.text2Status].badgeClass
+                                        : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                    }`}
+                                  >
+                                    T2 :{' '}
+                                    {item.text2Status
+                                      ? SUBMISSION_STATUS_META[item.text2Status].label
+                                      : 'Vide'}
+                                  </span>
                                 </div>
                                 <p className="text-[11px] text-ucaep-ink/65 line-clamp-2">
                                   {item.textPreview}
@@ -2442,15 +2800,293 @@ export function GestionPage() {
                         {inspectError}
                       </div>
                     ) : inspectingAccess ? (
-                      <div className="space-y-4">
-                        {inspectingAccess.kind === 'text' ? (
-                          <div className="p-5 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm max-h-96 overflow-y-auto">
-                            <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
-                              {inspectingAccess.textContent}
-                            </p>
+                      <div className="space-y-6">
+                        {reviewError && (
+                          <div
+                            role="alert"
+                            className="p-3.5 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+                          >
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span>{reviewError}</span>
                           </div>
+                        )}
+
+                        {inspectingAccess.kind === 'text' ? (
+                          (() => {
+                            const slotLabels = getPhaseTextSlotLabels(
+                              inspectingItem.phaseId,
+                            );
+                            const t1HasContent = Boolean(
+                              inspectingAccess.text1Content?.trim(),
+                            );
+                            const t2HasContent = Boolean(
+                              inspectingAccess.text2Content?.trim(),
+                            );
+                            const t1Status = inspectingAccess.text1Status;
+                            const t2Status = inspectingAccess.text2Status;
+                            const t1Validated = t1Status === 'validated';
+
+                            return (
+                              <div className="space-y-6">
+                                {/* ÉTAPE 1 : TEXTE 1 */}
+                                <div className="p-5 bg-ucaep-paper/60 border border-ucaep-brown/20 rounded-sm space-y-4">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-3">
+                                    <div>
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                                        Validation étape 1 sur 2
+                                      </span>
+                                      <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                        {slotLabels.slot1Title}
+                                      </h4>
+                                    </div>
+                                    <span
+                                      className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
+                                        t1Status
+                                          ? SUBMISSION_STATUS_META[t1Status].badgeClass
+                                          : 'bg-white text-ucaep-ink/60 border-ucaep-brown/20'
+                                      }`}
+                                    >
+                                      {t1Status
+                                        ? SUBMISSION_STATUS_META[t1Status].label
+                                        : 'Non soumis'}
+                                    </span>
+                                  </div>
+
+                                  {t1HasContent ? (
+                                    <>
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
+                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
+                                          {inspectingAccess.text1Content}
+                                        </p>
+                                      </div>
+
+                                      <div className="space-y-1.5">
+                                        <label
+                                          htmlFor="review-note-1"
+                                          className="block text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown"
+                                        >
+                                          Observation sur le Texte 1 (optionnel)
+                                        </label>
+                                        <textarea
+                                          id="review-note-1"
+                                          rows={2}
+                                          value={reviewNote1Draft}
+                                          onChange={(e) =>
+                                            setReviewNote1Draft(e.target.value)
+                                          }
+                                          placeholder="Appréciation ou motif de reprise pour le Texte 1..."
+                                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                                        />
+                                      </div>
+
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 1,
+                                                status: 'validated',
+                                                organizerNote: reviewNote1Draft,
+                                              },
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5" />
+                                          <span>
+                                            {t1Validated
+                                              ? 'Texte 1 validé'
+                                              : 'Valider le Texte 1'}
+                                          </span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 1,
+                                                status: 'rejected',
+                                                organizerNote: reviewNote1Draft,
+                                              },
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                                        >
+                                          <XCircle className="w-3.5 h-3.5" />
+                                          <span>À reprendre (Texte 1)</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 1,
+                                                organizerNote: reviewNote1Draft,
+                                              },
+                                            )
+                                          }
+                                          className="px-3.5 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                                        >
+                                          Enregistrer la note
+                                        </button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <p className="text-xs text-ucaep-ink/65 italic">
+                                      Le candidat n&apos;a pas encore soumis le Texte 1.
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* ÉTAPE 2 : TEXTE 2 (VALIDATION SÉQUENTIELLE APRÈS TEXTE 1) */}
+                                <div
+                                  className={`p-5 border rounded-sm space-y-4 ${
+                                    t1Validated
+                                      ? 'bg-ucaep-paper/60 border-ucaep-brown/20'
+                                      : 'bg-ucaep-linen/35 border-ucaep-brown/12'
+                                  }`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-3">
+                                    <div>
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                                        Validation étape 2 sur 2 · Après Texte 1
+                                      </span>
+                                      <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                        {slotLabels.slot2Title}
+                                      </h4>
+                                    </div>
+                                    <span
+                                      className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
+                                        t2Status
+                                          ? SUBMISSION_STATUS_META[t2Status].badgeClass
+                                          : 'bg-white text-ucaep-ink/60 border-ucaep-brown/20'
+                                      }`}
+                                    >
+                                      {t2Status
+                                        ? SUBMISSION_STATUS_META[t2Status].label
+                                        : 'Non soumis'}
+                                    </span>
+                                  </div>
+
+                                  {!t1Validated && (
+                                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 flex items-center gap-2">
+                                      <Lock className="w-3.5 h-3.5 shrink-0" />
+                                      <span>
+                                        Validation séquentielle : validez d&apos;abord le{' '}
+                                        <strong>Texte 1</strong> à l&apos;étape précédente
+                                        pour pouvoir valider le Texte 2.
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {t2HasContent ? (
+                                    <>
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
+                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
+                                          {inspectingAccess.text2Content}
+                                        </p>
+                                      </div>
+
+                                      <div className="space-y-1.5">
+                                        <label
+                                          htmlFor="review-note-2"
+                                          className="block text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown"
+                                        >
+                                          Observation sur le Texte 2 (optionnel)
+                                        </label>
+                                        <textarea
+                                          id="review-note-2"
+                                          rows={2}
+                                          value={reviewNote2Draft}
+                                          onChange={(e) =>
+                                            setReviewNote2Draft(e.target.value)
+                                          }
+                                          placeholder="Appréciation ou motif de reprise pour le Texte 2..."
+                                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                                        />
+                                      </div>
+
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving || !t1Validated}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 2,
+                                                status: 'validated',
+                                                organizerNote: reviewNote2Draft,
+                                              },
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-45 disabled:cursor-not-allowed"
+                                        >
+                                          {t1Validated ? (
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <Lock className="w-3.5 h-3.5" />
+                                          )}
+                                          <span>
+                                            {t2Status === 'validated'
+                                              ? 'Texte 2 validé'
+                                              : 'Valider le Texte 2'}
+                                          </span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 2,
+                                                status: 'rejected',
+                                                organizerNote: reviewNote2Draft,
+                                              },
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                                        >
+                                          <XCircle className="w-3.5 h-3.5" />
+                                          <span>À reprendre (Texte 2)</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={reviewSaving}
+                                          onClick={() =>
+                                            handleUpdateSubmissionReview(
+                                              inspectingItem.id,
+                                              {
+                                                textSlot: 2,
+                                                organizerNote: reviewNote2Draft,
+                                              },
+                                            )
+                                          }
+                                          className="px-3.5 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                                        >
+                                          Enregistrer la note
+                                        </button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <p className="text-xs text-ucaep-ink/65 italic">
+                                      Le candidat n&apos;a pas encore soumis le Texte 2.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()
                         ) : inspectingAccess.signedUrl ? (
-                          <div className="space-y-4">
+                          <div className="space-y-5">
                             {inspectingAccess.mimeType?.startsWith('video/') && (
                               <video
                                 controls
@@ -2479,8 +3115,8 @@ export function GestionPage() {
                                 <span className="font-semibold text-ucaep-brown">
                                   {inspectingAccess.fileName}
                                 </span>{' '}
-                                · {formatFileSize(inspectingAccess.sizeBytes)} · Lien temporaire
-                                valable 10 minutes
+                                · {formatFileSize(inspectingAccess.sizeBytes)} · Lien
+                                temporaire valable 10 minutes
                               </div>
                               <a
                                 href={inspectingAccess.signedUrl}
@@ -2493,83 +3129,85 @@ export function GestionPage() {
                                 <span>Ouvrir / Télécharger</span>
                               </a>
                             </div>
+
+                            {/* VALIDATION & NOTE INTERNE POUR FICHIER */}
+                            <div className="pt-4 border-t border-ucaep-brown/15 space-y-4">
+                              <div className="space-y-1.5">
+                                <label
+                                  htmlFor="review-note"
+                                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
+                                >
+                                  Note interne (ou motif si refus)
+                                </label>
+                                <textarea
+                                  id="review-note"
+                                  rows={3}
+                                  value={reviewNoteDraft}
+                                  onChange={(e) => setReviewNoteDraft(e.target.value)}
+                                  placeholder="Observation de l'équipe UCAEP ou du jury..."
+                                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                                />
+                              </div>
+
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={reviewSaving}
+                                    onClick={() =>
+                                      handleUpdateSubmissionReview(inspectingItem.id, {
+                                        status: 'validated',
+                                        organizerNote: reviewNoteDraft,
+                                      })
+                                    }
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Valider</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={reviewSaving}
+                                    onClick={() =>
+                                      handleUpdateSubmissionReview(inspectingItem.id, {
+                                        status: 'rejected',
+                                        organizerNote: reviewNoteDraft,
+                                      })
+                                    }
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" />
+                                    <span>Refuser</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={reviewSaving}
+                                    onClick={() =>
+                                      handleUpdateSubmissionReview(inspectingItem.id, {
+                                        organizerNote: reviewNoteDraft,
+                                      })
+                                    }
+                                    className="px-4 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                                  >
+                                    Enregistrer la note
+                                  </button>
+                                </div>
+
+                                <span
+                                  className={`px-2.5 py-1 text-xs font-semibold border rounded-sm ${
+                                    SUBMISSION_STATUS_META[inspectingItem.status]
+                                      .badgeClass
+                                  }`}
+                                >
+                                  Statut actuel :{' '}
+                                  {SUBMISSION_STATUS_META[inspectingItem.status].label}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         ) : null}
                       </div>
                     ) : null}
-
-                    {/* VALIDATION & NOTE INTERNE */}
-                    <div className="pt-4 border-t border-ucaep-brown/15 space-y-4">
-                      <div className="space-y-1.5">
-                        <label
-                          htmlFor="review-note"
-                          className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
-                        >
-                          Note interne (ou motif si refus)
-                        </label>
-                        <textarea
-                          id="review-note"
-                          rows={3}
-                          value={reviewNoteDraft}
-                          onChange={(e) => setReviewNoteDraft(e.target.value)}
-                          placeholder="Observation de l'équipe UCAEP ou du jury..."
-                          className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                        />
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={reviewSaving}
-                            onClick={() =>
-                              handleUpdateSubmissionReview(inspectingItem.id, {
-                                status: 'validated',
-                                organizerNote: reviewNoteDraft,
-                              })
-                            }
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Valider</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={reviewSaving}
-                            onClick={() =>
-                              handleUpdateSubmissionReview(inspectingItem.id, {
-                                status: 'rejected',
-                                organizerNote: reviewNoteDraft,
-                              })
-                            }
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Refuser</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={reviewSaving}
-                            onClick={() =>
-                              handleUpdateSubmissionReview(inspectingItem.id, {
-                                organizerNote: reviewNoteDraft,
-                              })
-                            }
-                            className="px-4 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
-                          >
-                            Enregistrer la note
-                          </button>
-                        </div>
-
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold border rounded-sm ${
-                            SUBMISSION_STATUS_META[inspectingItem.status].badgeClass
-                          }`}
-                        >
-                          Statut actuel : {SUBMISSION_STATUS_META[inspectingItem.status].label}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
