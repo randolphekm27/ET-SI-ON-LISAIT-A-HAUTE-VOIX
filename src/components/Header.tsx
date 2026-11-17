@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useScroll, useSpring } from 'motion/react';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
+import { EDITORIAL_EASE } from '../lib/motion';
 import { useSiteConfig } from '../lib/site-config';
 import type { CompetitionPhase } from '../types/competition';
 
@@ -34,12 +35,18 @@ export function UcaepMark({ light = false }: { light?: boolean }) {
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [hasOpenSubmissions, setHasOpenSubmissions] = useState(false);
   const candidateSession = useCandidateSession();
   const { siteConfig, activePhase } = useSiteConfig();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { scrollYProgress } = useScroll();
+  const scrollScaleX = useSpring(scrollYProgress, {
+    stiffness: 240,
+    damping: 32,
+    restDelta: 0.001,
+  });
 
   const isSinglePageMode = siteConfig.mode === 'phase_single_page';
   const isPresentielPhase =
@@ -71,12 +78,7 @@ export function Header() {
 
   useEffect(() => {
     const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 40);
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, y / maxScroll)) : 0;
-      setScrollProgress(ratio);
+      setScrolled(window.scrollY > 40);
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -255,11 +257,11 @@ export function Header() {
             </button>
           </div>
         </div>
-        {/* Barre de progression de lecture ultra-fine (GPU scaleX uniquement) */}
-        <div
+        {/* Barre de progression de lecture pilotée par Motion (GPU scaleX) */}
+        <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-ucaep-gold origin-left transition-transform duration-150 ease-out"
-          style={{ transform: `scaleX(${scrollProgress})` }}
+          style={{ scaleX: scrollScaleX }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-ucaep-gold origin-left"
         />
       </header>
 
@@ -284,10 +286,17 @@ export function Header() {
                 className="divide-y divide-white/10 border-t border-b border-white/10"
               >
                 {isSinglePageMode ? (
-                  singlePageNavItems.map((item) => (
-                    <button
+                  singlePageNavItems.map((item, idx) => (
+                    <motion.button
                       key={item.id}
                       type="button"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.24,
+                        delay: 0.04 * idx,
+                        ease: EDITORIAL_EASE,
+                      }}
                       onClick={() => handleSectionJump(item.id)}
                       className="w-full flex items-baseline justify-between py-4 text-left text-ucaep-paper hover:text-ucaep-gold transition-colors"
                     >
@@ -295,7 +304,7 @@ export function Header() {
                       <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
                         {item.num}
                       </span>
-                    </button>
+                    </motion.button>
                   ))
                 ) : (
                   <>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -16,6 +16,7 @@ import {
   BrandPatternWave,
 } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { EditorialReveal } from '../components/MotionPrimitives';
 import { fetchApiJson } from '../lib/api';
 import {
   clearCandidateSession,
@@ -23,6 +24,7 @@ import {
   useCandidateSession,
 } from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
+import { EDITORIAL_EASE, EDITORIAL_SPRING, TACTILE_SPRING } from '../lib/motion';
 import type { RegistrationPayload } from '../types/competition';
 
 const STEPS = [
@@ -60,6 +62,7 @@ export function InscriptionPage() {
   const [form, setForm] = useState<RegistrationPayload>(INITIAL_DATA);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const stepRailId = useId();
 
   function updateField<K extends keyof RegistrationPayload>(
     key: K,
@@ -193,53 +196,55 @@ export function InscriptionPage() {
             blendMultiply
           />
           <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
-            <div className="art-card p-8 sm:p-10 bg-white border border-ucaep-green/25 rounded-[2px] space-y-6">
-              <div className="flex items-center justify-between gap-4">
-                <EditorialMark folio="Confirmé" label="Déjà inscrit(e)" tone="green" />
-                <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
+            <EditorialReveal>
+              <div className="art-card p-8 sm:p-10 bg-white border border-ucaep-green/25 rounded-[2px] space-y-6">
+                <div className="flex items-center justify-between gap-4">
+                  <EditorialMark folio="Confirmé" label="Déjà inscrit(e)" tone="green" />
+                  <CheckCircle2 className="w-6 h-6 text-ucaep-green shrink-0" />
+                </div>
+
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
+                  Votre candidature est enregistrée
+                  {existingSession.candidateName ? `, ${existingSession.candidateName}` : ''}.
+                </h2>
+
+                <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
+                  Votre code d&apos;anonymat{' '}
+                  <span className="font-mono font-semibold text-ucaep-brown">
+                    {existingSession.referenceCode}
+                  </span>{' '}
+                  est actif. Vous pouvez accéder directement à votre espace de dépôt pour
+                  consulter les consignes des phases et transmettre vos productions.
+                </p>
+
+                <div className="pt-2 flex flex-wrap items-center gap-4">
+                  <Link
+                    to="/depot"
+                    className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
+                  >
+                    <span>Accéder à mon espace candidat</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                  <Link
+                    to="/confirmation-inscription"
+                    className="editorial-underline text-sm font-medium text-ucaep-brown"
+                  >
+                    Revoir mon reçu d&apos;inscription
+                  </Link>
+                </div>
+
+                <div className="pt-4 border-t border-ucaep-brown/12">
+                  <button
+                    type="button"
+                    onClick={() => clearCandidateSession()}
+                    className="inline-flex items-center gap-2 text-xs text-ucaep-ink/65 hover:text-ucaep-brown underline"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Inscrire une autre personne sur cet appareil</span>
+                  </button>
+                </div>
               </div>
-
-              <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
-                Votre candidature est enregistrée
-                {existingSession.candidateName ? `, ${existingSession.candidateName}` : ''}.
-              </h2>
-
-              <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed">
-                Votre code d&apos;anonymat{' '}
-                <span className="font-mono font-semibold text-ucaep-brown">
-                  {existingSession.referenceCode}
-                </span>{' '}
-                est actif. Vous pouvez accéder directement à votre espace de dépôt pour
-                consulter les consignes des phases et transmettre vos productions.
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center gap-4">
-                <Link
-                  to="/depot"
-                  className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
-                >
-                  <span>Accéder à mon espace candidat</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </Link>
-                <Link
-                  to="/confirmation-inscription"
-                  className="editorial-underline text-sm font-medium text-ucaep-brown"
-                >
-                  Revoir mon reçu d&apos;inscription
-                </Link>
-              </div>
-
-              <div className="pt-4 border-t border-ucaep-brown/12">
-                <button
-                  type="button"
-                  onClick={() => clearCandidateSession()}
-                  className="inline-flex items-center gap-2 text-xs text-ucaep-ink/65 hover:text-ucaep-brown underline"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Inscrire une autre personne sur cet appareil</span>
-                </button>
-              </div>
-            </div>
+            </EditorialReveal>
           </div>
         </section>
       </div>
@@ -291,8 +296,20 @@ export function InscriptionPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           {/* Left Focused Progression Rail */}
-          <aside className="lg:col-span-4 space-y-8 lg:sticky lg:top-24">
+          <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
             <EditorialMark folio={`Étape 0${step} / 04`} label="Progression" tone="brown" />
+
+            <div className="space-y-1.5">
+              <div className="h-[3px] w-full bg-ucaep-brown/12 overflow-hidden rounded-full">
+                <motion.div
+                  aria-hidden="true"
+                  initial={false}
+                  animate={{ scaleX: step / 4 }}
+                  transition={{ duration: 0.35, ease: EDITORIAL_EASE }}
+                  className="h-full w-full bg-ucaep-gold origin-left"
+                />
+              </div>
+            </div>
 
             <nav aria-label="Étapes de l'inscription" className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-0 lg:divide-y lg:divide-ucaep-brown/14 lg:border-t lg:border-b lg:border-ucaep-brown/14">
               {STEPS.map((item) => {
@@ -301,7 +318,7 @@ export function InscriptionPage() {
                 return (
                   <div
                     key={item.num}
-                    className={`py-3 lg:py-4 flex items-center justify-between gap-3 transition-colors ${
+                    className={`relative py-3 lg:py-4 pl-3 pr-2 flex items-center justify-between gap-3 transition-colors ${
                       isCurrent
                         ? 'text-ucaep-ink font-semibold'
                         : isDone
@@ -309,6 +326,14 @@ export function InscriptionPage() {
                           : 'text-ucaep-ink/42'
                     }`}
                   >
+                    {isCurrent && (
+                      <motion.span
+                        layoutId={`inscription-step-${stepRailId}`}
+                        aria-hidden="true"
+                        transition={EDITORIAL_SPRING}
+                        className="hidden lg:block absolute left-0 top-2.5 bottom-2.5 w-[2px] bg-ucaep-gold"
+                      />
+                    )}
                     <div className="flex items-baseline gap-3 min-w-0">
                       <span
                         className={`font-serif text-2xl tabular-nums ${
@@ -349,25 +374,32 @@ export function InscriptionPage() {
           {/* Right Form Desk */}
           <div className="lg:col-span-8">
             <div className="p-6 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm space-y-8">
-              {error && (
-                <div
-                  role="alert"
-                  className="p-4 rounded-sm border border-red-800/30 bg-red-50 text-red-900 text-sm flex items-start gap-3"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {error && (
+                  <motion.div
+                    key={error}
+                    role="alert"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                    className="p-4 rounded-sm border border-red-800/30 bg-red-50 text-red-900 text-sm flex items-start gap-3"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 <AnimatePresence mode="wait">
                   {step === 1 && (
                     <motion.div
                       key="step-1"
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.18 }}
+                      transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
                       className="space-y-6"
                     >
                       <div className="space-y-2">
@@ -453,10 +485,10 @@ export function InscriptionPage() {
                   {step === 2 && (
                     <motion.div
                       key="step-2"
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.18 }}
+                      transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
                       className="space-y-6"
                     >
                       <div className="space-y-2">
@@ -518,10 +550,10 @@ export function InscriptionPage() {
                   {step === 3 && (
                     <motion.div
                       key="step-3"
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.18 }}
+                      transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
                       className="space-y-6"
                     >
                       <div className="space-y-2">
@@ -592,10 +624,10 @@ export function InscriptionPage() {
                   {step === 4 && (
                     <motion.div
                       key="step-4"
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.18 }}
+                      transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
                       className="space-y-6"
                     >
                       <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
@@ -626,8 +658,10 @@ export function InscriptionPage() {
 
                 <div className="pt-5 border-t border-ucaep-brown/12 flex items-center justify-between gap-4">
                   {step > 1 ? (
-                    <button
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.98 }}
+                      transition={TACTILE_SPRING}
                       onClick={() => {
                         setError(null);
                         setStep((s) => s - 1);
@@ -637,23 +671,27 @@ export function InscriptionPage() {
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>Retour</span>
-                    </button>
+                    </motion.button>
                   ) : (
                     <span />
                   )}
 
                   {step < 4 ? (
-                    <button
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.98 }}
+                      transition={TACTILE_SPRING}
                       onClick={handleNext}
                       className="group inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors"
                     >
                       <span>Continuer</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-                    </button>
+                    </motion.button>
                   ) : (
-                    <button
+                    <motion.button
                       type="submit"
+                      whileTap={{ scale: 0.98 }}
+                      transition={TACTILE_SPRING}
                       disabled={submitting}
                       className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-60 transition-colors"
                     >
@@ -661,7 +699,7 @@ export function InscriptionPage() {
                         {submitting ? 'Enregistrement en cours…' : 'Valider et générer mon code UCAEP'}
                       </span>
                       <Check className="w-4 h-4" />
-                    </button>
+                    </motion.button>
                   )}
                 </div>
               </form>

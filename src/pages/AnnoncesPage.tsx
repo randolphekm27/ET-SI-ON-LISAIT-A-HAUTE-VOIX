@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import {
@@ -8,10 +8,13 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import {
+  EditorialReveal,
+  PhotographicPlate,
+} from '../components/MotionPrimitives';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
-import { useEditorialScrollMotion } from '../lib/motion';
 import type { PublicAnnouncement } from '../types/competition';
 
 export function AnnoncesPage() {
@@ -32,7 +35,6 @@ function AnnouncementsFeedView() {
 
   const [announcements, setAnnouncements] = useState<PublicAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
-  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -50,10 +52,8 @@ function AnnouncementsFeedView() {
     };
   }, []);
 
-  useEditorialScrollMotion(pageRef, [announcements.length]);
-
   return (
-    <div ref={pageRef} className="bg-ucaep-paper">
+    <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Tableau"
         section="Communications officielles"
@@ -109,75 +109,75 @@ function AnnouncementsFeedView() {
                 const isFirst = idx === 0;
                 const displayNumber = String(announcements.length - idx).padStart(2, '0');
                 return (
-                  <article
-                    key={item.id}
-                    data-reveal
-                    className="group py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center"
-                  >
-                    <div
-                      className={`${
-                        isFirst ? 'lg:col-span-6' : 'lg:col-span-5 lg:order-2'
-                      }`}
-                    >
-                      <Link
-                        to={`/annonces/${item.slug}`}
-                        className="block aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
-                      >
-                        <EditorialImage
-                          assetKey={item.imageKey}
-                          className="group-hover:scale-[1.04] transition-transform duration-500 ease-out"
-                        />
-                      </Link>
-                    </div>
-
-                    <div
-                      className={`space-y-5 ${
-                        isFirst ? 'lg:col-span-6' : 'lg:col-span-7 lg:order-1'
-                      }`}
-                    >
-                      <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3 group-hover:border-ucaep-gold transition-colors">
-                        <span className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-gold tabular-nums leading-none">
-                          № {displayNumber}
-                        </span>
-                        <div className="text-xs text-ucaep-brown/75 tabular-nums">
-                          <span className="font-semibold text-ucaep-green">
-                            {item.category}
-                          </span>
-                          <span aria-hidden="true"> · </span>
-                          <time dateTime={item.publishedAt}>
-                            {formatFrenchDate(item.publishedAt)}
-                          </time>
-                        </div>
-                      </div>
-
-                      <h2
-                        className={`font-serif font-semibold text-ucaep-ink leading-[1.06] ${
-                          isFirst ? 'text-3xl sm:text-5xl' : 'text-3xl sm:text-4xl'
+                  <EditorialReveal key={item.id} delay={idx * 0.06}>
+                    <article className="group py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                      <div
+                        className={`${
+                          isFirst ? 'lg:col-span-6' : 'lg:col-span-5 lg:order-2'
                         }`}
                       >
-                        <Link
-                          to={`/annonces/${item.slug}`}
-                          className="hover:text-ucaep-brown transition-colors"
-                        >
-                          {item.title}
-                        </Link>
-                      </h2>
-
-                      <p className="text-base text-ucaep-ink/78 leading-relaxed max-w-2xl">
-                        {item.excerpt}
-                      </p>
-
-                      <div className="pt-1">
-                        <Link
-                          to={`/annonces/${item.slug}`}
-                          className="inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
-                        >
-                          <span className="editorial-underline">Lire l&apos;annonce</span>
-                          <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                        <Link to={`/annonces/${item.slug}`} className="block">
+                          <PhotographicPlate
+                            parallaxAmount={8}
+                            className="aspect-[16/10] rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
+                          >
+                            <EditorialImage
+                              assetKey={item.imageKey}
+                              className="group-hover:scale-[1.04] transition-transform duration-500 ease-out"
+                            />
+                          </PhotographicPlate>
                         </Link>
                       </div>
-                    </div>
-                  </article>
+
+                      <div
+                        className={`space-y-5 ${
+                          isFirst ? 'lg:col-span-6' : 'lg:col-span-7 lg:order-1'
+                        }`}
+                      >
+                        <div className="flex items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3 group-hover:border-ucaep-gold transition-colors">
+                          <span className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-gold tabular-nums leading-none">
+                            № {displayNumber}
+                          </span>
+                          <div className="text-xs text-ucaep-brown/75 tabular-nums">
+                            <span className="font-semibold text-ucaep-green">
+                              {item.category}
+                            </span>
+                            <span aria-hidden="true"> · </span>
+                            <time dateTime={item.publishedAt}>
+                              {formatFrenchDate(item.publishedAt)}
+                            </time>
+                          </div>
+                        </div>
+
+                        <h2
+                          className={`font-serif font-semibold text-ucaep-ink leading-[1.06] ${
+                            isFirst ? 'text-3xl sm:text-5xl' : 'text-3xl sm:text-4xl'
+                          }`}
+                        >
+                          <Link
+                            to={`/annonces/${item.slug}`}
+                            className="hover:text-ucaep-brown transition-colors"
+                          >
+                            {item.title}
+                          </Link>
+                        </h2>
+
+                        <p className="text-base text-ucaep-ink/78 leading-relaxed max-w-2xl">
+                          {item.excerpt}
+                        </p>
+
+                        <div className="pt-1">
+                          <Link
+                            to={`/annonces/${item.slug}`}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
+                          >
+                            <span className="editorial-underline">Lire l&apos;annonce</span>
+                            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                  </EditorialReveal>
                 );
               })}
             </div>
@@ -276,9 +276,13 @@ function AnnouncementDetailView({ slug }: { slug: string }) {
         </header>
 
         <figure>
-          <div className="aspect-[16/9] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10">
-            <EditorialImage assetKey={announcement.imageKey} />
-          </div>
+          <PhotographicPlate
+            immediate
+            parallaxAmount={8}
+            className="aspect-[16/9] rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/10"
+          >
+            <EditorialImage assetKey={announcement.imageKey} priority />
+          </PhotographicPlate>
         </figure>
 
         <div className="max-w-prose space-y-6 text-base sm:text-lg text-ucaep-ink/85 leading-relaxed">

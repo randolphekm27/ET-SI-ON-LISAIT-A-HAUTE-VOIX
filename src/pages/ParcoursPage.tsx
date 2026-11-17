@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -23,12 +23,19 @@ import {
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
 import { InteractiveRubric } from '../components/InteractiveRubric';
+import {
+  EditorialReveal,
+  EditorialTitleReveal,
+  ParallaxDepthCard,
+  PhotographicPlate,
+  ThreePhaseNarrativeArc,
+} from '../components/MotionPrimitives';
 import { SectionAnchorRail } from '../components/SectionAnchorRail';
 import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
-import { useEditorialScrollMotion } from '../lib/motion';
+import { EDITORIAL_EASE, EDITORIAL_SPRING } from '../lib/motion';
 import type { CompetitionPhase } from '../types/competition';
 
 const PHASE_ATMOSPHERES = [
@@ -119,7 +126,7 @@ export function ParcoursPage() {
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
-  const pageRef = useRef<HTMLDivElement>(null);
+  const chapterLayoutId = useId();
 
   useEffect(() => {
     let active = true;
@@ -137,8 +144,6 @@ export function ParcoursPage() {
     };
   }, []);
 
-  useEditorialScrollMotion(pageRef, [phases.length]);
-
   const activePhase = phases[activeIdx];
   const activeStyle = PHASE_ATMOSPHERES[activeIdx % PHASE_ATMOSPHERES.length];
   const hasOpenDeposits = phases.some((p) => Boolean(p.submissionsOpen));
@@ -151,7 +156,7 @@ export function ParcoursPage() {
   );
 
   return (
-    <div ref={pageRef} className="bg-ucaep-paper">
+    <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Parcours"
         section="De l'inscription à la finale · 3 semaines"
@@ -186,6 +191,8 @@ export function ParcoursPage() {
           {/* DESKTOP: Horizontal 3-Chapter Progression Rail + Atmospheric Stage */}
           <section className="hidden lg:block py-16 lg:py-20 bg-ucaep-paper">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
+              <ThreePhaseNarrativeArc activeStepIndex={activeIdx} />
+
               <div
                 role="tablist"
                 aria-label="Chapitres du parcours"
@@ -223,10 +230,10 @@ export function ParcoursPage() {
                       </div>
                       {isActive && (
                         <motion.span
-                          layoutId="parcours-chapter-bar"
+                          layoutId={`chapter-bar-${chapterLayoutId}`}
                           aria-hidden="true"
                           className="absolute -bottom-px left-0 right-6 h-0.5 bg-ucaep-gold"
-                          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                          transition={EDITORIAL_SPRING}
                         />
                       )}
                     </button>
@@ -241,7 +248,7 @@ export function ParcoursPage() {
                     initial={{ opacity: 0, x: 18 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -18 }}
-                    transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.28, ease: EDITORIAL_EASE }}
                     className={`relative overflow-hidden rounded-[2px] border ${activeStyle.border} ${activeStyle.bg} ${activeStyle.text} p-10 lg:p-12 transition-colors`}
                   >
                     <BrandPatternEdge
@@ -251,9 +258,13 @@ export function ParcoursPage() {
                     />
                     <div className="grid grid-cols-12 gap-12 items-center">
                       <div className="col-span-6">
-                        <div className="aspect-4/3 overflow-hidden rounded-[2px] bg-black/15 border border-ucaep-gold/20">
+                        <PhotographicPlate
+                          immediate
+                          parallaxAmount={8}
+                          className="aspect-4/3 rounded-[2px] bg-black/15 border border-ucaep-gold/20"
+                        >
                           <EditorialImage assetKey={activePhase.imageKey} />
-                        </div>
+                        </PhotographicPlate>
                       </div>
 
                       <div className="col-span-6 space-y-6">
@@ -394,21 +405,18 @@ export function ParcoursPage() {
           className="hidden lg:block -bottom-24 -right-16 w-64 h-64 opacity-[0.09]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6" data-reveal>
+          <EditorialReveal className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="space-y-3 max-w-2xl">
               <EditorialMark
                 folio="Phase 01 · En ligne"
                 label="La Plume · Notée sur 20 points"
                 tone="green"
               />
-              <div className="overflow-hidden">
-                <h2
-                  data-mask-title
-                  className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
-                >
+              <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
+                <EditorialTitleReveal>
                   Phase 1 — <em className="italic font-normal text-ucaep-brown">La Plume : textes originaux et vidéo</em>
-                </h2>
-              </div>
+                </EditorialTitleReveal>
+              </h2>
             </div>
             <div className="text-xs sm:text-sm text-ucaep-brown/80 space-y-1 tabular-nums">
               <p className="font-semibold text-ucaep-brown">
@@ -416,84 +424,79 @@ export function ParcoursPage() {
               </p>
               <p>Phase qualificative · Double lecture anonyme en Jours 4–5</p>
             </div>
-          </div>
+          </EditorialReveal>
 
           {phase1?.isRevealed ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <article
-              data-reveal
-              data-parallax-card="8"
-              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
-            >
-              <Feather
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-8 -right-6 w-44 h-44 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
-                strokeWidth={1.15}
-              />
-              <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Épreuve 01 · Texte original + vidéo
-                </span>
-                <span className="text-xs font-semibold text-ucaep-green tabular-nums">
-                  Jusqu&apos;à 5 min de présentation
-                </span>
-              </div>
-              <h3 className="relative z-10 font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                « Je suis… »
-              </h3>
-              <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/84 leading-relaxed">
-                Vous rédigez un autoportrait personnel qui dépasse la simple fiche d&apos;identité (nom, âge ou filière), puis vous le lisez ou l&apos;interprétez en vidéo. Vous pouvez par exemple partir d&apos;un souvenir d&apos;apprentissage, d&apos;une conviction ou d&apos;un projet qui guide vos études.
-              </p>
-              <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                  Ce que vous travaillez
+            <ParallaxDepthCard offset={8} delay={0.04}>
+              <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5">
+                <Feather
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-8 -right-6 w-44 h-44 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
+                  strokeWidth={1.15}
+                />
+                <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                    Épreuve 01 · Texte original + vidéo
+                  </span>
+                  <span className="text-xs font-semibold text-ucaep-green tabular-nums">
+                    Jusqu&apos;à 5 min de présentation
+                  </span>
+                </div>
+                <h3 className="relative z-10 font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                  « Je suis… »
+                </h3>
+                <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/84 leading-relaxed">
+                  Vous rédigez un autoportrait personnel qui dépasse la simple fiche d&apos;identité (nom, âge ou filière), puis vous le lisez ou l&apos;interprétez en vidéo. Vous pouvez par exemple partir d&apos;un souvenir d&apos;apprentissage, d&apos;une conviction ou d&apos;un projet qui guide vos études.
                 </p>
-                <p className="text-sm text-ucaep-ink/85 leading-relaxed">
-                  Trouver un angle personnel, structurer vos idées et les porter à voix haute avec un rythme naturel.
+                <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
+                    Ce que vous travaillez
+                  </p>
+                  <p className="text-sm text-ucaep-ink/85 leading-relaxed">
+                    Trouver un angle personnel, structurer vos idées et les porter à voix haute avec un rythme naturel.
+                  </p>
+                </div>
+                <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
+                  <strong>Formes admises :</strong> récit personnel, lettre à soi-même, monologue, poème ou prose littéraire.
                 </p>
-              </div>
-              <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
-                <strong>Formes admises :</strong> récit personnel, lettre à soi-même, monologue, poème ou prose littéraire.
-              </p>
-            </article>
+              </article>
+            </ParallaxDepthCard>
 
-            <article
-              data-reveal
-              data-reveal-delay="0.08"
-              data-parallax-card="-8"
-              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5"
-            >
-              <MessageSquareQuote
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-8 -right-6 w-44 h-44 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
-                strokeWidth={1.15}
-              />
-              <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Épreuve 02 · Texte original + vidéo
-                </span>
-                <span className="text-xs font-semibold text-ucaep-green tabular-nums">
-                  Jusqu&apos;à 5 min de présentation
-                </span>
-              </div>
-              <h3 className="relative z-10 font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                « Les mots que l&apos;on n&apos;ose pas dire »
-              </h3>
-              <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/84 leading-relaxed">
-                Vous mettez en mots une pensée, une reconnaissance, un constat ou une vérité que l&apos;on retient souvent par pudeur — à l&apos;adresse d&apos;un proche, de votre promotion ou de la société — puis vous en enregistrez la lecture en vidéo.
-              </p>
-              <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                  Ce que le jury regarde
+            <ParallaxDepthCard offset={-8} delay={0.1}>
+              <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-paper p-8 sm:p-10 space-y-5">
+                <MessageSquareQuote
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-8 -right-6 w-44 h-44 text-ucaep-brown opacity-[0.06] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
+                  strokeWidth={1.15}
+                />
+                <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                    Épreuve 02 · Texte original + vidéo
+                  </span>
+                  <span className="text-xs font-semibold text-ucaep-green tabular-nums">
+                    Jusqu&apos;à 5 min de présentation
+                  </span>
+                </div>
+                <h3 className="relative z-10 font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                  « Les mots que l&apos;on n&apos;ose pas dire »
+                </h3>
+                <p className="relative z-10 text-sm sm:text-base text-ucaep-ink/84 leading-relaxed">
+                  Vous mettez en mots une pensée, une reconnaissance, un constat ou une vérité que l&apos;on retient souvent par pudeur — à l&apos;adresse d&apos;un proche, de votre promotion ou de la société — puis vous en enregistrez la lecture en vidéo.
                 </p>
-                <p className="text-sm text-ucaep-ink/85 leading-relaxed">
-                  Justesse de l&apos;écriture, sincérité du propos, articulation claire et respect de votre respiration.
+                <div className="relative z-10 p-4 rounded-[2px] bg-ucaep-linen/75 border border-ucaep-brown/14 space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
+                    Ce que le jury regarde
+                  </p>
+                  <p className="text-sm text-ucaep-ink/85 leading-relaxed">
+                    Justesse de l&apos;écriture, sincérité du propos, articulation claire et respect de votre respiration.
+                  </p>
+                </div>
+                <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
+                  <strong>Formes admises :</strong> lettre non envoyée, monologue, poème ou récit en français (touches de langues nationales possibles).
                 </p>
-              </div>
-              <p className="relative z-10 text-xs text-ucaep-brown/80 leading-relaxed">
-                <strong>Formes admises :</strong> lettre non envoyée, monologue, poème ou récit en français (touches de langues nationales possibles).
-              </p>
-            </article>
+              </article>
+            </ParallaxDepthCard>
           </div>
           ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -538,87 +541,85 @@ export function ParcoursPage() {
           <div className="space-y-8">
             <InteractiveRubric phaseId="phase-1" />
 
-            <article
-              data-reveal
-              data-reveal-delay="0.06"
-              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-9 space-y-6"
-            >
-              <BrandPatternSurface
-                variant="green"
-                tileWidth={190}
-                opacityClass="opacity-[0.11]"
-              />
-              <BrandPatternCircle
-                variant="gold"
-                tileWidth={120}
-                ring={false}
-                orbit
-                className="hidden sm:block absolute -top-12 -right-12 w-36 h-36 opacity-20"
-              />
-              <Award
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-7 -right-6 w-40 h-40 text-ucaep-gold opacity-[0.1] -rotate-12"
-                strokeWidth={1.2}
-              />
-              <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                    Temps de parole, règles &amp; qualification
-                  </p>
-                  <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-paper">
-                    Modalités pratiques de la Phase 1
-                  </h3>
-                </div>
-                <div className="flex flex-wrap items-center gap-4">
-                  {candidateSession ? (
-                    <Link
-                      to="/depot"
-                      className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
-                    >
-                      <span>Accéder à mon espace candidat ({candidateSession.referenceCode})</span>
-                      <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
-                    </Link>
-                  ) : (
-                    <>
+            <EditorialReveal delay={0.06}>
+              <article className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/16 bg-ucaep-green text-ucaep-paper p-7 sm:p-9 space-y-6">
+                <BrandPatternSurface
+                  variant="green"
+                  tileWidth={190}
+                  opacityClass="opacity-[0.11]"
+                />
+                <BrandPatternCircle
+                  variant="gold"
+                  tileWidth={120}
+                  ring={false}
+                  orbit
+                  className="hidden sm:block absolute -top-12 -right-12 w-36 h-36 opacity-20"
+                />
+                <Award
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-7 -right-6 w-40 h-40 text-ucaep-gold opacity-[0.1] -rotate-12"
+                  strokeWidth={1.2}
+                />
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                      Temps de parole, règles &amp; qualification
+                    </p>
+                    <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-paper">
+                      Modalités pratiques de la Phase 1
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {candidateSession ? (
                       <Link
-                        to="/inscription"
+                        to="/depot"
                         className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                       >
-                        <span>Commencer mon inscription</span>
+                        <span>Accéder à mon espace candidat ({candidateSession.referenceCode})</span>
                         <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
                       </Link>
-                      {hasOpenDeposits && (
+                    ) : (
+                      <>
                         <Link
-                          to="/depot"
-                          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
+                          to="/inscription"
+                          className="btn-tactile group/btn inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c]"
                         >
-                          <span className="editorial-underline">Déposer mes productions</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span>Commencer mon inscription</span>
+                          <ArrowRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/btn:translate-x-0.5" />
                         </Link>
-                      )}
-                    </>
-                  )}
+                        {hasOpenDeposits && (
+                          <Link
+                            to="/depot"
+                            className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ucaep-ivory hover:text-ucaep-gold transition-colors"
+                          >
+                            <span className="editorial-underline">Déposer mes productions</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
-                <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
-                  <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
-                    Comment enregistrer vos vidéos
-                  </p>
-                  <p>
-                    Un simple smartphone dans une salle calme suffit. Chaque vidéo accompagne l&apos;un de vos deux textes et reste sous la limite de <strong>5 minutes</strong>.
-                  </p>
+                <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-ucaep-ivory/90 leading-relaxed">
+                  <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
+                    <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
+                      Comment enregistrer vos vidéos
+                    </p>
+                    <p>
+                      Un simple smartphone dans une salle calme suffit. Chaque vidéo accompagne l&apos;un de vos deux textes et reste sous la limite de <strong>5 minutes</strong>.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
+                    <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
+                      Qualification &amp; attestation
+                    </p>
+                    <p>
+                      Les meilleurs dossiers retenus par le jury passent à la Phase 2 (La Connaissance, en ligne). Chaque étudiant de l&apos;ENSET inscrit reçoit une attestation officielle.
+                    </p>
+                  </div>
                 </div>
-                <div className="p-4 rounded-[2px] bg-[#1f3622]/85 border border-ucaep-ivory/15 space-y-1.5">
-                  <p className="font-semibold text-ucaep-gold text-xs uppercase tracking-wider">
-                    Qualification &amp; attestation
-                  </p>
-                  <p>
-                    Les meilleurs dossiers retenus par le jury passent à la Phase 2 (La Connaissance, en ligne). Chaque étudiant de l&apos;ENSET inscrit reçoit une attestation officielle.
-                  </p>
-                </div>
-              </div>
-            </article>
+              </article>
+            </EditorialReveal>
           </div>
         </div>
       </section>
@@ -629,20 +630,22 @@ export function ParcoursPage() {
         className="scroll-mt-20 relative py-20 lg:py-24 bg-ucaep-paper border-b border-ucaep-brown/14 overflow-hidden"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
-          <div className="space-y-3 max-w-prose" data-reveal>
+          <EditorialReveal className="space-y-3 max-w-prose">
             <EditorialMark
               folio="Outil pratique"
               label="Du texte à la vidéo · Limite 05:00"
               tone="green"
             />
             <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Calibrer votre lecture et{' '}
-              <em className="italic font-normal text-ucaep-brown">préparer votre tournage</em>
+              <EditorialTitleReveal>
+                Calibrer votre lecture et{' '}
+                <em className="italic font-normal text-ucaep-brown">préparer votre tournage</em>
+              </EditorialTitleReveal>
             </h2>
             <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
               Avant d&apos;allumer la caméra, vérifiez que votre texte se lit sans précipitation en moins de 5 minutes grâce au calculateur, puis suivez la liste de contrôle technique.
             </p>
-          </div>
+          </EditorialReveal>
 
           <VideoPrepWorkshop />
         </div>
@@ -668,7 +671,7 @@ export function ParcoursPage() {
           className="hidden lg:block -top-20 -right-16 w-56 h-56 opacity-[0.08]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
-          <div className="space-y-2 max-w-2xl" data-reveal>
+          <EditorialReveal className="space-y-2 max-w-2xl">
             <EditorialMark
               folio="Phases 02 & 03"
               label={
@@ -678,132 +681,124 @@ export function ParcoursPage() {
               }
               tone="brown"
             />
-            <div className="overflow-hidden">
-              <h2
-                data-mask-title
-                className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
-              >
+            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
+              <EditorialTitleReveal>
                 Vulgarisation et scène :{' '}
                 <em className="italic font-normal text-ucaep-brown">
                   {phase2?.isRevealed || phase3?.isRevealed
                     ? 'les quatre épreuves suivantes'
                     : 'les prochaines étapes du concours'}
                 </em>
-              </h2>
-            </div>
-          </div>
+              </EditorialTitleReveal>
+            </h2>
+          </EditorialReveal>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* PHASE 02 CARD */}
-            <article
-              data-reveal
-              data-parallax-card="8"
-              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
-            >
-              <BookOpen
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-6 -right-5 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                strokeWidth={1.2}
-              />
-              <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Phase 02 · {phase2?.title || 'La Connaissance'} · En ligne
-                </span>
-                <span className="text-xs text-ucaep-brown/70 tabular-nums">Qualificative · / 20 pts</span>
-              </div>
+            <ParallaxDepthCard offset={6} delay={0.04}>
+              <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4">
+                <BookOpen
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-6 -right-5 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
+                  strokeWidth={1.2}
+                />
+                <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                    Phase 02 · {phase2?.title || 'La Connaissance'} · En ligne
+                  </span>
+                  <span className="text-xs text-ucaep-brown/70 tabular-nums">Qualificative · / 20 pts</span>
+                </div>
 
-              {phase2?.isRevealed && phase2.testDetails ? (
-                <>
-                  <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    {phase2.testDetails.instructionsTitle || phase2.title}
-                  </h3>
-                  {phase2.testDetails.theme && (
-                    <p className="relative z-10 text-sm font-semibold text-ucaep-brown">
-                      {phase2.testDetails.theme}
+                {phase2?.isRevealed && phase2.testDetails ? (
+                  <>
+                    <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
+                      {phase2.testDetails.instructionsTitle || phase2.title}
+                    </h3>
+                    {phase2.testDetails.theme && (
+                      <p className="relative z-10 text-sm font-semibold text-ucaep-brown">
+                        {phase2.testDetails.theme}
+                      </p>
+                    )}
+                    <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
+                      {phase2.testDetails.instructions}
                     </p>
-                  )}
-                  <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
-                    {phase2.testDetails.instructions}
-                  </p>
-                  {phase2.testDetails.submissionNote && (
-                    <p className="relative z-10 text-xs text-ucaep-brown/75 pt-2 border-t border-ucaep-brown/10 leading-relaxed">
-                      {phase2.testDetails.submissionNote}
+                    {phase2.testDetails.submissionNote && (
+                      <p className="relative z-10 text-xs text-ucaep-brown/75 pt-2 border-t border-ucaep-brown/10 leading-relaxed">
+                        {phase2.testDetails.submissionNote}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
+                      Épreuves 03 &amp; 04 masquées jusqu&apos;au lancement
+                    </h3>
+                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                      La Phase 02 (« La Connaissance ») se déroule en ligne pour les candidats qualifiés de La Plume. Vous y préparez deux exercices centrés sur l&apos;explication d&apos;un sujet scientifique et la réflexion sur la transmission des savoirs, accompagnés chacun d&apos;une vidéo (jusqu&apos;à 5 minutes). Les intitulés exacts restent masqués jusqu&apos;à l&apos;ouverture au Jour 6.
                     </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    Épreuves 03 &amp; 04 masquées jusqu&apos;au lancement
-                  </h3>
-                  <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                    La Phase 02 (« La Connaissance ») se déroule en ligne pour les candidats qualifiés de La Plume. Vous y préparez deux exercices centrés sur l&apos;explication d&apos;un sujet scientifique et la réflexion sur la transmission des savoirs, accompagnés chacun d&apos;une vidéo (jusqu&apos;à 5 minutes). Les intitulés exacts restent masqués jusqu&apos;à l&apos;ouverture au Jour 6.
-                  </p>
-                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
-                    <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>
-                      Consignes masquées · Ouverture prévue au Jour 6 pour les candidats retenus.
-                    </span>
-                  </div>
-                </>
-              )}
-            </article>
+                    <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
+                      <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
+                      <span>
+                        Consignes masquées · Ouverture prévue au Jour 6 pour les candidats retenus.
+                      </span>
+                    </div>
+                  </>
+                )}
+              </article>
+            </ParallaxDepthCard>
 
             {/* PHASE 03 CARD */}
-            <article
-              data-reveal
-              data-reveal-delay="0.08"
-              data-parallax-card="-8"
-              className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4"
-            >
-              <Mic2
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-6 -right-5 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                strokeWidth={1.2}
-              />
-              <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
-                  Phase 03 · {phase3?.title || "L'Éloquence"} · En présentiel
-                </span>
-                <span className="text-xs text-ucaep-brown/70 tabular-nums">Finale J14 · / 20 pts</span>
-              </div>
+            <ParallaxDepthCard offset={-6} delay={0.1}>
+              <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-white p-8 space-y-4">
+                <Mic2
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-6 -right-5 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
+                  strokeWidth={1.2}
+                />
+                <div className="relative z-10 flex items-baseline justify-between gap-4 border-b border-ucaep-brown/12 pb-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-gold tabular-nums">
+                    Phase 03 · {phase3?.title || "L'Éloquence"} · En présentiel
+                  </span>
+                  <span className="text-xs text-ucaep-brown/70 tabular-nums">Finale J14 · / 20 pts</span>
+                </div>
 
-              {phase3?.isRevealed && phase3.testDetails ? (
-                <>
-                  <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    {phase3.testDetails.instructionsTitle || phase3.title}
-                  </h3>
-                  {phase3.testDetails.theme && (
-                    <p className="relative z-10 text-sm font-semibold text-ucaep-brown">
-                      {phase3.testDetails.theme}
+                {phase3?.isRevealed && phase3.testDetails ? (
+                  <>
+                    <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
+                      {phase3.testDetails.instructionsTitle || phase3.title}
+                    </h3>
+                    {phase3.testDetails.theme && (
+                      <p className="relative z-10 text-sm font-semibold text-ucaep-brown">
+                        {phase3.testDetails.theme}
+                      </p>
+                    )}
+                    <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
+                      {phase3.testDetails.instructions}
                     </p>
-                  )}
-                  <p className="relative z-10 text-sm text-ucaep-ink/80 leading-relaxed">
-                    {phase3.testDetails.instructions}
-                  </p>
-                  {phase3.testDetails.submissionNote && (
-                    <p className="relative z-10 text-xs text-ucaep-brown/75 pt-2 border-t border-ucaep-brown/10 leading-relaxed">
-                      {phase3.testDetails.submissionNote}
+                    {phase3.testDetails.submissionNote && (
+                      <p className="relative z-10 text-xs text-ucaep-brown/75 pt-2 border-t border-ucaep-brown/10 leading-relaxed">
+                        {phase3.testDetails.submissionNote}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
+                      Épreuves 05 &amp; 06 masquées jusqu&apos;à la finale
+                    </h3>
+                    <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
+                      La Grande Finale réunit les finalistes en présentiel à l&apos;ENSET de Lokossa devant le jury et le public, après deux jours d&apos;ateliers pratiques de diction (Jours 12 et 13). Aucun fichier n&apos;est à déposer en ligne ; les sujets des deux prises de parole sont publiés à l&apos;approche de la finale.
                     </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <h3 className="relative z-10 font-serif text-3xl font-semibold text-ucaep-brown">
-                    Épreuves 05 &amp; 06 masquées jusqu&apos;à la finale
-                  </h3>
-                  <p className="relative z-10 text-sm text-ucaep-ink/82 leading-relaxed">
-                    La Grande Finale réunit les finalistes en présentiel à l&apos;ENSET de Lokossa devant le jury et le public, après deux jours d&apos;ateliers pratiques de diction (Jours 12 et 13). Aucun fichier n&apos;est à déposer en ligne ; les sujets des deux prises de parole sont publiés à l&apos;approche de la finale.
-                  </p>
-                  <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
-                    <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>
-                      Consignes masquées · Finale sur le campus (Jour 14), notée sur 20 points sans élimination en cours de soirée.
-                    </span>
-                  </div>
-                </>
-              )}
-            </article>
+                    <div className="relative z-10 flex items-start gap-2.5 text-xs text-ucaep-brown/85 p-3.5 rounded-[2px] bg-ucaep-linen/70 border border-ucaep-brown/14 leading-relaxed">
+                      <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
+                      <span>
+                        Consignes masquées · Finale sur le campus (Jour 14), notée sur 20 points sans élimination en cours de soirée.
+                      </span>
+                    </div>
+                  </>
+                )}
+              </article>
+            </ParallaxDepthCard>
           </div>
         </div>
       </section>
@@ -827,46 +822,45 @@ export function ParcoursPage() {
           className="hidden lg:block absolute -bottom-24 -left-16 w-64 h-64 opacity-[0.07]"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-10">
-          <div className="space-y-2 max-w-2xl" data-reveal>
+          <EditorialReveal className="space-y-2 max-w-2xl">
             <EditorialMark folio="Organisation" label="Calendrier en 3 semaines" tone="green" />
             <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
-              Le rythme <em className="italic font-normal text-ucaep-brown">du concours</em>
+              <EditorialTitleReveal>
+                Le rythme <em className="italic font-normal text-ucaep-brown">du concours</em>
+              </EditorialTitleReveal>
             </h2>
-          </div>
+          </EditorialReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {calendarWeeks.map((week, idx) => {
               const Icon = week.Icon;
               return (
-                <article
-                  key={week.step}
-                  data-reveal
-                  data-reveal-delay={String(idx * 0.06)}
-                  className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-4"
-                >
-                  <Icon
-                    aria-hidden="true"
-                    className="pointer-events-none select-none absolute -bottom-6 -right-5 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
-                    strokeWidth={1.25}
-                  />
-                  <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/12 pb-3">
-                    <span className="font-serif text-2xl font-semibold text-ucaep-brown">
-                      {week.step}
-                    </span>
-                    <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums inline-flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                      {week.span}
-                    </span>
-                  </div>
-                  <h3 className="relative z-10 font-serif text-xl font-semibold text-ucaep-ink">
-                    {week.title}
-                  </h3>
-                  <ul className="relative z-10 space-y-2 text-sm text-ucaep-ink/78 leading-relaxed">
-                    {week.items.map((line) => (
-                      <li key={line}>· {line}</li>
-                    ))}
-                  </ul>
-                </article>
+                <EditorialReveal key={week.step} delay={idx * 0.08}>
+                  <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-4">
+                    <Icon
+                      aria-hidden="true"
+                      className="pointer-events-none select-none absolute -bottom-6 -right-5 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105"
+                      strokeWidth={1.25}
+                    />
+                    <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/12 pb-3">
+                      <span className="font-serif text-2xl font-semibold text-ucaep-brown">
+                        {week.step}
+                      </span>
+                      <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums inline-flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                        {week.span}
+                      </span>
+                    </div>
+                    <h3 className="relative z-10 font-serif text-xl font-semibold text-ucaep-ink">
+                      {week.title}
+                    </h3>
+                    <ul className="relative z-10 space-y-2 text-sm text-ucaep-ink/78 leading-relaxed">
+                      {week.items.map((line) => (
+                        <li key={line}>· {line}</li>
+                      ))}
+                    </ul>
+                  </article>
+                </EditorialReveal>
               );
             })}
           </div>

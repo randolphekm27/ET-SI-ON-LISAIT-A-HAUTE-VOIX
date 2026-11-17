@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Mail, MapPin, Phone, Send } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { BrandPatternSurface } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import { EditorialReveal, EditorialTitleReveal } from '../components/MotionPrimitives';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
+import { EDITORIAL_EASE, TACTILE_SPRING } from '../lib/motion';
 
 export function ContactPage() {
   usePageSeo(
@@ -72,17 +75,19 @@ export function ContactPage() {
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           <div className="lg:col-span-5 space-y-8">
-            <div className="space-y-3">
+            <EditorialReveal className="space-y-3">
               <EditorialMark folio="Repères" label="Sur le campus" tone="brown" />
-              <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                Nos coordonnées
-              </h2>
+              <EditorialTitleReveal>
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                  Nos coordonnées
+                </h2>
+              </EditorialTitleReveal>
               <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed max-w-prose">
                 Si vous êtes déjà inscrit et que votre demande concerne votre dossier, précisez votre code d&apos;anonymat{' '}
                 <span className="font-mono font-semibold text-ucaep-brown">UCAEP-2026-XXXX</span>{' '}
                 dans votre message : l&apos;équipe de la Session Théâtre pourra vous répondre plus rapidement.
               </p>
-            </div>
+            </EditorialReveal>
 
             <dl className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14 text-sm">
               <div className="py-5">
@@ -154,38 +159,61 @@ export function ContactPage() {
                 className="pointer-events-none select-none absolute -bottom-8 -right-6 w-40 h-40 text-ucaep-brown opacity-[0.04] -rotate-12"
                 strokeWidth={1.1}
               />
-              {status === 'sent' ? (
-                <div className="relative z-10 py-12 text-center space-y-4">
-                  <CheckCircle2 className="w-8 h-8 text-ucaep-green mx-auto" />
-                  <h2 className="font-serif text-4xl font-semibold text-ucaep-brown">
-                    Message transmis
-                  </h2>
-                  <p className="text-sm sm:text-base text-ucaep-ink/75 max-w-md mx-auto">
-                    Votre message a bien été enregistré. Un membre de l&apos;équipe UCAEP vous
-                    répondra dans les meilleurs délais.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setStatus('idle')}
-                    className="editorial-underline text-sm font-semibold text-ucaep-brown"
+              <AnimatePresence mode="wait">
+                {status === 'sent' ? (
+                  <motion.div
+                    key="contact-sent"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.28, ease: EDITORIAL_EASE }}
+                    className="relative z-10 py-12 text-center space-y-4"
                   >
-                    Envoyer un autre message
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
-                  <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                    Nous laisser un message
-                  </h2>
-
-                  {status === 'error' && (
-                    <p
-                      role="alert"
-                      className="p-3.5 text-sm rounded-[2px] bg-red-50 text-red-900 border border-red-800/20"
-                    >
-                      {errorMsg}
+                    <CheckCircle2 className="w-8 h-8 text-ucaep-green mx-auto" />
+                    <h2 className="font-serif text-4xl font-semibold text-ucaep-brown">
+                      Message transmis
+                    </h2>
+                    <p className="text-sm sm:text-base text-ucaep-ink/75 max-w-md mx-auto">
+                      Votre message a bien été enregistré. Un membre de l&apos;équipe UCAEP vous
+                      répondra dans les meilleurs délais.
                     </p>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setStatus('idle')}
+                      className="editorial-underline text-sm font-semibold text-ucaep-brown"
+                    >
+                      Envoyer un autre message
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    key="contact-form"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.24, ease: EDITORIAL_EASE }}
+                    onSubmit={handleSubmit}
+                    className="relative z-10 space-y-6"
+                  >
+                    <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                      Nous laisser un message
+                    </h2>
+
+                    <AnimatePresence mode="wait">
+                      {status === 'error' && (
+                        <motion.p
+                          key={errorMsg}
+                          role="alert"
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                          className="p-3.5 text-sm rounded-[2px] bg-red-50 text-red-900 border border-red-800/20"
+                        >
+                          {errorMsg}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
@@ -256,16 +284,19 @@ export function ContactPage() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={status === 'submitting'}
-                    className="btn-tactile group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] disabled:opacity-60"
-                  >
-                    <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                    <span>{status === 'submitting' ? 'Envoi en cours…' : 'Envoyer le message'}</span>
-                  </button>
-                </form>
-              )}
+                    <motion.button
+                      type="submit"
+                      whileTap={{ scale: 0.98 }}
+                      transition={TACTILE_SPRING}
+                      disabled={status === 'submitting'}
+                      className="btn-tactile group inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#dfb05c] disabled:opacity-60"
+                    >
+                      <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                      <span>{status === 'submitting' ? 'Envoi en cours…' : 'Envoyer le message'}</span>
+                    </motion.button>
+                  </motion.form>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

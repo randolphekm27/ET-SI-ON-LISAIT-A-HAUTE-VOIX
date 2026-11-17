@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,6 +7,9 @@ import {
   Scale,
   ShieldCheck,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { EditorialExpandable } from './MotionPrimitives';
+import { EDITORIAL_EASE, EDITORIAL_SPRING } from '../lib/motion';
 
 export interface RubricCriterion {
   id: string;
@@ -185,6 +188,7 @@ export function InteractiveRubric({
   const criteria = PHASE_RUBRICS[phaseId] || PHASE_RUBRICS['phase-1'];
   const [selectedId, setSelectedId] = useState<string>(criteria[0].id);
   const [showBlindInfo, setShowBlindInfo] = useState(false);
+  const rubricGroupId = useId();
 
   const active = criteria.find((c) => c.id === selectedId) || criteria[0];
   const totalPoints = criteria.reduce((acc, item) => acc + item.points, 0);
@@ -225,15 +229,16 @@ export function InteractiveRubric({
         >
           {criteria.map((item, idx) => {
             const isSelected = item.id === active.id;
-            const widthPct = Math.round((item.points / totalPoints) * 100);
+            const widthRatio = item.points / totalPoints;
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
                 role="tab"
                 aria-selected={isSelected}
+                whileTap={{ scale: 0.99 }}
                 onClick={() => setSelectedId(item.id)}
-                className={`w-full text-left p-4 rounded-[2px] border transition-all duration-150 space-y-2.5 ${
+                className={`relative w-full text-left p-4 rounded-[2px] border transition-colors duration-150 space-y-2.5 ${
                   isSelected
                     ? dark
                       ? 'bg-[#2a472e] border-ucaep-gold'
@@ -243,6 +248,14 @@ export function InteractiveRubric({
                       : 'bg-white border-ucaep-brown/14 hover:border-ucaep-brown/35'
                 }`}
               >
+                {isSelected && (
+                  <motion.span
+                    layoutId={`rubric-active-${rubricGroupId}`}
+                    aria-hidden="true"
+                    transition={EDITORIAL_SPRING}
+                    className="absolute inset-y-2 left-0 w-[3px] bg-ucaep-gold rounded-r-[1px]"
+                  />
+                )}
                 <div className="flex items-baseline justify-between gap-3">
                   <span
                     className={`text-sm font-semibold ${
@@ -265,93 +278,103 @@ export function InteractiveRubric({
                   </span>
                 </div>
 
-                {/* Jauge proportionnelle */}
+                {/* Jauge proportionnelle accélérée GPU (scaleX) */}
                 <div
                   aria-hidden="true"
                   className={`h-1.5 w-full rounded-full overflow-hidden ${
                     dark ? 'bg-black/25' : 'bg-ucaep-brown/10'
                   }`}
                 >
-                  <div
-                    className={`h-full transition-all duration-300 ${
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    whileInView={{ scaleX: widthRatio }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.52, delay: idx * 0.05, ease: EDITORIAL_EASE }}
+                    className={`h-full w-full origin-left transition-colors duration-200 ${
                       isSelected ? 'bg-ucaep-gold' : 'bg-ucaep-green/65'
                     }`}
-                    style={{ width: `${widthPct}%` }}
                   />
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
         {/* Panneau détaillé du critère sélectionné */}
-        <div
-          role="tabpanel"
-          className={`lg:col-span-6 p-5 sm:p-6 rounded-[2px] border space-y-4 ${
-            dark
-              ? 'bg-[#172b1a] border-ucaep-ivory/18 text-ucaep-ivory/90'
-              : 'bg-ucaep-linen/55 border-ucaep-brown/15 text-ucaep-ink'
-          }`}
-        >
-          <div className="flex items-baseline justify-between gap-3 border-b border-current/12 pb-3">
-            <h4
-              className={`font-serif text-xl sm:text-2xl font-semibold ${
-                dark ? 'text-ucaep-paper' : 'text-ucaep-brown'
-              }`}
-            >
-              {active.label}
-            </h4>
-            <span className="font-mono text-base font-bold text-ucaep-gold tabular-nums shrink-0">
-              {active.points} / {totalPoints}
-            </span>
-          </div>
-
-          <p className="text-xs sm:text-sm font-medium opacity-85">{active.summary}</p>
-
-          <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
-            <div className="flex items-start gap-2.5">
-              <Eye className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-gold">
-                  Ce que le jury observe
-                </p>
-                <p className="opacity-90 mt-0.5">{active.juryLooksFor}</p>
-              </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active.id}
+            role="tabpanel"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+            className={`lg:col-span-6 p-5 sm:p-6 rounded-[2px] border space-y-4 ${
+              dark
+                ? 'bg-[#172b1a] border-ucaep-ivory/18 text-ucaep-ivory/90'
+                : 'bg-ucaep-linen/55 border-ucaep-brown/15 text-ucaep-ink'
+            }`}
+          >
+            <div className="flex items-baseline justify-between gap-3 border-b border-current/12 pb-3">
+              <h4
+                className={`font-serif text-xl sm:text-2xl font-semibold ${
+                  dark ? 'text-ucaep-paper' : 'text-ucaep-brown'
+                }`}
+              >
+                {active.label}
+              </h4>
+              <span className="font-mono text-base font-bold text-ucaep-gold tabular-nums shrink-0">
+                {active.points} / {totalPoints}
+              </span>
             </div>
 
-            <div className="flex items-start gap-2.5">
-              <Lightbulb
-                className={`w-4 h-4 shrink-0 mt-0.5 ${
-                  dark ? 'text-ucaep-gold' : 'text-ucaep-green'
-                }`}
-                aria-hidden="true"
-              />
-              <div>
-                <p
-                  className={`text-[11px] font-semibold uppercase tracking-wider ${
+            <p className="text-xs sm:text-sm font-medium opacity-85">{active.summary}</p>
+
+            <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
+              <div className="flex items-start gap-2.5">
+                <Eye className="w-4 h-4 text-ucaep-gold shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-gold">
+                    Ce que le jury observe
+                  </p>
+                  <p className="opacity-90 mt-0.5">{active.juryLooksFor}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <Lightbulb
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
                     dark ? 'text-ucaep-gold' : 'text-ucaep-green'
                   }`}
-                >
-                  Conseil pratique
-                </p>
-                <p className="opacity-90 mt-0.5">{active.practicalTip}</p>
+                  aria-hidden="true"
+                />
+                <div>
+                  <p
+                    className={`text-[11px] font-semibold uppercase tracking-wider ${
+                      dark ? 'text-ucaep-gold' : 'text-ucaep-green'
+                    }`}
+                  >
+                    Conseil pratique
+                  </p>
+                  <p className="opacity-90 mt-0.5">{active.practicalTip}</p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle
-                className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                  Erreur à éviter
-                </p>
-                <p className="opacity-90 mt-0.5">{active.commonPitfall}</p>
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle
+                  className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    Erreur à éviter
+                  </p>
+                  <p className="opacity-90 mt-0.5">{active.commonPitfall}</p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Double lecture anonyme */}
@@ -375,7 +398,7 @@ export function InteractiveRubric({
           </button>
         </div>
 
-        {showBlindInfo && (
+        <EditorialExpandable isOpen={showBlindInfo}>
           <div
             className={`p-4 rounded-[2px] border text-xs leading-relaxed grid grid-cols-1 sm:grid-cols-3 gap-4 ${
               dark
@@ -411,7 +434,7 @@ export function InteractiveRubric({
               </p>
             </div>
           </div>
-        )}
+        </EditorialExpandable>
       </div>
     </div>
   );

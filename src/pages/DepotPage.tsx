@@ -6,6 +6,7 @@ import {
 } from '../components/BrandPattern';
 import { DepotSubmissionPanel } from '../components/DepotSubmissionPanel';
 import { PageFolioHeader } from '../components/EditorialMark';
+import { EditorialReveal } from '../components/MotionPrimitives';
 import { usePageSeo } from '../lib/format';
 import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
 
@@ -79,37 +80,42 @@ export function DepotPage() {
         />
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {DEPOT_STEPS.map((item) => (
-              <div
-                key={item.num}
-                className="p-4 bg-white border border-ucaep-brown/14 rounded-[2px] space-y-1.5"
-              >
-                <span className="font-mono text-[11px] font-semibold text-ucaep-gold tabular-nums">
-                  {item.num}
-                </span>
-                <h2 className="font-serif text-lg font-semibold text-ucaep-brown">
-                  {item.verb}
-                </h2>
-                <p className="text-xs text-ucaep-ink/78 leading-relaxed">{item.detail}</p>
-              </div>
+            {DEPOT_STEPS.map((item, idx) => (
+              <EditorialReveal key={item.num} delay={idx * 0.06} y={14}>
+                <div className="art-card h-full p-4 bg-white border border-ucaep-brown/14 rounded-[2px] space-y-1.5">
+                  <span className="font-mono text-[11px] font-semibold text-ucaep-gold tabular-nums">
+                    {item.num}
+                  </span>
+                  <h2 className="font-serif text-lg font-semibold text-ucaep-brown">
+                    {item.verb}
+                  </h2>
+                  <p className="text-xs text-ucaep-ink/78 leading-relaxed">{item.detail}</p>
+                </div>
+              </EditorialReveal>
             ))}
           </div>
 
-          <DepotSubmissionPanel />
+          <EditorialReveal delay={0.1}>
+            <DepotSubmissionPanel />
+          </EditorialReveal>
 
-          <div className="p-5 bg-ucaep-linen/65 border border-ucaep-brown/15 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs sm:text-sm text-ucaep-ink/82">
-            <p className="leading-relaxed">
-              Un fichier échoue à l&apos;envoi ou vous avez transmis le mauvais document avant validation ? Modifiez-le directement tant qu&apos;il est en attente, ou contactez l&apos;équipe en indiquant votre code UCAEP.
-            </p>
-            <Link
-              to="/contact"
-              className="font-semibold text-ucaep-brown hover:text-ucaep-gold underline whitespace-nowrap shrink-0"
-            >
-              Contacter l&apos;équipe
-            </Link>
-          </div>
+          <EditorialReveal delay={0.08}>
+            <div className="p-5 bg-ucaep-linen/65 border border-ucaep-brown/15 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs sm:text-sm text-ucaep-ink/82">
+              <p className="leading-relaxed">
+                Un fichier échoue à l&apos;envoi ou vous avez transmis le mauvais document avant validation ? Modifiez-le directement tant qu&apos;il est en attente, ou contactez l&apos;équipe en indiquant votre code UCAEP.
+              </p>
+              <Link
+                to="/contact"
+                className="font-semibold text-ucaep-brown hover:text-ucaep-gold underline whitespace-nowrap shrink-0"
+              >
+                Contacter l&apos;équipe
+              </Link>
+            </div>
+          </EditorialReveal>
 
-          <VideoPrepWorkshop />
+          <EditorialReveal delay={0.1}>
+            <VideoPrepWorkshop />
+          </EditorialReveal>
         </div>
       </section>
     </div>

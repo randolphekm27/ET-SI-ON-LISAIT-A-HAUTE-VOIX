@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { MotionConfig } from 'motion/react';
 import { Layout } from './components/Layout';
+import { EDITORIAL_EASE } from './lib/motion';
 import { SiteConfigProvider, useSiteConfig } from './lib/site-config';
 import { HomePage } from './pages/HomePage';
 import { SinglePhasePage } from './pages/SinglePhasePage';
@@ -84,12 +86,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <SiteConfigProvider>
-        <Layout>
-          <AppRoutes />
-        </Layout>
-      </SiteConfigProvider>
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user" transition={{ ease: EDITORIAL_EASE }}>
+      <BrowserRouter>
+        <SiteConfigProvider>
+          <Layout>
+            <AppRoutes />
+          </Layout>
+        </SiteConfigProvider>
+      </BrowserRouter>
+    </MotionConfig>
   );
 }

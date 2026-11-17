@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -15,13 +15,16 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { fetchApiJson } from '../lib/api';
 import { CandidateProgressCard } from './CandidateProgressCard';
+import { EditorialTabPill } from './MotionPrimitives';
 import {
   getCandidateSession,
   saveCandidateSession,
 } from '../lib/candidate-session';
 import { formatFrenchDate } from '../lib/format';
+import { EDITORIAL_EASE, TACTILE_SPRING } from '../lib/motion';
 import {
   ACCEPT_ATTRIBUTE,
   MAX_TEXT_SUBMISSION_LENGTH,
@@ -94,6 +97,7 @@ export function DepotSubmissionPanel({
   hideRegistrationHint = false,
 }: DepotSubmissionPanelProps) {
   const [searchParams] = useSearchParams();
+  const tabScopeId = useId();
   const initialStored = useMemo(() => getCandidateSession(), []);
   const [referenceCode, setReferenceCode] = useState(
     () =>
@@ -565,141 +569,174 @@ export function DepotSubmissionPanel({
           )}
         </div>
 
-        {okMsg && (
-          <div
-            role="status"
-            className="p-3 bg-emerald-50 border border-emerald-300 rounded-sm text-xs text-emerald-950 flex items-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0" />
-            <span>{okMsg}</span>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {okMsg && (
+            <motion.div
+              key={`ok-${slot}-${okMsg}`}
+              role="status"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+              className="p-3 bg-emerald-50 border border-emerald-300 rounded-sm text-xs text-emerald-950 flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0" />
+              <span>{okMsg}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {errMsg && (
-          <div
-            role="alert"
-            className="p-3 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
-          >
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{errMsg}</span>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {errMsg && (
+            <motion.div
+              key={`err-${slot}-${errMsg}`}
+              role="alert"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+              className="p-3 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errMsg}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {submittedText && (!editing || isLocked || !selectedPhase.acceptingNow) && (
-          <div className="space-y-3">
-            <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm">
-              <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto">
-                {submittedText}
-              </p>
-            </div>
-
-            {slotNote && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
-                <strong>Observation du jury (Texte {slot}) :</strong> {slotNote}
-              </div>
-            )}
-
-            {isLocked ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <p className="text-xs text-ucaep-green font-medium flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    Validé par le jury : votre Texte {slot} est définitivement
-                    verrouillé.
-                  </span>
+        <AnimatePresence mode="wait">
+          {submittedText && (!editing || isLocked || !selectedPhase.acceptingNow) ? (
+            <motion.div
+              key={`slot-preview-${slot}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+              className="space-y-3"
+            >
+              <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm">
+                <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto">
+                  {submittedText}
                 </p>
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/20 bg-ucaep-linen/70 text-ucaep-ink/50 cursor-not-allowed"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Resoumission désactivée (Validé)</span>
-                </button>
               </div>
-            ) : selectedPhase.acceptingNow ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <p className="text-xs text-ucaep-ink/65">
-                  {slotStatus === 'rejected'
-                    ? 'Le jury demande une reprise de ce texte. Modifiez-le puis renvoyez-le.'
-                    : 'Vous pouvez modifier ce texte tant que le jury ne l’a pas encore validé.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft(submittedText);
-                    setEditing(true);
-                    isSlot1 ? setSlot1Success('') : setSlot2Success('');
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Remplacer / Mettre à jour</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-        )}
 
-        {showEditor && (
-          <form onSubmit={(e) => handleSubmitTextSlot(slot, e)} className="space-y-3">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <label
-                  htmlFor={`depot-text-area-${slot}`}
-                  className="font-semibold uppercase tracking-wider text-ucaep-brown"
-                >
-                  Rédaction — Texte {slot} *
-                </label>
-                <span className="tabular-nums text-ucaep-ink/65">
-                  {draft.length.toLocaleString('fr-FR')} /{' '}
-                  {MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères
-                </span>
-              </div>
-              <textarea
-                id={`depot-text-area-${slot}`}
-                rows={8}
-                required
-                maxLength={MAX_TEXT_SUBMISSION_LENGTH}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={`Rédigez ou collez ici votre Texte ${slot} (${title})...`}
-                className="w-full px-4 py-3 text-sm leading-relaxed border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                disabled={loading || !draft.trim()}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
-              >
-                <span>
-                  {loading
-                    ? 'Enregistrement...'
-                    : submittedText
-                      ? `Mettre à jour le Texte ${slot}`
-                      : `Soumettre le Texte ${slot}`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              {submittedText && (
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => {
-                    setEditing(false);
-                    setDraft(submittedText);
-                  }}
-                  className="px-4 py-2.5 text-xs font-medium text-ucaep-brown/80 hover:text-ucaep-brown underline"
-                >
-                  Annuler
-                </button>
+              {slotNote && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
+                  <strong>Observation du jury (Texte {slot}) :</strong> {slotNote}
+                </div>
               )}
-            </div>
-          </form>
-        )}
+
+              {isLocked ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <p className="text-xs text-ucaep-green font-medium flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Validé par le jury : votre Texte {slot} est définitivement
+                      verrouillé.
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/20 bg-ucaep-linen/70 text-ucaep-ink/50 cursor-not-allowed"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Resoumission désactivée (Validé)</span>
+                  </button>
+                </div>
+              ) : selectedPhase.acceptingNow ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <p className="text-xs text-ucaep-ink/65">
+                    {slotStatus === 'rejected'
+                      ? 'Le jury demande une reprise de ce texte. Modifiez-le puis renvoyez-le.'
+                      : 'Vous pouvez modifier ce texte tant que le jury ne l’a pas encore validé.'}
+                  </p>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    transition={TACTILE_SPRING}
+                    onClick={() => {
+                      setDraft(submittedText);
+                      setEditing(true);
+                      isSlot1 ? setSlot1Success('') : setSlot2Success('');
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/30 text-ucaep-brown hover:bg-ucaep-brown/5 transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Remplacer / Mettre à jour</span>
+                  </motion.button>
+                </div>
+              ) : null}
+            </motion.div>
+          ) : showEditor ? (
+            <motion.form
+              key={`slot-editor-${slot}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+              onSubmit={(e) => handleSubmitTextSlot(slot, e)}
+              className="space-y-3"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <label
+                    htmlFor={`depot-text-area-${slot}`}
+                    className="font-semibold uppercase tracking-wider text-ucaep-brown"
+                  >
+                    Rédaction — Texte {slot} *
+                  </label>
+                  <span className="tabular-nums text-ucaep-ink/65">
+                    {draft.length.toLocaleString('fr-FR')} /{' '}
+                    {MAX_TEXT_SUBMISSION_LENGTH.toLocaleString('fr-FR')} caractères
+                  </span>
+                </div>
+                <textarea
+                  id={`depot-text-area-${slot}`}
+                  rows={8}
+                  required
+                  maxLength={MAX_TEXT_SUBMISSION_LENGTH}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={`Rédigez ou collez ici votre Texte ${slot} (${title})...`}
+                  className="w-full px-4 py-3 text-sm leading-relaxed border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <motion.button
+                  type="submit"
+                  whileTap={{ scale: 0.98 }}
+                  transition={TACTILE_SPRING}
+                  disabled={loading || !draft.trim()}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-45"
+                >
+                  <span>
+                    {loading
+                      ? 'Enregistrement...'
+                      : submittedText
+                        ? `Mettre à jour le Texte ${slot}`
+                        : `Soumettre le Texte ${slot}`}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+                {submittedText && (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => {
+                      setEditing(false);
+                      setDraft(submittedText);
+                    }}
+                    className="px-4 py-2.5 text-xs font-medium text-ucaep-brown/80 hover:text-ucaep-brown underline"
+                  >
+                    Annuler
+                  </button>
+                )}
+              </div>
+            </motion.form>
+          ) : null}
+        </AnimatePresence>
 
         {!submittedText && !selectedPhase.acceptingNow && (
           <p className="text-xs text-ucaep-ink/65 italic">
@@ -712,100 +749,122 @@ export function DepotSubmissionPanel({
 
   return (
     <div className="space-y-8">
-      {/* ÉTAPE 1 : IDENTIFICATION */}
-      {!sessionData ? (
-        <form
-          onSubmit={handleVerifyCandidate}
-          className="p-6 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm space-y-6"
-        >
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-              Étape 01 · Identifiez-vous
-            </p>
-            <h3 className="font-serif text-3xl font-semibold text-ucaep-brown">
-              Accéder à mon espace candidat
-            </h3>
-            <p className="text-sm text-ucaep-ink/78 leading-relaxed">
-              Saisissez le code d’anonymat reçu à la fin de votre inscription (ex.{' '}
-              <span className="font-mono font-semibold">UCAEP-2026-0001</span>) ainsi que l’adresse e-mail utilisée dans votre dossier.
-            </p>
-          </div>
-
-          {authError && (
-            <div
-              role="alert"
-              className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{authError}</span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="depot-ref"
-                className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
-              >
-                Code de référence *
-              </label>
-              <input
-                id="depot-ref"
-                type="text"
-                required
-                value={referenceCode}
-                onChange={(e) => setReferenceCode(e.target.value.toUpperCase())}
-                placeholder="UCAEP-2026-0001"
-                className="w-full px-3.5 py-2.5 text-sm font-mono uppercase border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label
-                htmlFor="depot-email"
-                className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
-              >
-                E-mail d&apos;inscription *
-              </label>
-              <input
-                id="depot-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="prenom.nom@exemple.com"
-                className="w-full px-3.5 py-2.5 text-sm border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-50"
-            >
-              <span>
-                {authLoading ? 'Vérification en cours...' : 'Ouvrir mon dossier'}
-              </span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            {!hideRegistrationHint && (
-              <p className="text-xs text-ucaep-ink/65">
-                Pas encore inscrit(e) ?{' '}
-                <Link
-                  to="/inscription"
-                  className="text-ucaep-brown font-semibold underline hover:text-ucaep-gold"
-                >
-                  Commencer mon inscription
-                </Link>
+      <AnimatePresence mode="wait">
+        {/* ÉTAPE 1 : IDENTIFICATION */}
+        {!sessionData ? (
+          <motion.form
+            key="depot-login"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.24, ease: EDITORIAL_EASE }}
+            onSubmit={handleVerifyCandidate}
+            className="p-6 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm space-y-6"
+          >
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
+                Étape 01 · Identifiez-vous
               </p>
-            )}
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-8">
-          {/* BANDEAU CANDIDAT IDENTIFIÉ */}
-          <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h3 className="font-serif text-3xl font-semibold text-ucaep-brown">
+                Accéder à mon espace candidat
+              </h3>
+              <p className="text-sm text-ucaep-ink/78 leading-relaxed">
+                Saisissez le code d’anonymat reçu à la fin de votre inscription (ex.{' '}
+                <span className="font-mono font-semibold">UCAEP-2026-0001</span>) ainsi que l’adresse e-mail utilisée dans votre dossier.
+              </p>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {authError && (
+                <motion.div
+                  key={authError}
+                  role="alert"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{authError}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="depot-ref"
+                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
+                >
+                  Code de référence *
+                </label>
+                <input
+                  id="depot-ref"
+                  type="text"
+                  required
+                  value={referenceCode}
+                  onChange={(e) => setReferenceCode(e.target.value.toUpperCase())}
+                  placeholder="UCAEP-2026-0001"
+                  className="w-full px-3.5 py-2.5 text-sm font-mono uppercase border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="depot-email"
+                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
+                >
+                  E-mail d&apos;inscription *
+                </label>
+                <input
+                  id="depot-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="prenom.nom@exemple.com"
+                  className="w-full px-3.5 py-2.5 text-sm border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.98 }}
+                transition={TACTILE_SPRING}
+                disabled={authLoading}
+                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors disabled:opacity-50"
+              >
+                <span>
+                  {authLoading ? 'Vérification en cours...' : 'Ouvrir mon dossier'}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+              {!hideRegistrationHint && (
+                <p className="text-xs text-ucaep-ink/65">
+                  Pas encore inscrit(e) ?{' '}
+                  <Link
+                    to="/inscription"
+                    className="text-ucaep-brown font-semibold underline hover:text-ucaep-gold"
+                  >
+                    Commencer mon inscription
+                  </Link>
+                </p>
+              )}
+            </div>
+          </motion.form>
+        ) : (
+          <motion.div
+            key="depot-dashboard"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: EDITORIAL_EASE }}
+            className="space-y-8"
+          >
+            {/* BANDEAU CANDIDAT IDENTIFIÉ */}
+            <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                 Dossier vérifié
@@ -880,14 +939,16 @@ export function DepotSubmissionPanel({
                     : null;
 
                   return (
-                    <button
+                    <motion.button
                       key={phase.id}
                       type="button"
                       role="radio"
+                      whileTap={disabled && !phase.existingSubmission ? undefined : { scale: 0.99 }}
+                      transition={TACTILE_SPRING}
                       aria-checked={isSelected}
                       disabled={disabled && !phase.existingSubmission}
                       onClick={() => setSelectedPhaseId(phase.id)}
-                      className={`text-left p-5 rounded-sm border transition-all space-y-2.5 ${
+                      className={`text-left p-5 rounded-sm border transition-colors space-y-2.5 ${
                         isSelected
                           ? 'bg-white border-ucaep-gold ring-2 ring-ucaep-gold/30'
                           : phase.acceptingNow
@@ -939,7 +1000,7 @@ export function DepotSubmissionPanel({
                           </span>
                         </div>
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -1092,14 +1153,20 @@ export function DepotSubmissionPanel({
                             setFileSubmitError('');
                             setFileError('');
                           }}
-                          className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
+                          className={`relative inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
                             activeKind === 'text'
-                              ? 'bg-ucaep-brown text-ucaep-paper'
+                              ? 'text-ucaep-paper'
                               : 'text-ucaep-brown hover:bg-white/70'
                           }`}
                         >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Mes textes (Texte 1 &amp; Texte 2)</span>
+                          {activeKind === 'text' && (
+                            <EditorialTabPill
+                              groupId={tabScopeId}
+                              className="absolute inset-0 bg-ucaep-brown rounded-sm"
+                            />
+                          )}
+                          <FileText className="relative z-10 w-3.5 h-3.5" />
+                          <span className="relative z-10">Mes textes (Texte 1 &amp; Texte 2)</span>
                         </button>
                         <button
                           type="button"
@@ -1109,14 +1176,20 @@ export function DepotSubmissionPanel({
                             setActiveKind('file');
                             setFileSubmitError('');
                           }}
-                          className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
+                          className={`relative inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm transition-colors ${
                             activeKind === 'file'
-                              ? 'bg-ucaep-brown text-ucaep-paper'
+                              ? 'text-ucaep-paper'
                               : 'text-ucaep-brown hover:bg-white/70'
                           }`}
                         >
-                          <Upload className="w-3.5 h-3.5" />
-                          <span>Envoyer un fichier</span>
+                          {activeKind === 'file' && (
+                            <EditorialTabPill
+                              groupId={tabScopeId}
+                              className="absolute inset-0 bg-ucaep-brown rounded-sm"
+                            />
+                          )}
+                          <Upload className="relative z-10 w-3.5 h-3.5" />
+                          <span className="relative z-10">Envoyer un fichier</span>
                         </button>
                       </div>
                     )}
@@ -1260,15 +1333,22 @@ export function DepotSubmissionPanel({
                                 )}
                               </div>
 
-                              {fileSubmitError && (
-                                <div
-                                  role="alert"
-                                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
-                                >
-                                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                  <span>{fileSubmitError}</span>
-                                </div>
-                              )}
+                              <AnimatePresence mode="wait">
+                                {fileSubmitError && (
+                                  <motion.div
+                                    key={fileSubmitError}
+                                    role="alert"
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -4 }}
+                                    transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                                    className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                                  >
+                                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                    <span>{fileSubmitError}</span>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
 
                               <div
                                 onDragOver={(e) => {
@@ -1316,15 +1396,22 @@ export function DepotSubmissionPanel({
                                 </p>
                               </div>
 
-                              {fileError && (
-                                <div
-                                  role="alert"
-                                  className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
-                                >
-                                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                  <span>{fileError}</span>
-                                </div>
-                              )}
+                              <AnimatePresence mode="wait">
+                                {fileError && (
+                                  <motion.div
+                                    key={fileError}
+                                    role="alert"
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -4 }}
+                                    transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                                    className="p-4 bg-red-50 border border-red-300 rounded-sm text-sm text-red-900 flex items-start gap-3"
+                                  >
+                                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                    <span>{fileError}</span>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
 
                               {selectedFile && (
                                 <div className="p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm flex items-center justify-between gap-4">
@@ -1370,16 +1457,20 @@ export function DepotSubmissionPanel({
                                     aria-valuemax={100}
                                     className="w-full h-2.5 bg-ucaep-linen rounded-sm overflow-hidden border border-ucaep-brown/15"
                                   >
-                                    <div
-                                      className="h-full bg-ucaep-green transition-all duration-150"
-                                      style={{ width: `${uploadProgress}%` }}
+                                    <motion.div
+                                      initial={{ scaleX: 0 }}
+                                      animate={{ scaleX: Math.max(0.02, uploadProgress / 100) }}
+                                      transition={{ duration: 0.18, ease: EDITORIAL_EASE }}
+                                      className="h-full w-full bg-ucaep-green origin-left"
                                     />
                                   </div>
                                 </div>
                               )}
 
-                              <button
+                              <motion.button
                                 type="button"
+                                whileTap={{ scale: 0.98 }}
+                                transition={TACTILE_SPRING}
                                 disabled={
                                   !selectedFile || fileSubmitLoading || !uploadReady
                                 }
@@ -1394,7 +1485,7 @@ export function DepotSubmissionPanel({
                                       : 'Envoyer mon fichier'}
                                 </span>
                                 <ArrowRight className="w-4 h-4" />
-                              </button>
+                              </motion.button>
                             </div>
                           )}
                       </div>
@@ -1403,8 +1494,9 @@ export function DepotSubmissionPanel({
                 )}
             </div>
           )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

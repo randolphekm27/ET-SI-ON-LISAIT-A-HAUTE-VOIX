@@ -1,15 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Feather, MessageCircleQuestion, Plus } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   BrandPatternCircle,
   BrandPatternSurface,
   BrandPatternWave,
 } from '../components/BrandPattern';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import {
+  EditorialExpandable,
+  EditorialReveal,
+  EditorialTitleReveal,
+  ParallaxDepthCard,
+} from '../components/MotionPrimitives';
 import { fetchApiJson } from '../lib/api';
 import { usePageSeo } from '../lib/format';
+import { EDITORIAL_SPRING, TACTILE_SPRING } from '../lib/motion';
 import type { CompetitionPhase } from '../types/competition';
 
 interface FaqItem {
@@ -155,6 +162,7 @@ export function FaqPage() {
 
   const [openKey, setOpenKey] = useState<string | null>('avant-de-participer-0');
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
+  const faqBarScopeId = useId();
 
   useEffect(() => {
     let active = true;
@@ -185,25 +193,26 @@ export function FaqPage() {
       {/* Synthèse rapide en quatre points */}
       <section className="border-b border-ucaep-brown/14 bg-ucaep-linen/60 paper-fiber py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
-            L’essentiel en quatre repères
-          </p>
+          <EditorialReveal>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
+              L’essentiel en quatre repères
+            </p>
+          </EditorialReveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {QUICK_ANSWERS.map((qa) => (
-              <div
-                key={qa.num}
-                className="art-card rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-5 space-y-2"
-              >
-                <div className="flex items-baseline justify-between">
-                  <h2 className="font-serif text-xl font-semibold text-ucaep-brown">
-                    {qa.title}
-                  </h2>
-                  <span className="font-mono text-xs text-ucaep-gold">{qa.num}</span>
+            {QUICK_ANSWERS.map((qa, idx) => (
+              <EditorialReveal key={qa.num} delay={idx * 0.06} y={14}>
+                <div className="art-card h-full rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-5 space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="font-serif text-xl font-semibold text-ucaep-brown">
+                      {qa.title}
+                    </h2>
+                    <span className="font-mono text-xs text-ucaep-gold">{qa.num}</span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-ucaep-ink/80 leading-relaxed">
+                    {qa.summary}
+                  </p>
                 </div>
-                <p className="text-xs sm:text-sm text-ucaep-ink/80 leading-relaxed">
-                  {qa.summary}
-                </p>
-              </div>
+              </EditorialReveal>
             ))}
           </div>
         </div>
@@ -251,40 +260,44 @@ export function FaqPage() {
               ))}
             </nav>
 
-            <div className="art-card relative overflow-hidden p-6 bg-white border border-ucaep-brown/14 rounded-[2px] space-y-3 paper-fiber">
-              <Feather
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
-                strokeWidth={1.25}
-              />
-              <p className="relative z-10 font-serif italic text-2xl text-ucaep-brown leading-snug">
-                « Aucune expérience scénique préalable n&apos;est requise. »
-              </p>
-              <p className="relative z-10 text-xs text-ucaep-ink/78 leading-relaxed">
-                Les deux premières phases se réalisent en ligne avant les ateliers pratiques et la finale en présentiel à l&apos;ENSET de Lokossa.
-              </p>
-            </div>
+            <ParallaxDepthCard offset={6}>
+              <div className="art-card relative overflow-hidden p-6 bg-white border border-ucaep-brown/14 rounded-[2px] space-y-3 paper-fiber">
+                <Feather
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
+                  strokeWidth={1.25}
+                />
+                <p className="relative z-10 font-serif italic text-2xl text-ucaep-brown leading-snug">
+                  « Aucune expérience scénique préalable n&apos;est requise. »
+                </p>
+                <p className="relative z-10 text-xs text-ucaep-ink/78 leading-relaxed">
+                  Les deux premières phases se réalisent en ligne avant les ateliers pratiques et la finale en présentiel à l&apos;ENSET de Lokossa.
+                </p>
+              </div>
+            </ParallaxDepthCard>
 
-            <div className="art-card relative overflow-hidden p-6 bg-ucaep-linen/80 paper-grain border border-ucaep-brown/14 rounded-[2px] space-y-3">
-              <MessageCircleQuestion
-                aria-hidden="true"
-                className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
-                strokeWidth={1.25}
-              />
-              <h2 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown">
-                Vous ne trouvez pas votre réponse ?
-              </h2>
-              <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
-                Écrivez directement à l&apos;équipe de la Session Théâtre UCAEP en précisant, si possible, votre filière ou votre code candidat.
-              </p>
-              <Link
-                to="/contact"
-                className="relative z-10 group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
-              >
-                <span className="editorial-underline">Contacter l&apos;organisation</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-            </div>
+            <EditorialReveal delay={0.08}>
+              <div className="art-card relative overflow-hidden p-6 bg-ucaep-linen/80 paper-grain border border-ucaep-brown/14 rounded-[2px] space-y-3">
+                <MessageCircleQuestion
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute -bottom-5 -right-4 w-28 h-28 text-ucaep-brown opacity-[0.055] -rotate-12"
+                  strokeWidth={1.25}
+                />
+                <h2 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown">
+                  Vous ne trouvez pas votre réponse ?
+                </h2>
+                <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
+                  Écrivez directement à l&apos;équipe de la Session Théâtre UCAEP en précisant, si possible, votre filière ou votre code candidat.
+                </p>
+                <Link
+                  to="/contact"
+                  className="relative z-10 group inline-flex items-center gap-2 text-sm font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors pt-1"
+                >
+                  <span className="editorial-underline">Contacter l&apos;organisation</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </div>
+            </EditorialReveal>
           </aside>
 
           <div className="lg:col-span-8 space-y-14">
@@ -294,17 +307,19 @@ export function FaqPage() {
                 id={chapter.id}
                 className="scroll-mt-24 space-y-5"
               >
-                <div className="space-y-1.5">
+                <EditorialReveal className="space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                     {chapter.folio}
                   </p>
-                  <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
-                    {chapter.title}
-                  </h2>
+                  <EditorialTitleReveal>
+                    <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                      {chapter.title}
+                    </h2>
+                  </EditorialTitleReveal>
                   <p className="text-sm text-ucaep-ink/75 max-w-prose">
                     {chapter.subtitle}
                   </p>
-                </div>
+                </EditorialReveal>
 
                 <div className="divide-y divide-ucaep-brown/15 border-t border-b border-ucaep-brown/15 bg-ucaep-paper/85">
                   {chapter.items.map((item, idx) => {
@@ -313,12 +328,22 @@ export function FaqPage() {
                     const isOpen = openKey === itemKey;
                     const displayIdx = String(runningIndex).padStart(2, '0');
                     return (
-                      <div key={item.q}>
-                        <button
+                      <div key={item.q} className="relative">
+                        {isOpen && (
+                          <motion.span
+                            layoutId={`faq-active-${faqBarScopeId}`}
+                            aria-hidden="true"
+                            transition={EDITORIAL_SPRING}
+                            className="absolute left-0 top-3 bottom-3 w-[2px] bg-ucaep-gold"
+                          />
+                        )}
+                        <motion.button
                           type="button"
+                          whileTap={{ scale: 0.995 }}
+                          transition={TACTILE_SPRING}
                           aria-expanded={isOpen}
                           onClick={() => setOpenKey(isOpen ? null : itemKey)}
-                          className="w-full py-5 sm:py-6 flex items-baseline justify-between gap-6 text-left group"
+                          className="w-full py-5 sm:py-6 pl-3 sm:pl-4 pr-2 flex items-baseline justify-between gap-6 text-left group"
                         >
                           <div className="flex items-baseline gap-4 sm:gap-5">
                             <span className="font-mono text-base sm:text-lg text-ucaep-gold tabular-nums shrink-0">
@@ -328,28 +353,22 @@ export function FaqPage() {
                               {item.q}
                             </span>
                           </div>
-                          <Plus
-                            className={`w-5 h-5 text-ucaep-brown shrink-0 transition-transform duration-200 ${
-                              isOpen ? 'rotate-45 text-ucaep-gold' : ''
+                          <motion.span
+                            animate={{ rotate: isOpen ? 45 : 0 }}
+                            transition={TACTILE_SPRING}
+                            className={`shrink-0 inline-flex ${
+                              isOpen ? 'text-ucaep-gold' : 'text-ucaep-brown'
                             }`}
-                          />
-                        </button>
+                          >
+                            <Plus className="w-5 h-5" />
+                          </motion.span>
+                        </motion.button>
 
-                        <AnimatePresence initial={false}>
-                          {isOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                              className="overflow-hidden"
-                            >
-                              <div className="pb-6 pl-9 sm:pl-11 pr-6 text-sm sm:text-base text-ucaep-ink/84 leading-[1.75] max-w-prose">
-                                {item.a}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <EditorialExpandable isOpen={isOpen}>
+                          <div className="pb-6 pl-10 sm:pl-14 pr-6 text-sm sm:text-base text-ucaep-ink/84 leading-[1.75] max-w-prose">
+                            {item.a}
+                          </div>
+                        </EditorialExpandable>
                       </div>
                     );
                   })}

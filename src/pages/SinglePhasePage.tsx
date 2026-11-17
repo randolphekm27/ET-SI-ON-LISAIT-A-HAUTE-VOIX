@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import {
   ArrowDown,
   ArrowRight,
@@ -6,7 +6,6 @@ import {
   Calendar,
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   Clock,
   Feather,
   Languages,
@@ -19,6 +18,7 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   BrandPatternBand,
   BrandPatternCircle,
@@ -28,11 +28,19 @@ import {
 import { DepotSubmissionPanel } from '../components/DepotSubmissionPanel';
 import { EditorialImage } from '../components/EditorialImage';
 import { InteractiveRubric } from '../components/InteractiveRubric';
+import {
+  EditorialExpandable,
+  EditorialReveal,
+  EditorialTitleReveal,
+  ParallaxDepthCard,
+  PhotographicPlate,
+  ThreePhaseNarrativeArc,
+} from '../components/MotionPrimitives';
 import { SectionAnchorRail } from '../components/SectionAnchorRail';
 import { VideoPrepWorkshop } from '../components/VideoPrepWorkshop';
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
-import { useEditorialScrollMotion } from '../lib/motion';
+import { EDITORIAL_EASE, EDITORIAL_SPRING } from '../lib/motion';
 import { useSiteConfig } from '../lib/site-config';
 
 interface PhaseEpreuveCard {
@@ -484,12 +492,10 @@ function formatDeadline(iso?: string | null): string | null {
 
 export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   const { siteConfig, activePhase, phasesSummary, announcements } = useSiteConfig();
-  const pageRef = useRef<HTMLDivElement>(null);
+  const guideTabGroupId = useId();
   const [expandedAnnId, setExpandedAnnId] = useState<string | null>(null);
   const [expandedEpreuves, setExpandedEpreuves] = useState<Record<string, boolean>>({});
   const [activeGuideTab, setActiveGuideTab] = useState(0);
-
-  useEditorialScrollMotion(pageRef, [activePhase?.id]);
 
   useEffect(() => {
     setExpandedEpreuves({});
@@ -582,7 +588,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
     : [];
 
   return (
-    <div ref={pageRef} className="bg-ucaep-paper text-ucaep-ink">
+    <div className="bg-ucaep-paper text-ucaep-ink">
       {/* SECTION 1 : HERO PLEIN ÉCRAN CENTRÉ SUR LA PHASE ACTIVE */}
       <section
         id="phase-apercu"
@@ -605,7 +611,12 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
 
         <div className="relative z-10 w-full max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 my-auto py-8 lg:py-12">
           {hasNotice && (
-            <div className="mb-8 px-4 py-3 bg-[#FBF9F5]/90 border border-[#4E2A1E]/20 rounded-sm text-xs sm:text-sm text-[#4E2A1E] flex flex-wrap items-center justify-between gap-3">
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: EDITORIAL_EASE }}
+              className="mb-8 px-4 py-3 bg-[#FBF9F5]/90 border border-[#4E2A1E]/20 rounded-sm text-xs sm:text-sm text-[#4E2A1E] flex flex-wrap items-center justify-between gap-3"
+            >
               <p className="font-medium leading-relaxed">{siteConfig.customNotice}</p>
               <a
                 href="#informations"
@@ -613,12 +624,17 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               >
                 Consulter les annonces
               </a>
-            </div>
+            </motion.div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             {/* Colonne gauche */}
-            <div className="lg:col-span-7 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.56, ease: EDITORIAL_EASE }}
+              className="lg:col-span-7 space-y-6"
+            >
               <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#4E2A1E]/80">
                 <span>Session Théâtre UCAEP · ENSET de Lokossa</span>
                 <span aria-hidden="true">·</span>
@@ -699,18 +715,22 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   <ArrowDown className="w-3.5 h-3.5" />
                 </a>
               </div>
-            </div>
+            </motion.div>
 
             {/* Colonne droite : Photographie documentaire */}
             <div className="lg:col-span-5">
               <div className="relative bg-[#4E2A1E] p-3 sm:p-4 rounded-sm shadow-xl">
-                <div className="aspect-[4/5] max-h-[540px] w-full overflow-hidden rounded-[2px]">
+                <PhotographicPlate
+                  immediate
+                  parallaxAmount={8}
+                  className="aspect-[4/5] max-h-[540px] w-full rounded-[2px]"
+                >
                   <EditorialImage
                     assetKey={activePhase.imageKey}
                     priority
                     className="w-full h-full object-cover"
                   />
-                </div>
+                </PhotographicPlate>
                 <div className="pt-3.5 px-1 flex items-center justify-between text-xs text-[#F7E6C8]/85">
                   <span className="font-serif italic">
                     Phase {activePhase.number} · {activePhase.title}
@@ -786,15 +806,19 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
           blendMultiply
         />
         <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 space-y-16">
+          <ThreePhaseNarrativeArc
+            activeStepIndex={Math.max(0, Number.parseInt(activePhase.number, 10) - 1)}
+          />
+
           {/* ÉTAPE 1 : PRÉSENTATION EN PARAGRAPHES CONTINUS */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-            <div className="lg:col-span-8 space-y-6">
+            <EditorialReveal className="lg:col-span-8 space-y-6">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                   {dossier.sectionKicker}
                 </p>
                 <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-ucaep-brown leading-[1.08] text-balance">
-                  {dossier.sectionTitle}
+                  <EditorialTitleReveal>{dossier.sectionTitle}</EditorialTitleReveal>
                 </h2>
                 <p className="font-serif italic text-lg sm:text-xl text-ucaep-brown/80">
                   {dossier.sectionSubtitle}
@@ -808,51 +832,53 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                   <p>{dossier.maskedSummary}</p>
                 )}
               </div>
-            </div>
+            </EditorialReveal>
 
-            <aside className="lg:col-span-4 bg-white border border-ucaep-brown/15 rounded-sm p-6 sm:p-7 space-y-5">
-              <div className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-widest text-ucaep-gold border-b border-ucaep-brown/12 pb-3">
-                {activePhase.id === 'phase-1' ? (
-                  <Feather className="w-4 h-4" />
-                ) : activePhase.id === 'phase-2' ? (
-                  <BookOpen className="w-4 h-4" />
-                ) : (
-                  <Mic2 className="w-4 h-4" />
-                )}
-                <span>En bref · Phase {activePhase.number}</span>
-              </div>
+            <ParallaxDepthCard offset={6} className="lg:col-span-4">
+              <aside className="bg-white border border-ucaep-brown/15 rounded-sm p-6 sm:p-7 space-y-5">
+                <div className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-widest text-ucaep-gold border-b border-ucaep-brown/12 pb-3">
+                  {activePhase.id === 'phase-1' ? (
+                    <Feather className="w-4 h-4" />
+                  ) : activePhase.id === 'phase-2' ? (
+                    <BookOpen className="w-4 h-4" />
+                  ) : (
+                    <Mic2 className="w-4 h-4" />
+                  )}
+                  <span>En bref · Phase {activePhase.number}</span>
+                </div>
 
-              <dl className="divide-y divide-ucaep-brown/10 text-sm">
-                <div className="py-3 space-y-1">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    Calendrier
-                  </dt>
-                  <dd className="font-medium text-ucaep-brown tabular-nums">
-                    {dossier.timelineWindow}
-                  </dd>
-                </div>
-                <div className="py-3 space-y-1">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    À remettre
-                  </dt>
-                  <dd className="font-medium text-ucaep-ink">
-                    {dossier.deliverableSummary}
-                  </dd>
-                </div>
-                <div className="py-3 space-y-1">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
-                    Suite du parcours
-                  </dt>
-                  <dd className="font-medium text-ucaep-green">
-                    {dossier.outcomeSummary}
-                  </dd>
-                </div>
-              </dl>
-            </aside>
+                <dl className="divide-y divide-ucaep-brown/10 text-sm">
+                  <div className="py-3 space-y-1">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
+                      Calendrier
+                    </dt>
+                    <dd className="font-medium text-ucaep-brown tabular-nums">
+                      {dossier.timelineWindow}
+                    </dd>
+                  </div>
+                  <div className="py-3 space-y-1">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
+                      À remettre
+                    </dt>
+                    <dd className="font-medium text-ucaep-ink">
+                      {dossier.deliverableSummary}
+                    </dd>
+                  </div>
+                  <div className="py-3 space-y-1">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/65">
+                      Suite du parcours
+                    </dt>
+                    <dd className="font-medium text-ucaep-green">
+                      {dossier.outcomeSummary}
+                    </dd>
+                  </div>
+                </dl>
+              </aside>
+            </ParallaxDepthCard>
           </div>
 
           {/* ÉTAPE 2 : PRÉSENTATION DES ÉPREUVES (PROTÉGÉE PAR isRevealed) */}
-          <div className="space-y-6 pt-8 border-t border-ucaep-brown/14">
+          <EditorialReveal className="space-y-6 pt-8 border-t border-ucaep-brown/14">
             <div className="space-y-2 max-w-prose">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-gold">
                 Étape 02 · Présentation des épreuves
@@ -867,79 +893,80 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
 
             {activePhase.isRevealed ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {dossier.epreuves.map((epreuve) => {
+                {dossier.epreuves.map((epreuve, idx) => {
                   const isExpanded = Boolean(expandedEpreuves[epreuve.number]);
                   return (
-                    <article
-                      key={epreuve.number}
-                      className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-8 space-y-5"
-                    >
-                      <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ucaep-brown/12 pb-3 tabular-nums">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                          {epreuve.tag}
-                        </span>
-                        <span className="text-xs font-semibold text-ucaep-green">
-                          {epreuve.duration}
-                        </span>
-                      </div>
-
-                      <h4 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
-                        {epreuve.title}
-                      </h4>
-
-                      <p className="text-[15px] sm:text-base text-ucaep-ink/88 leading-[1.7] max-w-prose">
-                        {epreuve.summary}
-                      </p>
-
-                      <div className="p-4 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1.5">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
-                          Repère utile sans sujet imposé
-                        </p>
-                        <p className="text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
-                          {epreuve.concreteAdvice}
-                        </p>
-                      </div>
-
-                      <p className="text-xs text-ucaep-brown/80 leading-relaxed">
-                        <strong className="font-semibold text-ucaep-brown">
-                          {epreuve.formatsLabel} :
-                        </strong>{' '}
-                        {epreuve.formats}
-                      </p>
-
-                      {isExpanded && (
-                        <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/84 leading-[1.75]">
-                          {epreuve.extraParagraphs.map((paragraph, pIdx) => (
-                            <p key={pIdx}>{paragraph}</p>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="pt-2 border-t border-ucaep-brown/10">
-                        <button
-                          type="button"
-                          aria-expanded={isExpanded}
-                          onClick={() =>
-                            setExpandedEpreuves((prev) => ({
-                              ...prev,
-                              [epreuve.number]: !prev[epreuve.number],
-                            }))
-                          }
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
-                        >
-                          <span>
-                            {isExpanded
-                              ? 'Masquer les repères de préparation'
-                              : 'Lire les repères de préparation'}
+                    <ParallaxDepthCard key={epreuve.number} offset={idx === 0 ? 5 : -5} delay={idx * 0.06}>
+                      <article className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-8 space-y-5">
+                        <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-ucaep-brown/12 pb-3 tabular-nums">
+                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                            {epreuve.tag}
                           </span>
-                          {isExpanded ? (
-                            <ChevronUp className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </article>
+                          <span className="text-xs font-semibold text-ucaep-green">
+                            {epreuve.duration}
+                          </span>
+                        </div>
+
+                        <h4 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
+                          {epreuve.title}
+                        </h4>
+
+                        <p className="text-[15px] sm:text-base text-ucaep-ink/88 leading-[1.7] max-w-prose">
+                          {epreuve.summary}
+                        </p>
+
+                        <div className="p-4 bg-[#F7E6C8]/38 border border-ucaep-brown/14 rounded-sm space-y-1.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-brown">
+                            Repère utile sans sujet imposé
+                          </p>
+                          <p className="text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
+                            {epreuve.concreteAdvice}
+                          </p>
+                        </div>
+
+                        <p className="text-xs text-ucaep-brown/80 leading-relaxed">
+                          <strong className="font-semibold text-ucaep-brown">
+                            {epreuve.formatsLabel} :
+                          </strong>{' '}
+                          {epreuve.formats}
+                        </p>
+
+                        <EditorialExpandable isOpen={isExpanded}>
+                          <div className="pt-4 border-t border-ucaep-brown/12 space-y-3 text-sm text-ucaep-ink/84 leading-[1.75]">
+                            {epreuve.extraParagraphs.map((paragraph, pIdx) => (
+                              <p key={pIdx}>{paragraph}</p>
+                            ))}
+                          </div>
+                        </EditorialExpandable>
+
+                        <div className="pt-2 border-t border-ucaep-brown/10">
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            onClick={() =>
+                              setExpandedEpreuves((prev) => ({
+                                ...prev,
+                                [epreuve.number]: !prev[epreuve.number],
+                              }))
+                            }
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ucaep-brown hover:text-ucaep-gold transition-colors"
+                          >
+                            <span>
+                              {isExpanded
+                                ? 'Masquer les repères de préparation'
+                                : 'Lire les repères de préparation'}
+                            </span>
+                            <motion.span
+                              animate={{ rotate: isExpanded ? 180 : 0 }}
+                              transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                              className="inline-flex"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </motion.span>
+                          </button>
+                        </div>
+                      </article>
+                    </ParallaxDepthCard>
                   );
                 })}
               </div>
@@ -969,11 +996,11 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 ))}
               </div>
             )}
-          </div>
+          </EditorialReveal>
 
           {/* ÉTAPES 3, 4 & 5 : CE QU'IL FAUT PRODUIRE, MÉTHODE ET PRÉPARATION */}
           {activePhase.isRevealed && (
-            <div className="space-y-6 pt-8 border-t border-ucaep-brown/14">
+            <EditorialReveal className="space-y-6 pt-8 border-t border-ucaep-brown/14">
               <div className="space-y-2 max-w-prose">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
                   Étapes 03 à 05 · Méthode et réalisation
@@ -1006,54 +1033,71 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                             role="tab"
                             aria-selected={isActive}
                             onClick={() => setActiveGuideTab(idx)}
-                            className={`px-5 py-4 text-xs sm:text-sm font-semibold transition-colors border-b-2 text-left whitespace-nowrap ${
+                            className={`relative px-5 py-4 text-xs sm:text-sm font-semibold transition-colors text-left whitespace-nowrap ${
                               isActive
-                                ? 'border-ucaep-brown text-ucaep-brown bg-white'
-                                : 'border-transparent text-ucaep-brown/65 hover:text-ucaep-brown hover:bg-white/50'
+                                ? 'text-ucaep-brown bg-white'
+                                : 'text-ucaep-brown/65 hover:text-ucaep-brown hover:bg-white/50'
                             }`}
                           >
-                            {tab.tabLabel}
+                            <span>{tab.tabLabel}</span>
+                            {isActive && (
+                              <motion.span
+                                layoutId={`guide-underline-${guideTabGroupId}`}
+                                aria-hidden="true"
+                                transition={EDITORIAL_SPRING}
+                                className="absolute inset-x-0 bottom-0 h-0.5 bg-ucaep-brown"
+                              />
+                            )}
                           </button>
                         );
                       })}
                     </div>
 
-                    <div className="p-6 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                      <div className="lg:col-span-7 space-y-4">
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
-                            {currentTab.kicker}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentTab.tabLabel}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+                        className="p-6 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+                      >
+                        <div className="lg:col-span-7 space-y-4">
+                          <div className="space-y-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-gold">
+                              {currentTab.kicker}
+                            </p>
+                            <h4 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                              {currentTab.title}
+                            </h4>
+                          </div>
+
+                          <div className="space-y-3 text-sm sm:text-[15.5px] text-ucaep-ink/86 leading-[1.75] max-w-prose">
+                            {currentTab.paragraphs.map((p, pIdx) => (
+                              <p key={pIdx}>{p}</p>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-5 p-5 sm:p-6 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm space-y-3.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
+                            Points clés de cette étape
                           </p>
-                          <h4 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                            {currentTab.title}
-                          </h4>
+                          <ul className="space-y-3 text-xs sm:text-sm text-ucaep-ink/88 leading-relaxed">
+                            {currentTab.checklist.map((point) => (
+                              <li key={point} className="flex items-start gap-2.5">
+                                <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
+                                <span>{point}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-
-                        <div className="space-y-3 text-sm sm:text-[15.5px] text-ucaep-ink/86 leading-[1.75] max-w-prose">
-                          {currentTab.paragraphs.map((p, pIdx) => (
-                            <p key={pIdx}>{p}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="lg:col-span-5 p-5 sm:p-6 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm space-y-3.5">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
-                          Points clés de cette étape
-                        </p>
-                        <ul className="space-y-3 text-xs sm:text-sm text-ucaep-ink/88 leading-relaxed">
-                          {currentTab.checklist.map((point) => (
-                            <li key={point} className="flex items-start gap-2.5">
-                              <CheckCircle2 className="w-4 h-4 text-ucaep-green shrink-0 mt-0.5" />
-                              <span>{point}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 );
               })()}
-            </div>
+            </EditorialReveal>
           )}
 
           {/* ENGAGEMENTS D'ÉQUITÉ ET UTILITÉ DES RÈGLES */}
@@ -1361,11 +1405,11 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                       <p className="text-sm text-ucaep-ink/80 leading-relaxed">
                         {ann.excerpt}
                       </p>
-                      {isExpanded && (
+                      <EditorialExpandable isOpen={isExpanded}>
                         <div className="pt-2 text-sm text-ucaep-ink/85 leading-relaxed whitespace-pre-line border-t border-ucaep-brown/10">
                           {ann.content}
                         </div>
-                      )}
+                      </EditorialExpandable>
                       <button
                         type="button"
                         onClick={() =>
@@ -1416,81 +1460,108 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </p>
               </div>
 
-              {!contactOpen ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setContactOpen(true);
-                    setContactSuccess(false);
-                  }}
-                  className="w-full py-3 px-5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors inline-flex items-center justify-center gap-2"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Écrire à l&apos;organisation</span>
-                </button>
-              ) : contactSuccess ? (
-                <div className="p-4 bg-ucaep-green/10 border border-ucaep-green/30 rounded-sm text-sm text-ucaep-green space-y-2">
-                  <p className="font-semibold">Message transmis à l&apos;UCAEP.</p>
-                  <p className="text-xs">
-                    L&apos;équipe organisatrice vous répondra à l&apos;adresse e-mail que vous avez indiquée.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleSendContact} className="space-y-3">
-                  {contactError && (
-                    <p className="p-3 text-xs bg-red-50 border border-red-300 text-red-900 rounded-sm">
-                      {contactError}
+              <AnimatePresence mode="wait">
+                {!contactOpen ? (
+                  <motion.button
+                    key="open-btn"
+                    type="button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      setContactOpen(true);
+                      setContactSuccess(false);
+                    }}
+                    className="w-full py-3 px-5 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Écrire à l&apos;organisation</span>
+                  </motion.button>
+                ) : contactSuccess ? (
+                  <motion.div
+                    key="contact-sent"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
+                    className="p-4 bg-ucaep-green/10 border border-ucaep-green/30 rounded-sm text-sm text-ucaep-green space-y-2"
+                  >
+                    <p className="font-semibold">Message transmis à l&apos;UCAEP.</p>
+                    <p className="text-xs">
+                      L&apos;équipe organisatrice vous répondra à l&apos;adresse e-mail que vous avez indiquée.
                     </p>
-                  )}
-                  <input
-                    type="text"
-                    required
-                    placeholder="Votre nom complet"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                  />
-                  <input
-                    type="email"
-                    required
-                    placeholder="Votre e-mail"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder={`Objet (ex. ${phaseTitle})`}
-                    value={contactSubject}
-                    onChange={(e) => setContactSubject(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                  />
-                  <textarea
-                    rows={3}
-                    required
-                    placeholder="Votre question ou précision..."
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="submit"
-                      disabled={contactSending}
-                      className="flex-1 py-2.5 px-4 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
-                    >
-                      {contactSending ? 'Envoi...' : 'Envoyer le message'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContactOpen(false)}
-                      className="py-2.5 px-3 text-xs font-medium text-ucaep-brown hover:underline"
-                    >
-                      Fermer
-                    </button>
-                  </div>
-                </form>
-              )}
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    key="contact-form"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.22, ease: EDITORIAL_EASE }}
+                    onSubmit={handleSendContact}
+                    className="space-y-3"
+                  >
+                    {contactError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 text-xs bg-red-50 border border-red-300 text-red-900 rounded-sm"
+                      >
+                        {contactError}
+                      </motion.p>
+                    )}
+                    <input
+                      type="text"
+                      required
+                      placeholder="Votre nom complet"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                    />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Votre e-mail"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder={`Objet (ex. ${phaseTitle})`}
+                      value={contactSubject}
+                      onChange={(e) => setContactSubject(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                    />
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Votre question ou précision..."
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="submit"
+                        disabled={contactSending}
+                        className="btn-tactile flex-1 py-2.5 px-4 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
+                      >
+                        {contactSending ? 'Envoi...' : 'Envoyer le message'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContactOpen(false)}
+                        className="py-2.5 px-3 text-xs font-medium text-ucaep-brown hover:underline"
+                      >
+                        Fermer
+                      </button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

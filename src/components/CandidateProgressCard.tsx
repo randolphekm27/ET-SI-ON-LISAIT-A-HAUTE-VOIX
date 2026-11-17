@@ -8,6 +8,8 @@ import {
   Lock,
   Sparkles,
 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { EDITORIAL_EASE } from '../lib/motion';
 import type { SubmissionStatus } from '../types/competition';
 
 interface CountdownParts {
@@ -269,15 +271,44 @@ export function CandidateProgressCard({
         )}
       </div>
 
+      {/* Jauge globale de complétion du dossier */}
+      {(() => {
+        const completedCount = milestones.filter(
+          (m) => m.state === 'validated' || m.state === 'done',
+        ).length;
+        const ratio = milestones.length > 0 ? completedCount / milestones.length : 0;
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-medium text-ucaep-brown/75 tabular-nums">
+              <span>Avancement du dossier</span>
+              <span>
+                {completedCount} / {milestones.length} étapes
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-ucaep-brown/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: ratio }}
+                transition={{ duration: 0.45, ease: EDITORIAL_EASE }}
+                className="h-full w-full origin-left bg-ucaep-green"
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Frise des 4 jalons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {milestones.map((m) => {
+        {milestones.map((m, idx) => {
           const isValidated = m.state === 'validated';
           const isDone = m.state === 'done';
           return (
-            <div
+            <motion.div
               key={m.num}
-              className={`p-3.5 rounded-[2px] border space-y-1 ${
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, delay: idx * 0.05, ease: EDITORIAL_EASE }}
+              className={`p-3.5 rounded-[2px] border space-y-1 transition-colors ${
                 isValidated
                   ? 'bg-emerald-50/65 border-ucaep-green/35'
                   : isDone
@@ -320,7 +351,7 @@ export function CandidateProgressCard({
               >
                 {m.detail}
               </p>
-            </div>
+            </motion.div>
           );
         })}
       </div>

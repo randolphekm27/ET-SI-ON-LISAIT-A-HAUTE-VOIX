@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -8,6 +8,8 @@ import {
   RotateCcw,
   Video,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { EDITORIAL_EASE, EDITORIAL_SPRING } from '../lib/motion';
 
 type ReadingPace = 'slow' | 'natural' | 'brisk';
 
@@ -92,6 +94,7 @@ export function VideoPrepWorkshop({
   const [activeTab, setActiveTab] = useState<'timer' | 'checklist'>('timer');
   const [draftText, setDraftText] = useState('');
   const [pace, setPace] = useState<ReadingPace>('natural');
+  const workshopId = useId();
   const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem(CHECKLIST_STORAGE_KEY);
@@ -196,32 +199,48 @@ export function VideoPrepWorkshop({
             role="tab"
             aria-selected={activeTab === 'timer'}
             onClick={() => setActiveTab('timer')}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-[2px] transition-colors whitespace-nowrap shrink-0 ${
+            className={`relative inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-[2px] transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'timer'
-                ? 'bg-ucaep-brown text-ucaep-paper'
+                ? 'text-ucaep-paper'
                 : 'text-ucaep-brown/75 hover:text-ucaep-brown'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Calculateur 5 min</span>
+            {activeTab === 'timer' && (
+              <motion.span
+                layoutId={`workshop-tab-${workshopId}`}
+                aria-hidden="true"
+                transition={EDITORIAL_SPRING}
+                className="absolute inset-0 bg-ucaep-brown rounded-[2px]"
+              />
+            )}
+            <Clock className="relative z-10 w-3.5 h-3.5" aria-hidden="true" />
+            <span className="relative z-10">Calculateur 5 min</span>
           </button>
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'checklist'}
             onClick={() => setActiveTab('checklist')}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-[2px] transition-colors whitespace-nowrap shrink-0 ${
+            className={`relative inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-[2px] transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'checklist'
-                ? 'bg-ucaep-brown text-ucaep-paper'
+                ? 'text-ucaep-paper'
                 : 'text-ucaep-brown/75 hover:text-ucaep-brown'
             }`}
           >
-            {isPresentiel ? (
-              <Mic2 className="w-3.5 h-3.5" aria-hidden="true" />
-            ) : (
-              <Video className="w-3.5 h-3.5" aria-hidden="true" />
+            {activeTab === 'checklist' && (
+              <motion.span
+                layoutId={`workshop-tab-${workshopId}`}
+                aria-hidden="true"
+                transition={EDITORIAL_SPRING}
+                className="absolute inset-0 bg-ucaep-brown rounded-[2px]"
+              />
             )}
-            <span>
+            {isPresentiel ? (
+              <Mic2 className="relative z-10 w-3.5 h-3.5" aria-hidden="true" />
+            ) : (
+              <Video className="relative z-10 w-3.5 h-3.5" aria-hidden="true" />
+            )}
+            <span className="relative z-10">
               Checklist ({completedChecks}/{CHECKLIST_ITEMS.length})
             </span>
           </button>
@@ -229,8 +248,16 @@ export function VideoPrepWorkshop({
       </div>
 
       {/* Corps de l'atelier */}
-      {activeTab === 'timer' ? (
-        <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <AnimatePresence mode="wait">
+        {activeTab === 'timer' ? (
+          <motion.div
+            key="timer-tab"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+            className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+          >
           {/* Colonne saisie brouillon */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -280,20 +307,29 @@ export function VideoPrepWorkshop({
                   const cfg = PACE_CONFIG[key];
                   const active = pace === key;
                   return (
-                    <button
+                    <motion.button
                       key={key}
                       type="button"
+                      whileTap={{ scale: 0.985 }}
                       onClick={() => setPace(key)}
-                      className={`p-3 text-left rounded-[2px] border transition-colors ${
+                      className={`relative p-3 text-left rounded-[2px] border transition-colors ${
                         active
-                          ? 'bg-ucaep-brown text-ucaep-paper border-ucaep-brown'
+                          ? 'text-ucaep-paper border-ucaep-brown'
                           : 'bg-white text-ucaep-ink border-ucaep-brown/16 hover:border-ucaep-brown/40'
                       }`}
                     >
-                      <span className="block text-xs font-semibold tabular-nums">
+                      {active && (
+                        <motion.span
+                          layoutId={`workshop-pace-${workshopId}`}
+                          aria-hidden="true"
+                          transition={EDITORIAL_SPRING}
+                          className="absolute inset-0 bg-ucaep-brown rounded-[1px]"
+                        />
+                      )}
+                      <span className="relative z-10 block text-xs font-semibold tabular-nums">
                         {cfg.label}
                       </span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -332,18 +368,19 @@ export function VideoPrepWorkshop({
               </div>
             </div>
 
-            {/* Barre de progression par rapport à 5 min */}
+            {/* Barre de progression par rapport à 5 min (GPU scaleX) */}
             <div className="space-y-1.5">
               <div className="h-2.5 w-full bg-ucaep-brown/10 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ${
+                <motion.div
+                  animate={{ scaleX: metrics.progressPct / 100 }}
+                  transition={{ duration: 0.25, ease: EDITORIAL_EASE }}
+                  className={`h-full w-full origin-left transition-colors duration-200 ${
                     metrics.verdict.status === 'over'
                       ? 'bg-red-700'
                       : metrics.verdict.status === 'tight'
                         ? 'bg-amber-600'
                         : 'bg-ucaep-green'
                   }`}
-                  style={{ width: `${metrics.progressPct}%` }}
                 />
               </div>
               <div className="flex justify-between text-[11px] text-ucaep-brown/65 font-mono tabular-nums">
@@ -380,71 +417,80 @@ export function VideoPrepWorkshop({
               Ce simulateur reste strictement local dans votre navigateur : aucun brouillon n&apos;est envoyé au serveur avant votre dépôt officiel.
             </p>
           </div>
-        </div>
-      ) : (
-        <div className="p-6 sm:p-8 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-ucaep-brown tabular-nums">
-                Progression de préparation : {completedChecks} / {CHECKLIST_ITEMS.length} vérifications validées
-              </p>
-              <p className="text-xs text-ucaep-ink/70">
-                Cochez chaque repère au fur et à mesure ; votre progression est mémorisée automatiquement sur cet appareil.
-              </p>
-            </div>
-            {completedChecks > 0 && (
-              <button
-                type="button"
-                onClick={() => setCheckedIds({})}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-ucaep-brown/75 hover:text-ucaep-brown underline"
-              >
-                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Réinitialiser la liste</span>
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CHECKLIST_ITEMS.map((item, idx) => {
-              const checked = Boolean(checkedIds[item.id]);
-              return (
+          </motion.div>
+        ) : (
+          <motion.div
+            key="checklist-tab"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
+            className="p-6 sm:p-8 space-y-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-ucaep-brown tabular-nums">
+                  Progression de préparation : {completedChecks} / {CHECKLIST_ITEMS.length} vérifications validées
+                </p>
+                <p className="text-xs text-ucaep-ink/70">
+                  Cochez chaque repère au fur et à mesure ; votre progression est mémorisée automatiquement sur cet appareil.
+                </p>
+              </div>
+              {completedChecks > 0 && (
                 <button
-                  key={item.id}
                   type="button"
-                  role="checkbox"
-                  aria-checked={checked}
-                  onClick={() => toggleCheck(item.id)}
-                  className={`text-left p-5 rounded-[2px] border transition-all space-y-2 ${
-                    checked
-                      ? 'bg-emerald-50/60 border-ucaep-green/45'
-                      : 'bg-ucaep-paper/70 border-ucaep-brown/15 hover:border-ucaep-brown/40'
-                  }`}
+                  onClick={() => setCheckedIds({})}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-ucaep-brown/75 hover:text-ucaep-brown underline"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] font-semibold text-ucaep-gold tabular-nums">
-                      0{idx + 1}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-                        checked ? 'text-ucaep-green' : 'text-ucaep-brown/60'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>{checked ? 'Vérifié' : 'À vérifier'}</span>
-                    </span>
-                  </div>
-                  <h4 className="font-serif text-lg font-semibold text-ucaep-brown leading-snug">
-                    {item.title}
-                  </h4>
-                  <p className="text-xs text-ucaep-ink/78 leading-relaxed">
-                    {item.detail}
-                  </p>
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Réinitialiser la liste</span>
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {CHECKLIST_ITEMS.map((item, idx) => {
+                const checked = Boolean(checkedIds[item.id]);
+                return (
+                  <motion.button
+                    key={item.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={checked}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => toggleCheck(item.id)}
+                    className={`text-left p-5 rounded-[2px] border transition-colors space-y-2 ${
+                      checked
+                        ? 'bg-emerald-50/60 border-ucaep-green/45'
+                        : 'bg-ucaep-paper/70 border-ucaep-brown/15 hover:border-ucaep-brown/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[11px] font-semibold text-ucaep-gold tabular-nums">
+                        0{idx + 1}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                          checked ? 'text-ucaep-green' : 'text-ucaep-brown/60'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>{checked ? 'Vérifié' : 'À vérifier'}</span>
+                      </span>
+                    </div>
+                    <h4 className="font-serif text-lg font-semibold text-ucaep-brown leading-snug">
+                      {item.title}
+                    </h4>
+                    <p className="text-xs text-ucaep-ink/78 leading-relaxed">
+                      {item.detail}
+                    </p>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -10,7 +10,6 @@ import {
   Lock,
   Scale,
   ShieldCheck,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import {
@@ -21,11 +20,17 @@ import {
 } from '../components/BrandPattern';
 import { EditorialImage } from '../components/EditorialImage';
 import { EditorialMark, PageFolioHeader } from '../components/EditorialMark';
+import {
+  EditorialReveal,
+  EditorialTitleReveal,
+  ParallaxDepthCard,
+  PhotographicPlate,
+  ThreePhaseNarrativeArc,
+} from '../components/MotionPrimitives';
 import { ScenicStageAsset } from '../components/ScenicStageAsset';
 import { fetchApiJson } from '../lib/api';
 import { useCandidateSession } from '../lib/candidate-session';
 import { usePageSeo } from '../lib/format';
-import { useEditorialScrollMotion } from '../lib/motion';
 import type { CompetitionPhase } from '../types/competition';
 
 function buildPillars(phases: CompetitionPhase[]) {
@@ -131,7 +136,6 @@ export function ConcoursPage() {
     "Présentation pédagogique et règlement complet du concours « Et si on lisait à haute voix ? » organisé gratuitement par l'UCAEP pour les étudiants de l'ENSET de Lokossa.",
   );
 
-  const pageRef = useRef<HTMLDivElement>(null);
   const candidateSession = useCandidateSession();
   const [phases, setPhases] = useState<CompetitionPhase[]>([]);
 
@@ -147,11 +151,10 @@ export function ConcoursPage() {
     };
   }, []);
 
-  useEditorialScrollMotion(pageRef, [phases.length]);
   const pillars = buildPillars(phases);
 
   return (
-    <div ref={pageRef} className="bg-ucaep-paper">
+    <div className="bg-ucaep-paper">
       <PageFolioHeader
         folio="Présentation"
         section="Session Théâtre UCAEP · ENSET de Lokossa — UNSTIM"
@@ -189,20 +192,26 @@ export function ConcoursPage() {
       {/* Documentary Exhibition Opening Image + Continuous Editorial Explanation */}
       <section className="py-14 lg:py-20 border-b border-ucaep-brown/14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          <div className="lg:col-span-7" data-clip-reveal>
-            <div className="aspect-[16/10] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/12">
-              <EditorialImage assetKey="audience" data-parallax="-5" />
-            </div>
+          <div className="lg:col-span-7">
+            <PhotographicPlate
+              immediate
+              parallaxAmount={12}
+              className="aspect-[16/10] rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/12"
+            >
+              <EditorialImage assetKey="audience" priority />
+            </PhotographicPlate>
             <p className="mt-3 text-xs font-serif italic text-ucaep-brown/75">
               Fig. 00 — Un rendez-vous pensé pour les étudiants de toutes les filières de l&apos;ENSET de Lokossa
             </p>
           </div>
-          <div className="lg:col-span-5 space-y-5" data-reveal>
+          <EditorialReveal className="lg:col-span-5 space-y-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
               Comprendre l&apos;intention
             </p>
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown leading-tight">
-              Apprendre à formuler ses idées, de la feuille jusqu&apos;à l&apos;auditoire
+              <EditorialTitleReveal>
+                Apprendre à formuler ses idées, de la feuille jusqu&apos;à l&apos;auditoire
+              </EditorialTitleReveal>
             </h2>
             <div className="space-y-4 text-sm sm:text-base text-ucaep-ink/85 leading-relaxed max-w-prose">
               <p>
@@ -221,91 +230,90 @@ export function ConcoursPage() {
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
-          </div>
+          </EditorialReveal>
         </div>
       </section>
 
       {/* Three Editorial Pillar Spreads */}
       <section className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
-          <div className="space-y-3 max-w-2xl" data-reveal>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-14">
+          <EditorialReveal className="space-y-3 max-w-2xl">
             <EditorialMark folio="Architecture du concours" label="3 phases · 6 épreuves" tone="brown" />
-            <div className="overflow-hidden">
-              <h2
-                data-mask-title
-                className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]"
-              >
+            <h2 className="font-serif text-4xl sm:text-5xl font-semibold text-ucaep-ink leading-[1.06]">
+              <EditorialTitleReveal>
                 Trois phases pour exercer <em className="italic font-normal text-ucaep-brown">l&apos;écrit, la pédagogie et l&apos;éloquence</em>
-              </h2>
-            </div>
-          </div>
+              </EditorialTitleReveal>
+            </h2>
+          </EditorialReveal>
+
+          <ThreePhaseNarrativeArc activeStepIndex={0} />
 
           <div className="divide-y divide-ucaep-brown/14 border-t border-b border-ucaep-brown/14">
             {pillars.map((pillar, idx) => {
               const reversed = idx % 2 === 1;
               const isEloquence = pillar.index === 'III';
               return (
-                <article
-                  key={pillar.index}
-                  data-reveal
-                  data-scenic-stage={isEloquence ? 'eloquence' : undefined}
-                  className="group relative py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
-                >
-                  {isEloquence && (
-                    <ScenicStageAsset
-                      assetKey="tamtam"
-                      plan={1}
-                      motionId="tamtam"
-                      className="order-3 ml-auto w-24 opacity-40 sm:order-none sm:ml-0 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:right-4 lg:right-6 sm:w-40 lg:w-48 sm:opacity-30 lg:opacity-35"
-                    />
-                  )}
-
-                  <div
-                    className={`relative z-10 lg:col-span-6 ${
-                      reversed ? 'lg:order-2' : 'lg:order-1'
-                    }`}
+                <EditorialReveal key={pillar.index} delay={idx * 0.06}>
+                  <article
+                    data-scenic-stage={isEloquence ? 'eloquence' : undefined}
+                    className="group relative py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
                   >
-                    <div
-                      className="aspect-[4/3] overflow-hidden rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/12"
-                      data-clip-reveal
-                    >
-                      <EditorialImage
-                        assetKey={pillar.imageKey}
-                        className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+                    {isEloquence && (
+                      <ScenicStageAsset
+                        assetKey="tamtam"
+                        plan={1}
+                        motionId="tamtam"
+                        className="order-3 ml-auto w-24 opacity-40 sm:order-none sm:ml-0 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:right-4 lg:right-6 sm:w-40 lg:w-48 sm:opacity-30 lg:opacity-35"
                       />
-                    </div>
-                    <p className="mt-2.5 text-xs font-serif italic text-ucaep-brown/70">
-                      {pillar.caption}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`relative z-10 lg:col-span-6 space-y-5 ${
-                      isEloquence ? 'sm:pr-28 lg:pr-36' : ''
-                    } ${reversed ? 'lg:order-1' : 'lg:order-2'}`}
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3">
-                      <span className="font-serif text-5xl sm:text-6xl font-semibold text-ucaep-gold tabular-nums leading-none">
-                        {pillar.number}
-                      </span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-green tabular-nums">
-                        Volet {pillar.index} · {pillar.keyPoint}
-                      </span>
-                    </div>
-                    <h3 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-brown leading-tight">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-base sm:text-lg text-ucaep-ink/80 leading-relaxed max-w-xl">
-                      {pillar.text}
-                    </p>
-                    {!pillar.revealed && (
-                      <div className="inline-flex items-center gap-2 text-xs font-medium text-ucaep-brown/80 bg-ucaep-linen/70 border border-ucaep-brown/15 px-3 py-2 rounded-[2px]">
-                        <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0" aria-hidden="true" />
-                        <span>Sujets des épreuves masqués jusqu&apos;au lancement de la phase</span>
-                      </div>
                     )}
-                  </div>
-                </article>
+
+                    <div
+                      className={`relative z-10 lg:col-span-6 ${
+                        reversed ? 'lg:order-2' : 'lg:order-1'
+                      }`}
+                    >
+                      <PhotographicPlate
+                        parallaxAmount={10}
+                        className="aspect-[4/3] rounded-[2px] bg-ucaep-brown/5 border border-ucaep-brown/12"
+                      >
+                        <EditorialImage
+                          assetKey={pillar.imageKey}
+                          className="group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+                        />
+                      </PhotographicPlate>
+                      <p className="mt-2.5 text-xs font-serif italic text-ucaep-brown/70">
+                        {pillar.caption}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`relative z-10 lg:col-span-6 space-y-5 ${
+                        isEloquence ? 'sm:pr-28 lg:pr-36' : ''
+                      } ${reversed ? 'lg:order-1' : 'lg:order-2'}`}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-ucaep-brown/14 pb-3">
+                        <span className="font-serif text-5xl sm:text-6xl font-semibold text-ucaep-gold tabular-nums leading-none">
+                          {pillar.number}
+                        </span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-green tabular-nums">
+                          Volet {pillar.index} · {pillar.keyPoint}
+                        </span>
+                      </div>
+                      <h3 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-brown leading-tight">
+                        {pillar.title}
+                      </h3>
+                      <p className="text-base sm:text-lg text-ucaep-ink/80 leading-relaxed max-w-xl">
+                        {pillar.text}
+                      </p>
+                      {!pillar.revealed && (
+                        <div className="inline-flex items-center gap-2 text-xs font-medium text-ucaep-brown/80 bg-ucaep-linen/70 border border-ucaep-brown/15 px-3 py-2 rounded-[2px]">
+                          <Lock className="w-3.5 h-3.5 text-ucaep-gold shrink-0" aria-hidden="true" />
+                          <span>Sujets des épreuves masqués jusqu&apos;au lancement de la phase</span>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                </EditorialReveal>
               );
             })}
           </div>
@@ -334,48 +342,46 @@ export function ConcoursPage() {
           className="absolute bottom-0 inset-x-0 h-20"
         />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
-          <div className="space-y-2 max-w-2xl" data-reveal>
+          <EditorialReveal className="space-y-2 max-w-2xl">
             <EditorialMark folio="Cadre réglementaire" label="Équité & modalités" tone="green" />
-            <div className="overflow-hidden">
-              <h2
-                data-mask-title
-                className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight"
-              >
+            <h2 className="font-serif text-3xl sm:text-5xl font-semibold text-ucaep-ink leading-tight">
+              <EditorialTitleReveal>
                 Des règles précises <em className="italic font-normal text-ucaep-brown">pour garantir l&apos;équité d&apos;évaluation</em>
-              </h2>
-            </div>
-          </div>
+              </EditorialTitleReveal>
+            </h2>
+          </EditorialReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {PRACTICAL_RULES.map((rule, idx) => {
               const Icon = rule.Icon;
               return (
-                <article
+                <ParallaxDepthCard
                   key={rule.number}
-                  data-reveal
-                  data-reveal-delay={String(idx * 0.05)}
-                  className="art-card group relative overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-3"
+                  offset={idx % 2 === 0 ? -5 : 5}
+                  delay={idx * 0.05}
                 >
-                  <Icon
-                    aria-hidden="true"
-                    className="pointer-events-none select-none absolute -bottom-5 -right-4 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
-                    strokeWidth={1.3}
-                  />
-                  <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/10 pb-2.5">
-                    <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums">
-                      {rule.number}
-                    </span>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ucaep-green">
-                      {rule.takeaway}
-                    </span>
-                  </div>
-                  <h3 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown leading-snug">
-                    {rule.title}
-                  </h3>
-                  <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
-                    {rule.text}
-                  </p>
-                </article>
+                  <article className="art-card group relative h-full overflow-hidden rounded-[2px] border border-ucaep-brown/15 bg-ucaep-paper p-7 space-y-3">
+                    <Icon
+                      aria-hidden="true"
+                      className="pointer-events-none select-none absolute -bottom-5 -right-4 w-32 h-32 text-ucaep-brown opacity-[0.055] -rotate-12 transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-6"
+                      strokeWidth={1.3}
+                    />
+                    <div className="relative z-10 flex items-baseline justify-between border-b border-ucaep-brown/10 pb-2.5">
+                      <span className="font-mono text-xs font-semibold text-ucaep-gold tabular-nums">
+                        {rule.number}
+                      </span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ucaep-green">
+                        {rule.takeaway}
+                      </span>
+                    </div>
+                    <h3 className="relative z-10 font-serif text-2xl font-semibold text-ucaep-brown leading-snug">
+                      {rule.title}
+                    </h3>
+                    <p className="relative z-10 text-sm text-ucaep-ink/78 leading-relaxed">
+                      {rule.text}
+                    </p>
+                  </article>
+                </ParallaxDepthCard>
               );
             })}
           </div>
@@ -385,48 +391,44 @@ export function ConcoursPage() {
       {/* Simple Participation Recognition Strip (No detailed prize breakdown) */}
       <section className="relative py-20 bg-ucaep-paper paper-fiber overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
-          <div
-            data-reveal
-            className="art-card relative overflow-hidden rounded-[2px] border border-ucaep-brown/20 bg-ucaep-linen/80 paper-grain p-8 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
-          >
-            <Award
-              aria-hidden="true"
-              className="pointer-events-none select-none absolute -bottom-6 right-8 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12"
-              strokeWidth={1.2}
-            />
-            <Users
-              aria-hidden="true"
-              className="pointer-events-none select-none absolute -top-8 right-52 w-32 h-32 text-ucaep-brown opacity-[0.035] rotate-12"
-              strokeWidth={1.2}
-            />
-            <div className="lg:col-span-8 relative z-10 space-y-2.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                Valorisation du parcours
-              </p>
-              <div className="overflow-hidden">
-                <h2
-                  data-mask-title
-                  className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown"
-                >
-                  Une attestation pour chaque inscrit et une finale publique à l&apos;ENSET
+          <EditorialReveal>
+            <div className="art-card relative overflow-hidden rounded-[2px] border border-ucaep-brown/20 bg-ucaep-linen/80 paper-grain p-8 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <Award
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute -bottom-6 right-8 w-40 h-40 text-ucaep-brown opacity-[0.055] -rotate-12"
+                strokeWidth={1.2}
+              />
+              <Users
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute -top-8 right-52 w-32 h-32 text-ucaep-brown opacity-[0.035] rotate-12"
+                strokeWidth={1.2}
+              />
+              <div className="lg:col-span-8 relative z-10 space-y-2.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                  Valorisation du parcours
+                </p>
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-ucaep-brown">
+                  <EditorialTitleReveal>
+                    Une attestation pour chaque inscrit et une finale publique à l&apos;ENSET
+                  </EditorialTitleReveal>
                 </h2>
+                <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed max-w-2xl">
+                  Tout étudiant de l&apos;ENSET de Lokossa inscrit au concours reçoit une attestation
+                  de participation délivrée par la Session Théâtre de l&apos;UCAEP ainsi qu&apos;une
+                  invitation à la Grande Finale en présentiel, où les finalistes et lauréats sont distingués.
+                </p>
               </div>
-              <p className="text-sm sm:text-base text-ucaep-ink/80 leading-relaxed max-w-2xl">
-                Tout étudiant de l&apos;ENSET de Lokossa inscrit au concours reçoit une attestation
-                de participation délivrée par la Session Théâtre de l&apos;UCAEP ainsi qu&apos;une
-                invitation à la Grande Finale en présentiel, où les finalistes et lauréats sont distingués.
-              </p>
+              <div className="lg:col-span-4 relative z-10 flex lg:justify-end">
+                <Link
+                  to="/parcours"
+                  className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] whitespace-nowrap shrink-0"
+                >
+                  <span>Consulter le parcours et le calendrier</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
-            <div className="lg:col-span-4 relative z-10 flex lg:justify-end">
-              <Link
-                to="/parcours"
-                className="btn-tactile group inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16] whitespace-nowrap shrink-0"
-              >
-                <span>Consulter le parcours et le calendrier</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
+          </EditorialReveal>
         </div>
       </section>
 
@@ -448,10 +450,7 @@ export function ConcoursPage() {
           orbit
           className="hidden md:block absolute -bottom-16 left-12 w-40 h-40 opacity-20"
         />
-        <div
-          className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8"
-          data-reveal
-        >
+        <EditorialReveal className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div className="space-y-3 max-w-xl">
             <EditorialMark folio="Inscription" label="Édition 2026" tone="ivory" />
             <h2 className="font-serif text-3xl sm:text-4xl font-semibold leading-tight">
@@ -478,7 +477,7 @@ export function ConcoursPage() {
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           )}
-        </div>
+        </EditorialReveal>
       </section>
     </div>
   );

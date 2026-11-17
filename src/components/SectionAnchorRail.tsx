@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { motion } from 'motion/react';
+import { EDITORIAL_SPRING } from '../lib/motion';
 
 export interface AnchorSectionItem {
   id: string;
@@ -12,10 +14,11 @@ interface SectionAnchorRailProps {
 
 /**
  * Barre de sommaire éditorial légère placée sous l'en-tête de page
- * (non collante sur mobile afin de respecter le plafond <= 15% de surface fixe).
+ * avec indicateur actif fluide partagé (Motion layoutId).
  */
 export function SectionAnchorRail({ items }: SectionAnchorRailProps) {
   const [activeId, setActiveId] = useState<string>(items[0]?.id || '');
+  const railGroupId = useId();
 
   useEffect(() => {
     if (typeof window === 'undefined' || items.length === 0) return;
@@ -63,25 +66,30 @@ export function SectionAnchorRail({ items }: SectionAnchorRailProps) {
           {items.map((item) => {
             const isActive = item.id === activeId;
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
+                whileTap={{ scale: 0.97 }}
                 onClick={() => jumpTo(item.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
+                className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[2px] border transition-colors whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'bg-ucaep-brown text-ucaep-paper border-ucaep-brown'
+                    ? 'text-ucaep-paper border-ucaep-brown'
                     : 'bg-white/75 text-ucaep-brown border-ucaep-brown/14 hover:border-ucaep-gold'
                 }`}
               >
-                <span
-                  className={`font-mono text-[10px] tabular-nums ${
-                    isActive ? 'text-ucaep-gold' : 'text-ucaep-gold'
-                  }`}
-                >
+                {isActive && (
+                  <motion.span
+                    layoutId={`anchor-active-${railGroupId}`}
+                    aria-hidden="true"
+                    transition={EDITORIAL_SPRING}
+                    className="absolute inset-0 bg-ucaep-brown rounded-[1px]"
+                  />
+                )}
+                <span className="relative z-10 font-mono text-[10px] tabular-nums text-ucaep-gold">
                   {item.num}
                 </span>
-                <span>{item.label}</span>
-              </button>
+                <span className="relative z-10">{item.label}</span>
+              </motion.button>
             );
           })}
         </div>
