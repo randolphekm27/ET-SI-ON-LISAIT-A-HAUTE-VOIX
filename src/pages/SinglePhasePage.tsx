@@ -488,16 +488,17 @@ const PHASE_EDITORIAL_DOSSIERS: Record<string, PhaseEditorialDossier> = {
 
 const PLUME_EXAMPLE_STANZAS: readonly string[] = [
   'Je suis le fils de mon père, né de son sang, dans un village dont le chiendent a fait le nom.',
-  "Non à ces hommes qui croient encore qu'on n'est rien sans eux, \nQue sans eux on n'a pas d'origine. \nEt l'histoire n'est pas celle de ceux qu'on n'écrit pas.",
-  "Je suis Randolphe, \nfils de joie, au cœur pur et plein d'amour. \nAmour de père, amour de mère ne m'ont pas manqué.",
+  "Non à ces hommes qui croient encore qu'on n'est rien sans eux,\nQue sans eux, on n'a ni histoire ni origine.\nCar l'histoire ne se limite pas à ceux qu'on prend la peine d'écrire.",
+  "Je suis Randolphe,\nFils de joie, au cœur pur et plein d'amour.\nL'amour d'un père, l'amour d'une mère : rien de tout cela ne m'a manqué.",
   'Je suis plein. Ne le vois-tu pas assez ?',
-  "Je suis beau, bel et bien, et le zèle me mêle au ciel. \nFidèle à l'appel, je suis l'archer public pour vous dire qui je suis.",
-  "Je suis d'origine sud ; \nle fleuve Ouémé est ma cour de maison. \nJe suis béninois, et les gens qui me voient m'appellent « venu de Chine ».",
-  "Face à cela, je m'intrigue :",
-  "Je me demande à quel moment j'ai passé ce cap,",
-  'Cet "apparentistique" cap. \nDe toute façon, je vous l\'aurais dit : je suis africain, béninois, sudiste. Et je suis là pour gagner.',
-  'Je suis Randolphe',
+  "Je suis beau, bel et bien.\nEt le zèle me mêle au ciel.\nFidèle à mon appel, je suis l'archer public, celui qui prend la parole pour vous dire qui il est.",
+  "Je suis d'origine Sud ;\nLe fleuve Ouémé est ma cour de maison.\nJe suis Béninois, et ceux qui me voient m'appellent parfois « venu de Chine ».",
+  "Face à cela, je m'intrigue :\nÀ quel moment mon apparence a-t-elle commencé à parler à ma place ?\nÀ quel moment ai-je franchi ce cap,\nCet apparentique cap ?",
+  "Mais qu'importe le regard qu'on pose sur moi.\nJe vous l'aurais dit, et je vous le redis :\nJe suis Africain, Béninois, Sudiste.\nEt je suis là pour gagner.",
+  'Je suis Randolphe.',
 ];
+
+const PLUME_EXAMPLE_AUTHOR = 'Randolphe KM';
 
 const PLUME_EXAMPLE_WORD_COUNT = PLUME_EXAMPLE_STANZAS.join(' ')
   .replace(/[«»"?,.;:]/g, ' ')
@@ -1383,7 +1384,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                     <div className="space-y-4 font-serif text-[16.5px] sm:text-[17.5px] leading-[1.82] text-ucaep-ink max-w-prose">
                       {PLUME_EXAMPLE_STANZAS.map((stanza, idx) => {
                         const isFirst = idx === 0;
-                        const isSignature = idx === PLUME_EXAMPLE_STANZAS.length - 1;
+                        const isClosingStatement = idx === PLUME_EXAMPLE_STANZAS.length - 1;
                         return (
                           <p
                             key={idx}
@@ -1392,8 +1393,8 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                                 ? 'first-letter:text-4xl sm:first-letter:text-5xl first-letter:font-serif first-letter:font-semibold first-letter:text-ucaep-brown first-letter:float-left first-letter:mr-2.5 first-letter:mt-1 first-letter:leading-none'
                                 : ''
                             } ${
-                              isSignature
-                                ? 'pt-2 font-semibold text-ucaep-brown tracking-tight'
+                              isClosingStatement
+                                ? 'pt-2 font-bold text-ucaep-brown tracking-tight'
                                 : ''
                             }`}
                           >
@@ -1401,6 +1402,9 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                           </p>
                         );
                       })}
+                      <p className="pt-3 border-t border-ucaep-brown/12 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-ucaep-brown/80">
+                        {PLUME_EXAMPLE_AUTHOR}
+                      </p>
                     </div>
                   </article>
                 </ParallaxDepthCard>
