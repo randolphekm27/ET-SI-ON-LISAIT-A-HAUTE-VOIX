@@ -54,9 +54,12 @@ export function Header() {
   const isPublicRoot =
     location.pathname === '/' ||
     (isSinglePageMode &&
-      !['/gestion', '/mentions-legales', '/politique-de-confidentialite'].includes(
-        location.pathname,
-      ));
+      ![
+        '/depot',
+        '/gestion',
+        '/mentions-legales',
+        '/politique-de-confidentialite',
+      ].includes(location.pathname));
 
   useEffect(() => {
     setMobileOpen(false);
@@ -158,22 +161,63 @@ export function Header() {
             className="hidden lg:flex items-center gap-8 text-[13px] font-medium tracking-[0.04em]"
           >
             {isSinglePageMode
-              ? singlePageNavItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleSectionJump(item.id)}
-                    className={`relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
-                      overDarkHero
-                        ? 'text-[#F7E6C8]/88 hover:text-white'
-                        : overIvoryHero
-                          ? 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
-                          : 'text-ucaep-ink/75 hover:text-ucaep-brown'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))
+              ? singlePageNavItems.map((item) => {
+                  const isDepotRouteItem =
+                    item.id === 'depot-production' && !isPresentielPhase;
+                  if (isDepotRouteItem) {
+                    return (
+                      <NavLink
+                        key={item.id}
+                        to="/depot"
+                        className={({ isActive }) =>
+                          `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
+                            overDarkHero
+                              ? isActive
+                                ? 'text-white font-semibold'
+                                : 'text-[#F7E6C8]/88 hover:text-white'
+                              : overIvoryHero
+                                ? isActive
+                                  ? 'text-[#4E2A1E] font-semibold'
+                                  : 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
+                                : isActive
+                                  ? 'text-ucaep-brown font-semibold'
+                                  : 'text-ucaep-ink/75 hover:text-ucaep-brown'
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <span>{item.label}</span>
+                            {isActive && (
+                              <motion.span
+                                layoutId="nav-active-rule"
+                                aria-hidden="true"
+                                className="absolute inset-x-0 -bottom-0.5 h-[1.5px] bg-ucaep-gold"
+                                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                              />
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    );
+                  }
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSectionJump(item.id)}
+                      className={`relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
+                        overDarkHero
+                          ? 'text-[#F7E6C8]/88 hover:text-white'
+                          : overIvoryHero
+                            ? 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
+                            : 'text-ucaep-ink/75 hover:text-ucaep-brown'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })
               : MULTI_PAGE_NAV_ITEMS.map((item) => (
                   <NavLink
                     key={item.to}
@@ -214,26 +258,38 @@ export function Header() {
           {/* Zone 3: Strictly 1 Primary Action + Mobile Drawer Toggle */}
           <div className="flex items-center gap-3 shrink-0">
             {isSinglePageMode ? (
-              <button
-                type="button"
-                onClick={() =>
-                  handleSectionJump(isPresentielPhase ? 'consignes' : 'depot-production')
-                }
-                className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
-                  overDarkHero || overIvoryHero
-                    ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
-                    : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
-                }`}
-              >
-                <span>
-                  {isPresentielPhase
-                    ? 'Voir les consignes'
-                    : candidateSession
-                      ? 'Mon espace dépôt'
-                      : 'Déposer ma production'}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </button>
+              isPresentielPhase ? (
+                <button
+                  type="button"
+                  onClick={() => handleSectionJump('consignes')}
+                  className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
+                    overDarkHero || overIvoryHero
+                      ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
+                      : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
+                  }`}
+                >
+                  <span>Voir les consignes</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </button>
+              ) : (
+                <Link
+                  to={location.pathname === '/depot' ? '/' : '/depot'}
+                  className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
+                    overDarkHero || overIvoryHero
+                      ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
+                      : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
+                  }`}
+                >
+                  <span>
+                    {location.pathname === '/depot'
+                      ? 'Retour à la phase'
+                      : candidateSession
+                        ? 'Mon espace dépôt'
+                        : 'Déposer ma production'}
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
+              )
             ) : candidateSession ? (
               <Link
                 to="/depot"
@@ -307,26 +363,59 @@ export function Header() {
                 className="divide-y divide-white/10 border-t border-b border-white/10"
               >
                 {isSinglePageMode ? (
-                  singlePageNavItems.map((item, idx) => (
-                    <motion.button
-                      key={item.id}
-                      type="button"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.24,
-                        delay: 0.04 * idx,
-                        ease: EDITORIAL_EASE,
-                      }}
-                      onClick={() => handleSectionJump(item.id)}
-                      className="w-full flex items-baseline justify-between py-4 text-left text-ucaep-paper hover:text-ucaep-gold transition-colors"
-                    >
-                      <span className="font-serif text-3xl font-medium">{item.label}</span>
-                      <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
-                        {item.num}
-                      </span>
-                    </motion.button>
-                  ))
+                  singlePageNavItems.map((item, idx) => {
+                    const isDepotRouteItem =
+                      item.id === 'depot-production' && !isPresentielPhase;
+                    return isDepotRouteItem ? (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.24,
+                          delay: 0.04 * idx,
+                          ease: EDITORIAL_EASE,
+                        }}
+                      >
+                        <NavLink
+                          to="/depot"
+                          className={({ isActive }) =>
+                            `w-full flex items-baseline justify-between py-4 text-left transition-colors ${
+                              isActive
+                                ? 'text-ucaep-gold'
+                                : 'text-ucaep-paper hover:text-ucaep-gold'
+                            }`
+                          }
+                        >
+                          <span className="font-serif text-3xl font-medium">
+                            {item.label}
+                          </span>
+                          <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
+                            {item.num}
+                          </span>
+                        </NavLink>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key={item.id}
+                        type="button"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.24,
+                          delay: 0.04 * idx,
+                          ease: EDITORIAL_EASE,
+                        }}
+                        onClick={() => handleSectionJump(item.id)}
+                        className="w-full flex items-baseline justify-between py-4 text-left text-ucaep-paper hover:text-ucaep-gold transition-colors"
+                      >
+                        <span className="font-serif text-3xl font-medium">{item.label}</span>
+                        <span className="font-mono text-xs tabular-nums text-ucaep-ivory/55">
+                          {item.num}
+                        </span>
+                      </motion.button>
+                    );
+                  })
                 ) : (
                   <>
                     <Link to="/" className="flex items-baseline justify-between py-4 group">
@@ -374,20 +463,24 @@ export function Header() {
 
             <div className="pt-8 space-y-3">
               {isSinglePageMode ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSectionJump(isPresentielPhase ? 'consignes' : 'depot-production')
-                  }
-                  className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
-                >
-                  <span>
-                    {isPresentielPhase
-                      ? 'Consulter le programme'
-                      : 'Accéder à l’espace dépôt'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                isPresentielPhase ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSectionJump('consignes')}
+                    className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                  >
+                    <span>Consulter le programme</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <Link
+                    to="/depot"
+                    className="btn-tactile w-full py-3.5 px-6 inline-flex items-center justify-center gap-2 text-sm font-semibold tracking-wider uppercase rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                  >
+                    <span>Accéder à l’espace dépôt</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )
               ) : candidateSession ? (
                 <>
                   <p className="text-xs text-ucaep-ivory/75">

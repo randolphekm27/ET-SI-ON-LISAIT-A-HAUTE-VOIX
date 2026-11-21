@@ -29,10 +29,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/" element={<SinglePhasePage />} />
-        <Route
-          path="/depot"
-          element={<SinglePhasePage initialAnchor="depot-production" />}
-        />
+        <Route path="/depot" element={<DepotPage />} />
         <Route
           path="/annonces"
           element={<SinglePhasePage initialAnchor="informations" />}

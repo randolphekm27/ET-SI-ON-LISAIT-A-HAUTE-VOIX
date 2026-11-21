@@ -16,6 +16,7 @@ import {
   registrations as registrationsTable,
 } from '../src/db/schema.ts';
 import {
+  getSupabaseAdmin,
   getSupabaseServerDiagnostics,
   isSupabaseAdminConfigured,
 } from './supabase-admin.ts';
@@ -1535,6 +1536,163 @@ export async function updateSiteDisplayRecord(
       return normalized;
     });
   }
+}
+
+const RECONCILE_ACTIVE_EXTERNAL_KEY = 'reconcile_open_active_external_v1';
+let reconcilePromise: Promise<void> | null = null;
+let reconcileDone = false;
+
+async function hasReconcileMarker(): Promise<boolean> {
+  if (reconcileDone) return true;
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
+      .from('site_settings')
+      .select('key')
+      .eq('key', RECONCILE_ACTIVE_EXTERNAL_KEY)
+      .maybeSingle();
+    if (!error && data?.key) {
+      reconcileDone = true;
+      return true;
+    }
+    return false;
+  }
+
+  if (!isCloudSqlConfigured()) {
+    const store = await readJsonStore();
+    const flags = store.settings as unknown as Record<string, unknown>;
+    if (flags?.[RECONCILE_ACTIVE_EXTERNAL_KEY]) {
+      reconcileDone = true;
+      return true;
+    }
+    return false;
+  }
+
+  try {
+    await ensureDbSeeded();
+    const rows = await db
+      .select({ key: appSettingsTable.key })
+      .from(appSettingsTable)
+      .where(eq(appSettingsTable.key, RECONCILE_ACTIVE_EXTERNAL_KEY))
+      .limit(1);
+    if (rows[0]?.key) {
+      reconcileDone = true;
+      return true;
+    }
+    return false;
+  } catch (error) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      const admin = getSupabaseAdmin();
+      const { data } = await admin
+        .from('site_settings')
+        .select('key')
+        .eq('key', RECONCILE_ACTIVE_EXTERNAL_KEY)
+        .maybeSingle();
+      if (data?.key) {
+        reconcileDone = true;
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+async function persistReconcileMarker(): Promise<void> {
+  const payload = { done: true, at: new Date().toISOString() };
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    const admin = getSupabaseAdmin();
+    await admin.from('site_settings').upsert(
+      {
+        key: RECONCILE_ACTIVE_EXTERNAL_KEY,
+        value: payload,
+        updated_at: payload.at,
+      },
+      { onConflict: 'key' },
+    );
+    reconcileDone = true;
+    return;
+  }
+
+  if (!isCloudSqlConfigured()) {
+    await withJsonStoreLock((store) => {
+      (store.settings as unknown as Record<string, unknown>)[RECONCILE_ACTIVE_EXTERNAL_KEY] =
+        payload;
+    });
+    reconcileDone = true;
+    return;
+  }
+
+  try {
+    await ensureDbSeeded();
+    await db
+      .insert(appSettingsTable)
+      .values({
+        key: RECONCILE_ACTIVE_EXTERNAL_KEY,
+        value: payload,
+      })
+      .onConflictDoUpdate({
+        target: appSettingsTable.key,
+        set: { value: payload, updatedAt: new Date() },
+      });
+    reconcileDone = true;
+  } catch (error) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      const admin = getSupabaseAdmin();
+      await admin.from('site_settings').upsert(
+        {
+          key: RECONCILE_ACTIVE_EXTERNAL_KEY,
+          value: payload,
+          updated_at: payload.at,
+        },
+        { onConflict: 'key' },
+      );
+      reconcileDone = true;
+    }
+  }
+}
+
+export async function reconcileActiveExternalFormPhasesOnce(): Promise<void> {
+  if (reconcileDone) return;
+  if (!reconcilePromise) {
+    reconcilePromise = (async () => {
+      try {
+        const alreadyDone = await hasReconcileMarker();
+        if (alreadyDone) return;
+
+        const store = await readStore();
+        const externalForms =
+          normalizeSiteDisplayConfig(store.settings?.siteDisplay).externalForms || {};
+        let touched = false;
+
+        for (const phaseId of ['phase-1', 'phase-2'] as const) {
+          const cfg = externalForms[phaseId];
+          const phase = store.phases.find((p) => p.id === phaseId);
+          if (
+            cfg?.enabled &&
+            phase &&
+            phase.format !== 'En présentiel' &&
+            phase.statusLabel === 'Ouverte' &&
+            phase.isRevealed &&
+            !phase.submissionsOpen
+          ) {
+            await updatePhaseRecord(phaseId, { submissionsOpen: true });
+            touched = true;
+          }
+        }
+
+        if (touched) {
+          cachedStore = null;
+        }
+        await persistReconcileMarker();
+      } catch (err) {
+        reconcilePromise = null;
+        console.warn('reconcileActiveExternalFormPhasesOnce non bloquant:', err);
+      }
+    })();
+  }
+  await reconcilePromise;
 }
 
 export function isAnnouncementPublic(a: Announcement, now = new Date()): boolean {

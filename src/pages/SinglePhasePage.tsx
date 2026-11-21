@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ArrowDown,
   ArrowRight,
@@ -33,7 +34,6 @@ import {
   BrandPatternSurface,
   BrandPatternWave,
 } from '../components/BrandPattern';
-import { DepotSubmissionPanel } from '../components/DepotSubmissionPanel';
 import { EditorialImage } from '../components/EditorialImage';
 import { InteractiveRubric } from '../components/InteractiveRubric';
 import {
@@ -726,8 +726,8 @@ function PlumeDarkStageHero({
               transition={{ duration: 0.5, delay: 0.44, ease: EDITORIAL_EASE }}
               className="flex flex-wrap items-center gap-4 pt-1"
             >
-              <a
-                href="#depot-production"
+              <Link
+                to="/depot"
                 className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#D19A3A] text-[#1A120D] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
               >
                 <span>
@@ -736,7 +736,7 @@ function PlumeDarkStageHero({
                     : 'Accéder à mon espace candidat'}
                 </span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </a>
+              </Link>
               <a
                 href="#comprendre-phase"
                 className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#D19A3A]/75 bg-[#0C0705]/45 text-[#F7E6C8] hover:bg-[#D19A3A]/15 whitespace-nowrap shrink-0"
@@ -1050,19 +1050,27 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 pt-1">
-                  <a
-                    href="#depot-production"
-                    className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]"
-                  >
-                    <span>
-                      {isPresentiel
-                        ? 'Consulter le programme sur le campus'
-                        : activePhase.submissionsOpen
+                  {isPresentiel ? (
+                    <a
+                      href="#depot-production"
+                      className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]"
+                    >
+                      <span>Consulter le programme sur le campus</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <Link
+                      to="/depot"
+                      className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]"
+                    >
+                      <span>
+                        {activePhase.submissionsOpen
                           ? 'Déposer mes productions'
                           : 'Accéder à mon espace candidat'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
                   <a
                     href="#comprendre-phase"
                     className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#4E2A1E]/35 text-[#4E2A1E] hover:bg-[#4E2A1E]/6"
@@ -1823,10 +1831,63 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               </div>
             </div>
           ) : (
-            <DepotSubmissionPanel
-              lockedPhaseId={activePhase.id}
-              hideRegistrationHint
-            />
+            <div className="p-6 sm:p-8 bg-white border border-ucaep-brown/18 rounded-[2px] space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-5">
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                    {activePhase.submissionsOpen
+                      ? `Dépôts ouverts · Phase ${activePhase.number}`
+                      : `Espace candidat · Phase ${activePhase.number}`}
+                  </p>
+                  <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown">
+                    Accéder à la page complète de dépôt
+                  </h3>
+                </div>
+                <Link
+                  to="/depot"
+                  className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs sm:text-sm font-semibold rounded-[2px] bg-[#D19A3A] text-[#1A120D] hover:bg-[#c38c2d] shrink-0"
+                >
+                  <span>Ouvrir la page de dépôt</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+                <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-[2px] space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-gold">
+                    01 · Identification
+                  </p>
+                  <p className="font-semibold text-ucaep-brown">Code UCAEP-2026-XXXX</p>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Connectez-vous avec votre code d&apos;anonymat et votre e-mail d&apos;inscription.
+                  </p>
+                </div>
+                <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-[2px] space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-gold">
+                    02 · Épreuves écrites
+                  </p>
+                  <p className="font-semibold text-ucaep-brown">Texte 1 &amp; Texte 2</p>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Rédigez ou collez vos deux textes en ligne et suivez la relecture du jury.
+                  </p>
+                </div>
+                <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-[2px] space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-gold">
+                    03 · Vidéos face caméra
+                  </p>
+                  <p className="font-semibold text-ucaep-brown">
+                    {siteConfig.externalForms?.[activePhase.id]?.enabled
+                      ? 'Google Form officiel actif'
+                      : 'Envoi sécurisé en ligne'}
+                  </p>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    {deadlineLabel
+                      ? `Clôture prévue le ${deadlineLabel}.`
+                      : 'Jusqu’à 5 minutes par épreuve vidéo, avec votre code candidat.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </section>

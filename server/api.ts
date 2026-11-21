@@ -7,6 +7,7 @@ import {
   createNewsRecord,
   isAnnouncementPublic,
   readStore,
+  reconcileActiveExternalFormPhasesOnce,
   sanitizeAnnouncementForPublic,
   sanitizeNewsForPublic,
   sanitizePhaseForPublic,
@@ -156,6 +157,8 @@ function isValidEmail(email: string): boolean {
 }
 
 export function registerApiRoutes(app: express.Express) {
+  void reconcileActiveExternalFormPhasesOnce().catch(() => {});
+
   // Public API: Announcements (strictly published only)
   app.get('/api/announcements', async (_req, res) => {
     try {
@@ -191,6 +194,7 @@ export function registerApiRoutes(app: express.Express) {
   // Public API: Phases (strips unreleased testDetails)
   app.get('/api/phases', async (_req, res) => {
     try {
+      await reconcileActiveExternalFormPhasesOnce().catch(() => {});
       const store = await readStore();
       res.json({ phases: store.phases.map(sanitizePhaseForPublic) });
     } catch {
@@ -201,6 +205,7 @@ export function registerApiRoutes(app: express.Express) {
   // Public API: Site Display Configuration (Multi-page vs Phase-Focused Single Page)
   app.get('/api/site-config', async (_req, res) => {
     try {
+      await reconcileActiveExternalFormPhasesOnce().catch(() => {});
       const store = await readStore();
       const siteConfig = normalizeSiteDisplayConfig(store.settings?.siteDisplay);
       const rawActive =
@@ -508,6 +513,7 @@ export function registerApiRoutes(app: express.Express) {
         email?: string;
       };
       enforceSubmissionRateLimit(extractClientIp(req), referenceCode);
+      await reconcileActiveExternalFormPhasesOnce().catch(() => {});
       const result = await getCandidateSubmissionStatus({
         referenceCode: referenceCode || '',
         email: email || '',
@@ -710,12 +716,19 @@ export function registerApiRoutes(app: express.Express) {
   // Organizer CMS: Update Phase Reveal, Information & Submissions Settings
   app.patch('/api/admin/phases/:id', requireAdmin, async (req, res) => {
     try {
+      const statusLabel = req.body.statusLabel;
+      const derivedSubmissionsOpen =
+        req.body.submissionsOpen !== undefined
+          ? req.body.submissionsOpen
+          : statusLabel === 'Clôturée' || statusLabel === 'Verrouillée'
+            ? false
+            : undefined;
       const updated = await updatePhaseRecord(String(req.params.id), {
         title: req.body.title,
         shortDescription: req.body.shortDescription,
-        statusLabel: req.body.statusLabel,
+        statusLabel,
         isRevealed: req.body.isRevealed,
-        submissionsOpen: req.body.submissionsOpen,
+        submissionsOpen: derivedSubmissionsOpen,
         submissionDeadline: req.body.submissionDeadline,
         testDetails: req.body.testDetails,
       });
@@ -968,7 +981,25 @@ export function registerApiRoutes(app: express.Express) {
       });
 
       const saved = await updateSiteDisplayRecord(nextConfig);
-      res.json({ siteDisplay: saved });
+      if (enabled) {
+        const currentPhase = existingStore.phases.find((p) => p.id === phaseId);
+        if (
+          currentPhase &&
+          currentPhase.format !== 'En présentiel' &&
+          currentPhase.statusLabel !== 'Clôturée' &&
+          !currentPhase.submissionsOpen
+        ) {
+          await updatePhaseRecord(phaseId, {
+            submissionsOpen: true,
+            ...(currentPhase.statusLabel === 'Verrouillée' ||
+            currentPhase.statusLabel === 'À venir'
+              ? { statusLabel: 'Ouverte', isRevealed: true }
+              : {}),
+          });
+        }
+      }
+      const freshStore = await readStore();
+      res.json({ siteDisplay: saved, phases: freshStore.phases });
     } catch (error) {
       const err = error as Error;
       res.status(500).json({

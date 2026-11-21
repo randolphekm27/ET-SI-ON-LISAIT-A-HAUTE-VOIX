@@ -490,6 +490,8 @@ export function GestionPage() {
     setNotice('');
     setPhaseSavingId(phase.id);
     try {
+      const shouldAutoOpen =
+        !phase.isRevealed && phase.format !== 'En présentiel' && phase.id !== 'phase-3';
       const res = await fetchApiJson<{ phase: CompetitionPhase }>(
         `/api/admin/phases/${phase.id}`,
         {
@@ -498,6 +500,9 @@ export function GestionPage() {
           body: JSON.stringify({
             isRevealed: !phase.isRevealed,
             statusLabel: !phase.isRevealed ? 'Ouverte' : 'Verrouillée',
+            ...(phase.format !== 'En présentiel' && phase.id !== 'phase-3'
+              ? { submissionsOpen: shouldAutoOpen }
+              : {}),
           }),
         },
       );
@@ -511,7 +516,7 @@ export function GestionPage() {
             : prev,
         );
       }
-      await loadOverview();
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
       setNotice(
         !phase.isRevealed
           ? `Consignes de la Phase ${phase.number} rendues visibles.`
@@ -534,12 +539,28 @@ export function GestionPage() {
     setNotice('');
     setPhaseSavingId(phaseId);
     try {
+      const targetPhase = data?.phases.find((p) => p.id === phaseId);
+      const isOnline =
+        targetPhase && targetPhase.format !== 'En présentiel' && phaseId !== 'phase-3';
+      const derivedSubmissionsOpen =
+        statusLabel === 'Clôturée' ||
+        statusLabel === 'Verrouillée' ||
+        statusLabel === 'À venir'
+          ? false
+          : statusLabel === 'Ouverte' && isOnline
+            ? true
+            : undefined;
       const res = await fetchApiJson<{ phase: CompetitionPhase }>(
         `/api/admin/phases/${phaseId}`,
         {
           method: 'PATCH',
           headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ statusLabel }),
+          body: JSON.stringify({
+            statusLabel,
+            ...(derivedSubmissionsOpen !== undefined
+              ? { submissionsOpen: derivedSubmissionsOpen }
+              : {}),
+          }),
         },
       );
       if (res?.phase) {
@@ -552,7 +573,7 @@ export function GestionPage() {
             : prev,
         );
       }
-      await loadOverview();
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
       setNotice('Statut de la phase mis à jour avec succès.');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
@@ -586,7 +607,7 @@ export function GestionPage() {
             : prev,
         );
       }
-      await loadOverview();
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
       setNotice(
         !phase.submissionsOpen
           ? `Dépôts en ligne ouverts pour la Phase ${phase.number}.`
@@ -630,7 +651,7 @@ export function GestionPage() {
             : prev,
         );
       }
-      await loadOverview();
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
       setNotice(
         isoDeadline
           ? 'Date limite de dépôt enregistrée.'
@@ -698,7 +719,7 @@ export function GestionPage() {
             : prev,
         );
       }
-      await loadOverview();
+      await Promise.all([loadOverview(), refreshSiteConfig()]);
       setEditingPhaseId(null);
       setNotice('Informations et consignes de la phase enregistrées.');
     } catch (err) {
@@ -847,19 +868,19 @@ export function GestionPage() {
     setNotice('');
 
     try {
-      const res = await fetchApiJson<{ siteDisplay: SiteDisplayConfig }>(
-        '/api/admin/external-forms',
-        {
-          method: 'PATCH',
-          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({
-            phaseId,
-            enabled: nextEnabled,
-            googleFormUrl: draft.googleFormUrl,
-            instructions: draft.instructions,
-          }),
-        },
-      );
+      const res = await fetchApiJson<{
+        siteDisplay: SiteDisplayConfig;
+        phases?: CompetitionPhase[];
+      }>('/api/admin/external-forms', {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          phaseId,
+          enabled: nextEnabled,
+          googleFormUrl: draft.googleFormUrl,
+          instructions: draft.instructions,
+        }),
+      });
 
       const savedForm: PhaseExternalFormConfig = res.siteDisplay.externalForms?.[
         phaseId
@@ -883,6 +904,7 @@ export function GestionPage() {
         prev
           ? {
               ...prev,
+              phases: res.phases || prev.phases,
               settings: {
                 ...prev.settings,
                 siteDisplay: res.siteDisplay,
@@ -2125,6 +2147,20 @@ export function GestionPage() {
 
                       {phase.format !== 'En présentiel' && phase.id !== 'phase-3' ? (
                         <div className="pt-3 border-t border-ucaep-brown/10 space-y-3">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-ucaep-ink/70 font-medium">
+                              Dépôts en ligne :
+                            </span>
+                            <span
+                              className={`font-semibold ${
+                                phase.submissionsOpen
+                                  ? 'text-ucaep-green'
+                                  : 'text-ucaep-brown/75'
+                              }`}
+                            >
+                              {phase.submissionsOpen ? 'Ouverts' : 'Fermés'}
+                            </span>
+                          </div>
                           <button
                             type="button"
                             disabled={isBusy}
@@ -2506,10 +2542,7 @@ export function GestionPage() {
                     Activer un lien Google Form de soumission
                   </h2>
                   <p className="text-xs text-ucaep-ink/75 leading-relaxed">
-                    Lorsqu&apos;un lien Google Form est activé pour une phase, les
-                    candidats sont redirigés vers ce formulaire pour envoyer leurs vidéos et
-                    fichiers (au lieu du stockage Supabase), tout en soumettant leurs deux
-                    textes écrits (Texte 1 et Texte 2) ici pour validation séquentielle.
+                    Lorsqu&apos;un lien Google Form est activé pour une phase, les dépôts de cette phase sont ouverts et le bouton d&apos;accès au formulaire vidéo reste visible et cliquable en permanence sur la page de dépôt, quel que soit l&apos;avancement des deux textes écrits (Texte 1 et Texte 2).
                   </p>
                 </div>
               </div>
@@ -2566,6 +2599,24 @@ export function GestionPage() {
                             : 'Stockage Supabase'}
                         </span>
                       </div>
+
+                      {liveForm?.enabled && phaseInfo && !phaseInfo.submissionsOpen && (
+                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 space-y-2 leading-relaxed">
+                          <p>
+                            Le formulaire Google Form est actif, mais la saisie des textes (Texte 1 &amp; Texte 2) pour cette phase est encore fermée.
+                          </p>
+                          <button
+                            type="button"
+                            disabled={phaseSavingId === phaseInfo.id}
+                            onClick={() => handleToggleSubmissionsOpen(phaseInfo)}
+                            className="px-3 py-1.5 text-[11px] font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-50"
+                          >
+                            {phaseSavingId === phaseInfo.id
+                              ? 'Ouverture...'
+                              : 'Ouvrir les dépôts maintenant'}
+                          </button>
+                        </div>
+                      )}
 
                       <div className="space-y-1.5">
                         <label

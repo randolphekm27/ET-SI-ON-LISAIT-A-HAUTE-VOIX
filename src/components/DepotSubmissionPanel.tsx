@@ -25,6 +25,7 @@ import {
 } from '../lib/candidate-session';
 import { formatFrenchDate } from '../lib/format';
 import { EDITORIAL_EASE, TACTILE_SPRING } from '../lib/motion';
+import { useSiteConfig } from '../lib/site-config';
 import {
   ACCEPT_ATTRIBUTE,
   MAX_TEXT_SUBMISSION_LENGTH,
@@ -98,6 +99,7 @@ export function DepotSubmissionPanel({
 }: DepotSubmissionPanelProps) {
   const [searchParams] = useSearchParams();
   const tabScopeId = useId();
+  const { siteConfig, phasesSummary, activePhase } = useSiteConfig();
   const initialStored = useMemo(() => getCandidateSession(), []);
   const [referenceCode, setReferenceCode] = useState(
     () =>
@@ -515,6 +517,28 @@ export function DepotSubmissionPanel({
   const isText2Locked = text2Status === 'validated';
   const isFileLocked = displayedFileSubmission?.status === 'validated';
 
+  const activeExternalEntries = useMemo(() => {
+    const forms = siteConfig.externalForms || {};
+    const targetIds = lockedPhaseId
+      ? [lockedPhaseId]
+      : (['phase-1', 'phase-2'] as const);
+    return targetIds
+      .map((id) => {
+        const cfg = forms[id];
+        if (!cfg?.enabled || !cfg.googleFormUrl) return null;
+        const summary = phasesSummary.find((p) => p.id === id);
+        return {
+          phaseId: id,
+          phaseNumber: summary?.number || (id === 'phase-1' ? '01' : '02'),
+          phaseTitle:
+            summary?.title || (id === 'phase-1' ? 'La Plume' : 'La Connaissance'),
+          googleFormUrl: cfg.googleFormUrl,
+          instructions: cfg.instructions || '',
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  }, [siteConfig.externalForms, lockedPhaseId, phasesSummary]);
+
   function renderTextSlotCard(slot: 1 | 2) {
     if (!selectedPhase) return null;
     const isSlot1 = slot === 1;
@@ -752,15 +776,18 @@ export function DepotSubmissionPanel({
       <AnimatePresence mode="wait">
         {/* ÉTAPE 1 : IDENTIFICATION */}
         {!sessionData ? (
-          <motion.form
+          <motion.div
             key="depot-login"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.24, ease: EDITORIAL_EASE }}
-            onSubmit={handleVerifyCandidate}
-            className="p-6 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm space-y-6"
+            className="space-y-4"
           >
+            <form
+              onSubmit={handleVerifyCandidate}
+              className="p-6 sm:p-10 bg-white border border-ucaep-brown/15 rounded-sm space-y-6"
+            >
             <div className="space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ucaep-green">
                 Étape 01 · Identifiez-vous
@@ -772,6 +799,16 @@ export function DepotSubmissionPanel({
                 Saisissez le code d’anonymat reçu à la fin de votre inscription (ex.{' '}
                 <span className="font-mono font-semibold">UCAEP-2026-0001</span>) ainsi que l’adresse e-mail utilisée dans votre dossier.
               </p>
+              {activePhase &&
+                (!lockedPhaseId || activePhase.id === lockedPhaseId) &&
+                activePhase.submissionsOpen && (
+                  <p className="pt-1 text-xs font-medium text-ucaep-green flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      Les dépôts en ligne sont ouverts pour la Phase {activePhase.number} ({activePhase.title}) : connectez-vous ci-dessous pour rédiger et envoyer vos textes.
+                    </span>
+                  </p>
+                )}
             </div>
 
             <AnimatePresence mode="wait">
@@ -853,7 +890,64 @@ export function DepotSubmissionPanel({
                 </p>
               )}
             </div>
-          </motion.form>
+            </form>
+
+            {activeExternalEntries.length > 0 && (
+              <div className="p-6 sm:p-8 bg-white border border-ucaep-gold/60 rounded-[2px] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-ucaep-brown/12 pb-4">
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                      Envoi des vidéos · Google Form officiel actif
+                    </p>
+                    <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                      Déposer vos vidéos d&apos;interprétation
+                    </h3>
+                  </div>
+                  <span className="self-start inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ucaep-green">
+                    <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Accès ouvert</span>
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-ucaep-ink/80 leading-relaxed">
+                  Vous pouvez accéder directement au formulaire Google Form officiel ci-dessous pour envoyer vos vidéos. N&apos;oubliez pas également de vous identifier ci-dessus avec votre code d&apos;anonymat <span className="font-mono font-semibold text-ucaep-brown">UCAEP-2026-XXXX</span> pour soumettre vos deux textes écrits (Texte 1 et Texte 2) et recopier ce même code dans le Google Form.
+                </p>
+
+                <div className="space-y-4">
+                  {activeExternalEntries.map((entry) => (
+                    <div
+                      key={entry.phaseId}
+                      className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-ucaep-brown">
+                          Phase {entry.phaseNumber} — {entry.phaseTitle}
+                        </p>
+                        {entry.instructions && (
+                          <p className="text-xs text-ucaep-ink/78 leading-relaxed">
+                            {entry.instructions}
+                          </p>
+                        )}
+                      </div>
+                      <a
+                        href={entry.googleFormUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors shrink-0"
+                      >
+                        <span>
+                          {activeExternalEntries.length > 1
+                            ? `Ouvrir le Google Form — Phase ${entry.phaseNumber}`
+                            : 'Ouvrir le formulaire Google Form'}
+                        </span>
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
         ) : (
           <motion.div
             key="depot-dashboard"
@@ -932,7 +1026,11 @@ export function DepotSubmissionPanel({
               >
                 {sessionData.phases.map((phase) => {
                   const isSelected = phase.id === selectedPhaseId;
-                  const disabled = !phase.acceptingNow && !phase.existingSubmission;
+                  const phaseHasForm = Boolean(
+                    phase.externalForm?.enabled && phase.externalForm?.googleFormUrl,
+                  );
+                  const disabled =
+                    !phase.acceptingNow && !phase.existingSubmission && !phaseHasForm;
                   const deadlineStr = formatDeadline(phase.submissionDeadline);
                   const existingBadge = phase.existingSubmission
                     ? SUBMISSION_STATUS_BADGE[phase.existingSubmission.status]
@@ -943,15 +1041,15 @@ export function DepotSubmissionPanel({
                       key={phase.id}
                       type="button"
                       role="radio"
-                      whileTap={disabled && !phase.existingSubmission ? undefined : { scale: 0.99 }}
+                      whileTap={disabled ? undefined : { scale: 0.99 }}
                       transition={TACTILE_SPRING}
                       aria-checked={isSelected}
-                      disabled={disabled && !phase.existingSubmission}
+                      disabled={disabled}
                       onClick={() => setSelectedPhaseId(phase.id)}
                       className={`text-left p-5 rounded-sm border transition-colors space-y-2.5 ${
                         isSelected
                           ? 'bg-white border-ucaep-gold ring-2 ring-ucaep-gold/30'
-                          : phase.acceptingNow
+                          : phase.acceptingNow || phaseHasForm
                             ? 'bg-white border-ucaep-brown/20 hover:border-ucaep-brown/45'
                             : 'bg-ucaep-linen/50 border-ucaep-brown/12 opacity-70 cursor-not-allowed'
                       }`}
@@ -963,6 +1061,10 @@ export function DepotSubmissionPanel({
                         {phase.acceptingNow ? (
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-ucaep-green">
                             · Dépôts ouverts
+                          </span>
+                        ) : phaseHasForm ? (
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-ucaep-green">
+                            · Google Form actif
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ucaep-brown/60">
@@ -1029,6 +1131,7 @@ export function DepotSubmissionPanel({
 
               {!selectedPhase.acceptingNow &&
                 !selectedPhase.existingSubmission &&
+                !hasGoogleForm &&
                 selectedPhase.format !== 'En présentiel' && (
                   <div className="p-6 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm text-sm text-ucaep-ink/75">
                     {selectedPhase.closedReason ||
@@ -1046,89 +1149,145 @@ export function DepotSubmissionPanel({
               {/* CAS 1 : GOOGLE FORM ACTIVÉ PAR L'ORGANISATEUR POUR LES VIDÉOS / FICHIERS */}
               {selectedPhase.format !== 'En présentiel' && hasGoogleForm && (
                 <div className="space-y-6">
-                  {selectedPhase.acceptingNow && (
-                    <div className="p-6 sm:p-8 bg-white border-2 border-ucaep-gold/45 rounded-sm space-y-5">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                            Envoi des vidéos &amp; fichiers · Google Form officiel
-                          </p>
-                          <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                            Déposer vos vidéos d&apos;interprétation
-                          </h3>
-                        </div>
-                        <span className="self-start px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider bg-[#F7E6C8]/65 text-ucaep-brown rounded-sm">
-                          Lien actif
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-ucaep-ink/80 leading-relaxed">
-                        {selectedPhase.externalForm?.instructions ||
-                          'Pour cette phase, l’envoi de vos vidéos de lecture et pièces jointes s’effectue exclusivement via le formulaire Google Form officiel ci-dessous. Renseignez-y exactement votre code d’anonymat UCAEP.'}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                        Épreuves écrites · Phase {selectedPhase.number}
                       </p>
-
-                      <div className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/75">
-                            Votre code d&apos;anonymat à indiquer dans le Google Form
-                          </p>
-                          <p className="font-mono text-lg font-bold text-ucaep-brown">
-                            {sessionData.candidate.referenceCode}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyRef(sessionData.candidate.referenceCode)}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-ivory/40 transition-colors self-start sm:self-center"
-                        >
-                          {copiedRef ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-ucaep-green" />
-                              <span>Code copié</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" />
-                              <span>Copier mon code</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="pt-1">
-                        <a
-                          href={selectedPhase.externalForm!.googleFormUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
-                        >
-                          <span>Ouvrir le formulaire Google Form de soumission</span>
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
+                      <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                        1. Déposez vos deux textes (Texte 1 et Texte 2)
+                      </h3>
+                      <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                        Collez et envoyez séparément le texte complet de chaque épreuve ci-dessous. Vérifiez l&apos;ordre (Texte 1 puis Texte 2) : dès qu&apos;un texte est validé par le jury, sa modification est automatiquement bloquée.
+                      </p>
                     </div>
-                  )}
 
-                  {(selectedPhase.acceptingNow || textSub) && (
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                          Épreuves écrites · Phase {selectedPhase.number}
-                        </p>
-                        <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                          Déposez vos deux textes (Texte 1 et Texte 2)
-                        </h3>
-                        <p className="text-xs text-ucaep-ink/75 leading-relaxed">
-                          Collez et envoyez séparément le texte complet de chaque épreuve ci-dessous. Vérifiez l&apos;ordre (Texte 1 puis Texte 2) : dès qu&apos;un texte est validé par le jury, sa modification est automatiquement bloquée.
-                        </p>
-                      </div>
-
+                    {selectedPhase.acceptingNow || textSub ? (
                       <div className="grid grid-cols-1 gap-5">
                         {renderTextSlotCard(1)}
                         {renderTextSlotCard(2)}
                       </div>
+                    ) : (
+                      <div className="p-5 bg-ucaep-linen/65 border border-ucaep-brown/15 rounded-[2px] text-sm text-ucaep-ink/80 leading-relaxed">
+                        {selectedPhase.closedReason ||
+                          'La saisie des textes écrits est actuellement fermée par l’organisation, mais le formulaire vidéo Google Form ci-dessous reste accessible.'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* EN DESSOUS : BLOC VIDÉO GOOGLE FORM (TOUJOURS VISIBLE ET CLIQUABLE DÈS QUE ACTIVÉ) */}
+                  <motion.div
+                    key={`google-form-active-${selectedPhase.id}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.24, ease: EDITORIAL_EASE }}
+                    className="p-6 sm:p-8 bg-white border-2 border-ucaep-gold/65 rounded-[2px] space-y-5"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                          2. Envoi des vidéos · Google Form officiel
+                        </p>
+                        <h3 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                          Déposer vos vidéos d&apos;interprétation
+                        </h3>
+                      </div>
+                      <span className="self-start text-[11px] font-semibold uppercase tracking-wider text-ucaep-green inline-flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Accès ouvert · Obligatoire</span>
+                      </span>
                     </div>
-                  )}
+
+                    <p className="text-sm text-ucaep-ink/82 leading-relaxed">
+                      {selectedPhase.externalForm?.instructions ||
+                        'Transmettez vos vidéos de lecture via le formulaire Google Form officiel ci-dessous en renseignant exactement votre code d’anonymat UCAEP. Ce lien reste accessible dès son activation, quel que soit l’ordre d’envoi avec vos deux textes ci-dessus.'}
+                    </p>
+
+                    <div className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-[2px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown/75">
+                          Votre code d&apos;anonymat à indiquer dans le Google Form
+                        </p>
+                        <p className="font-mono text-lg font-bold text-ucaep-brown">
+                          {sessionData.candidate.referenceCode}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyRef(sessionData.candidate.referenceCode)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-[2px] border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-ivory/40 transition-colors self-start sm:self-center"
+                      >
+                        {copiedRef ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-ucaep-green" />
+                            <span>Code copié</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copier mon code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 pt-1">
+                      <a
+                        href={selectedPhase.externalForm!.googleFormUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[2px] bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors"
+                      >
+                        <span>Ouvrir le formulaire Google Form de soumission</span>
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2 border-t border-ucaep-brown/10">
+                      <div
+                        className={`p-3 rounded-[2px] border flex items-center gap-2 ${
+                          submittedText1
+                            ? 'bg-emerald-50/70 border-ucaep-green/35 text-ucaep-green'
+                            : 'bg-ucaep-paper border-ucaep-brown/15 text-ucaep-ink/78'
+                        }`}
+                      >
+                        {submittedText1 ? (
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        ) : (
+                          <Clock className="w-4 h-4 shrink-0 text-ucaep-gold" />
+                        )}
+                        <span className="font-medium">
+                          Texte 1 : {submittedText1 ? 'Enregistré' : 'À déposer'}
+                        </span>
+                      </div>
+                      <div
+                        className={`p-3 rounded-[2px] border flex items-center gap-2 ${
+                          submittedText2
+                            ? 'bg-emerald-50/70 border-ucaep-green/35 text-ucaep-green'
+                            : 'bg-ucaep-paper border-ucaep-brown/15 text-ucaep-ink/78'
+                        }`}
+                      >
+                        {submittedText2 ? (
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        ) : (
+                          <Clock className="w-4 h-4 shrink-0 text-ucaep-gold" />
+                        )}
+                        <span className="font-medium">
+                          Texte 2 : {submittedText2 ? 'Enregistré' : 'À déposer'}
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-[2px] border border-ucaep-gold/45 bg-[#F7E6C8]/25 text-ucaep-brown flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4 shrink-0 text-ucaep-gold" />
+                        <span className="font-medium">Vidéos : via Google Form</span>
+                      </div>
+                    </div>
+
+                    {!selectedPhase.acceptingNow && (
+                      <p className="text-xs text-ucaep-ink/68 leading-relaxed">
+                        Note : la fenêtre de saisie des textes est actuellement fermée, mais votre lien Google Form officiel reste actif ci-dessus.
+                      </p>
+                    )}
+                  </motion.div>
                 </div>
               )}
 
