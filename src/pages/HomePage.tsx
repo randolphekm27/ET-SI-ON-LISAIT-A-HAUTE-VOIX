@@ -115,13 +115,21 @@ export function HomePage() {
   const plumeY = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [0, 0] : [0, 150]);
   const plumeRotate = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [-4, -4] : [-4, -12]);
 
-  const monsteraX = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [0, 0] : [0, -22]);
-  const monsteraY = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [0, 0] : [0, -28]);
-  const monsteraRotate = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [6, 6] : [6, 1]);
-  const monsteraOpacity = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [1, 1] : [1, 0.2]);
-
-  const portraitY = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? ['0%', '0%'] : ['0%', '-6%']);
-  const portraitScale = useTransform(smoothHeroProgress, [0, 1], shouldReduce ? [1, 1] : [1, 1.035]);
+  const stageBgY = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? ['0%', '0%'] : ['0%', '10%'],
+  );
+  const stageBgScale = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? [1, 1] : [1.02, 1.09],
+  );
+  const heroContentY = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? [0, 0] : [0, -24],
+  );
 
   useEffect(() => {
     let active = true;
@@ -152,95 +160,89 @@ export function HomePage() {
   return (
     <div className="bg-ucaep-paper">
       {/* ================================================================
-          SECTION 1 · HERO IVOIRE ÉDITORIAL + MONSTERA + ONDE BRUNE + PLUME
+          SECTION 1 · HERO PLEIN ÉCRAN SOMBRE THÉÂTRAL SOUS PROJECTEUR DORÉ
           ================================================================ */}
       <section
         ref={heroRef}
-        className="relative z-20 w-full min-h-[100dvh] bg-[radial-gradient(ellipse_at_72%_30%,#FCF5E6_0%,#F7E6C8_58%,#EDD6AF_100%)] text-[#4E2A1E] pt-[132px] sm:pt-[112px] lg:pt-[100px] flex flex-col justify-between paper-grain"
+        className="relative z-20 w-full min-h-[100dvh] bg-[#0C0705] text-[#FBF9F5] pt-[104px] sm:pt-[114px] lg:pt-[108px] flex flex-col justify-between overflow-hidden"
       >
-        {/* SVG clipPath réutilisable pour les angles échancrés du cadre portrait */}
-        <svg aria-hidden="true" width="0" height="0" className="absolute pointer-events-none">
-          <defs>
-            <clipPath id="hero-cartouche-clip" clipPathUnits="objectBoundingBox">
-              <path d="M 0.055 0 L 0.945 0 A 0.055 0.042 0 0 0 1 0.042 L 1 0.958 A 0.055 0.042 0 0 0 0.945 1 L 0.055 1 A 0.055 0.042 0 0 0 0 0.958 L 0 0.042 A 0.055 0.042 0 0 0 0.055 0 Z" />
-            </clipPath>
-          </defs>
-        </svg>
+        {/* Plan 1 : Photographie plein écran en fond + voiles de contraste scéniques */}
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-[#0C0705]">
+          <motion.div
+            style={{ y: stageBgY, scale: stageBgScale }}
+            initial={{ opacity: 0.72, scale: 1.07 }}
+            animate={{ opacity: 1, scale: 1.02 }}
+            transition={{ duration: 1.15, ease: EDITORIAL_EASE }}
+            className="w-full h-full"
+          >
+            <img
+              src="/assets/aistudio/Sous_le_projecteur_dor__f9397ed6.png"
+              alt="Un étudiant de l'ENSET de Lokossa debout sous un projecteur doré, lisant son texte à haute voix face au public"
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover object-[50%_16%] lg:object-[48%_16%] lg:translate-x-[13%] brightness-[0.9] contrast-[1.04]"
+            />
+          </motion.div>
 
-        {/* Plan 1 : Texture papier, bordure africaine discrète à gauche & lumière d'atelier */}
-        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
-          <BrandPatternEdge
-            variant="brown"
-            side="left"
-            className="w-2.5 sm:w-3.5 lg:w-4 opacity-[0.18] mix-blend-multiply"
-          />
+          {/* Voile latéral gauche progressif garantissant une lisibilité parfaite du texte éditorial */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-[radial-gradient(circle_at_84%_22%,rgba(255,252,245,0.48)_0%,rgba(209,154,58,0.06)_44%,transparent_72%)]"
+            className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#0C0705] via-[#0C0705]/74 via-[46%] to-[#0C0705]/18"
           />
-          <BrandPatternCircle
-            variant="brown"
-            tileWidth={120}
-            blendMultiply
-            ring={false}
-            className="hidden md:block bottom-36 left-10 w-32 h-32 opacity-[0.065]"
+          {/* Voile mobile/tablette préservant le lecteur éclairé en haut tout en ancrant le texte en bas */}
+          <div
+            aria-hidden="true"
+            className="lg:hidden absolute inset-0 bg-gradient-to-t from-[#0C0705] via-[#0C0705]/72 via-[50%] to-[#0C0705]/42"
+          />
+          {/* Voile vertical haut/bas discret pour la barre de navigation et la transition vers l'onde brune */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-b from-[#0C0705]/72 via-transparent via-[28%] to-[#0C0705]/88"
+          />
+          {/* Lueur chaude du projecteur doré */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(circle_at_66%_20%,rgba(209,154,58,0.14)_0%,transparent_54%)]"
+          />
+          <BrandPatternEdge
+            variant="gold"
+            side="left"
+            className="w-2.5 sm:w-3 lg:w-3.5 opacity-25"
           />
         </div>
 
-        {/* Plan 2 : ASSET VÉGÉTAL — MONSTERA (angle supérieur gauche, orientée vers le centre) */}
+        {/* Plan 2 : Composition éditoriale au premier plan (alignée à gauche sur le voile sombre) */}
         <motion.div
-          aria-hidden="true"
-          data-scenic-asset="monstera"
-          data-scenic-plan="2"
-          style={{
-            x: monsteraX,
-            y: monsteraY,
-            rotate: monsteraRotate,
-            opacity: monsteraOpacity,
-          }}
-          className="hero-monstera pointer-events-none select-none absolute z-[5] top-[70px] sm:top-[76px] left-3 sm:left-5 lg:left-6 w-24 sm:w-32 lg:w-40 xl:w-44 aspect-[1392/1130]"
+          style={{ y: heroContentY }}
+          className="relative z-20 max-w-[1520px] mx-auto w-full px-5 sm:px-8 lg:px-14 xl:px-20 my-auto pt-44 sm:pt-52 lg:pt-8 pb-6 sm:pb-8 lg:pb-10"
         >
-          <motion.img
-            src={SCENIC_ASSETS.monstera.src}
-            alt=""
-            loading="eager"
-            decoding="async"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.12, ease: EDITORIAL_EASE }}
-            className="scenic-object w-full h-full object-contain"
-          />
-        </motion.div>
-
-        {/* Plan 2 : Composition principale 54% gauche / 46% droite sur toute la largeur éditoriale */}
-        <div className="relative z-20 max-w-[1520px] mx-auto w-full px-5 sm:px-8 lg:px-14 xl:px-20 my-auto py-4 sm:py-6 lg:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,54fr)_minmax(0,46fr)] gap-10 lg:gap-12 xl:gap-16 items-center">
-            {/* COLONNE GAUCHE — Contenu éditorial (ordre strict & copywriting intact) */}
-            <div className="lg:pl-8 xl:pl-12 space-y-6 sm:space-y-7">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+            <div className="lg:col-span-7 xl:col-span-6 space-y-6 sm:space-y-7">
               {/* 1. Contexte du concours */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.08, ease: EDITORIAL_EASE }}
-                className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8C5A0D]"
+                className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D19A3A]"
               >
                 <span>Session Théâtre · UCAEP</span>
-                <span aria-hidden="true" className="h-3 w-px bg-[#4E2A1E]/25" />
-                <span className="text-[#4E2A1E]/85">ENSET de Lokossa — UNSTIM</span>
+                <span aria-hidden="true" className="h-3 w-px bg-[#F7E6C8]/30" />
+                <span className="text-[#F7E6C8]/88">ENSET de Lokossa — UNSTIM</span>
                 <span
                   aria-hidden="true"
-                  className="hidden sm:block h-px flex-1 max-w-[110px] bg-[#4E2A1E]/22 ml-2"
+                  className="hidden sm:block h-px flex-1 max-w-[110px] bg-[#F7E6C8]/24 ml-2"
                 />
               </motion.div>
 
-              {/* 2. Titre monumental (76px–100px desktop) */}
-              <h1 className="font-serif text-[#4E2A1E] tracking-tight">
+              {/* 2. Titre monumental */}
+              <h1 className="font-serif text-[#FBF9F5] tracking-tight">
                 <span className="block overflow-hidden">
                   <motion.span
                     initial={{ y: '104%' }}
                     animate={{ y: '0%' }}
                     transition={{ duration: 0.72, delay: 0.14, ease: EDITORIAL_EASE }}
-                    className="block text-[2.85rem] sm:text-[4.2rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[6rem] font-semibold leading-[0.96]"
+                    className="block text-[2.75rem] sm:text-[4.15rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[5.85rem] font-semibold leading-[0.96]"
                   >
                     Et si on lisait
                   </motion.span>
@@ -250,22 +252,22 @@ export function HomePage() {
                     initial={{ y: '104%' }}
                     animate={{ y: '0%' }}
                     transition={{ duration: 0.72, delay: 0.24, ease: EDITORIAL_EASE }}
-                    className="block text-[2.85rem] sm:text-[4.2rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[6rem] italic font-normal text-[#4E2A1E] leading-[1.03] pr-2"
+                    className="block text-[2.75rem] sm:text-[4.15rem] lg:text-[4.75rem] xl:text-[5.5rem] 2xl:text-[5.85rem] italic font-normal text-[#F7E6C8] leading-[1.03] pr-2"
                   >
                     à haute voix ?
                   </motion.span>
                 </span>
               </h1>
 
-              {/* 3. Description (max 570px) */}
+              {/* 3. Description */}
               <motion.p
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.54, delay: 0.3, ease: EDITORIAL_EASE }}
-                className="text-base sm:text-lg text-[#4E2A1E]/90 max-w-[570px] leading-relaxed font-normal"
+                className="text-base sm:text-lg text-[#F7E6C8]/90 max-w-[565px] leading-relaxed font-normal"
               >
                 Organisé gratuitement par la Session Théâtre de l&apos;UCAEP pour{' '}
-                <strong className="text-[#4E2A1E] font-semibold">
+                <strong className="text-white font-semibold">
                   tous les étudiants de l&apos;ENSET de Lokossa
                 </strong>
                 , ce concours vous accompagne pas à pas : rédiger un texte personnel, vulgariser une notion scientifique en vidéo, puis prendre la parole devant un auditoire.
@@ -279,26 +281,26 @@ export function HomePage() {
                 className="grid grid-cols-3 gap-3 sm:gap-6 max-w-[560px] pt-1 pb-2 text-xs"
               >
                 <div>
-                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                  <dt className="uppercase tracking-[0.18em] text-[#D19A3A] text-[10px] sm:text-[11px] font-semibold">
                     Accès
                   </dt>
-                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1">
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#FBF9F5] font-semibold mt-1">
                     ENSET · Gratuit
                   </dd>
                 </div>
-                <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
-                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                <div className="border-l border-white/18 pl-3 sm:pl-6">
+                  <dt className="uppercase tracking-[0.18em] text-[#D19A3A] text-[10px] sm:text-[11px] font-semibold">
                     Parcours
                   </dt>
-                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#FBF9F5] font-semibold mt-1 tabular-nums">
                     2 en ligne · 1 campus
                   </dd>
                 </div>
-                <div className="border-l border-[#4E2A1E]/18 pl-3 sm:pl-6">
-                  <dt className="uppercase tracking-[0.18em] text-[#8C5A0D] text-[10px] sm:text-[11px] font-semibold">
+                <div className="border-l border-white/18 pl-3 sm:pl-6">
+                  <dt className="uppercase tracking-[0.18em] text-[#D19A3A] text-[10px] sm:text-[11px] font-semibold">
                     Clôture
                   </dt>
-                  <dd className="font-serif text-[15px] sm:text-xl text-[#4E2A1E] font-semibold mt-1 tabular-nums">
+                  <dd className="font-serif text-[15px] sm:text-xl text-[#FBF9F5] font-semibold mt-1 tabular-nums">
                     20 nov. 2026
                   </dd>
                 </div>
@@ -308,7 +310,7 @@ export function HomePage() {
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 0.65, delay: 0.38, ease: EDITORIAL_EASE }}
-                className="origin-left h-px max-w-[560px] bg-[#4E2A1E]/14"
+                className="origin-left h-px max-w-[560px] bg-white/18"
               />
 
               {/* 5. CTA existants et ordre conservé */}
@@ -321,7 +323,7 @@ export function HomePage() {
                 {candidateSession ? (
                   <Link
                     to="/depot"
-                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
+                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#1A120D] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
                   >
                     <span>Accéder à mon espace ({candidateSession.referenceCode})</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -329,7 +331,7 @@ export function HomePage() {
                 ) : (
                   <Link
                     to="/inscription"
-                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#2B160E] hover:bg-[#c58d2e] whitespace-nowrap shrink-0"
+                    className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-[4px] bg-[#D19A3A] text-[#1A120D] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
                   >
                     <span>Commencer mon inscription</span>
                     <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -339,7 +341,7 @@ export function HomePage() {
                 {!candidateSession && hasOpenSubmissions && (
                   <Link
                     to="/depot"
-                    className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold rounded-[4px] border border-[#D19A3A] bg-transparent text-[#4E2A1E] hover:bg-[#D19A3A]/12 whitespace-nowrap shrink-0"
+                    className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold rounded-[4px] border border-[#D19A3A]/75 bg-[#0C0705]/45 text-[#F7E6C8] hover:bg-[#D19A3A]/15 whitespace-nowrap shrink-0"
                   >
                     <span>Déposer une production</span>
                   </Link>
@@ -347,85 +349,31 @@ export function HomePage() {
 
                 <Link
                   to="/parcours"
-                  className="editorial-underline py-2 text-sm font-semibold text-[#4E2A1E] hover:text-[#8C5A0D] transition-colors whitespace-nowrap shrink-0"
+                  className="editorial-underline py-2 text-sm font-semibold text-[#F7E6C8] hover:text-[#D19A3A] transition-colors whitespace-nowrap shrink-0"
                 >
                   Découvrir les 3 phases et les épreuves
                 </Link>
               </motion.div>
             </div>
 
-            {/* COLONNE DROITE — Photographie principale encadrée (style cartouche brun + double filet doré) */}
-            <div className="relative z-10 flex justify-center lg:justify-end">
-              <motion.div
-                initial={{ opacity: 0, clipPath: 'inset(10% 0% 0% 0%)' }}
-                animate={{ opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
-                transition={{ duration: 0.85, delay: 0.06, ease: EDITORIAL_EASE }}
-                className="relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[450px] xl:max-w-[480px] p-2"
-              >
-                {/* Double filet fin brun & or entourant la silhouette échancrée */}
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 400 540"
-                  preserveAspectRatio="none"
-                  className="pointer-events-none absolute inset-0 w-full h-full"
-                >
-                  <path
-                    d="M 24 2 L 376 2 A 22 22 0 0 0 398 24 L 398 516 A 22 22 0 0 0 376 538 L 24 538 A 22 22 0 0 0 2 516 L 2 24 A 22 22 0 0 0 24 2 Z"
-                    fill="none"
-                    stroke="#4E2A1E"
-                    strokeOpacity="0.45"
-                    strokeWidth="1.2"
-                  />
-                  <path
-                    d="M 27 6 L 373 6 A 18 18 0 0 0 394 27 L 394 513 A 18 18 0 0 0 373 534 L 27 534 A 18 18 0 0 0 6 513 L 6 27 A 18 18 0 0 0 27 6 Z"
-                    fill="none"
-                    stroke="#D19A3A"
-                    strokeOpacity="0.7"
-                    strokeWidth="0.9"
-                  />
-                </svg>
-
-                <figure
-                  style={{ clipPath: 'url(#hero-cartouche-clip)' }}
-                  className="relative bg-[#4E2A1E] p-3 sm:p-4 shadow-[0_28px_64px_-22px_rgba(78,42,30,0.4)]"
-                >
-                  <div className="relative aspect-[3/4] max-h-[490px] w-full overflow-hidden bg-[#2E160E]">
-                    <motion.div
-                      style={{ y: portraitY, scale: portraitScale }}
-                      initial={{ scale: 1.07 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.95, ease: EDITORIAL_EASE }}
-                      className="w-full h-full"
-                    >
-                      <EditorialImage
-                        assetKey="portrait"
-                        priority
-                        className="object-cover object-top"
-                      />
-                    </motion.div>
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2E160E]/40 via-transparent to-transparent"
-                    />
-                  </div>
-                  <motion.figcaption
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.42, ease: EDITORIAL_EASE }}
-                    className="pt-3.5 pb-1 px-1.5 flex items-center justify-between text-xs text-[#F7E6C8]"
-                  >
-                    <span className="font-serif italic text-sm text-[#F7E6C8]">
-                      Créer · Transmettre · Rayonner
-                    </span>
-                    <span className="font-mono uppercase tracking-[0.2em] text-[10px] text-[#D19A3A] tabular-nums">
-                      Édition 2026
-                    </span>
-                  </motion.figcaption>
-                </figure>
-              </motion.div>
-            </div>
+            {/* Crédit discret en bas à droite de la scène */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.48, ease: EDITORIAL_EASE }}
+              className="hidden lg:flex lg:col-span-5 xl:col-span-6 justify-end items-end pb-2"
+            >
+              <div className="text-right space-y-1">
+                <p className="font-serif italic text-base text-[#F7E6C8]/90">
+                  Créer · Transmettre · Rayonner
+                </p>
+                <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-[#D19A3A]/90 tabular-nums">
+                  Session Théâtre UCAEP · Édition 2026
+                </p>
+              </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         {/* TRANSITION ORGANIQUE INFÉRIEURE BRUN PROFOND (#4E2A1E) */}
         <div className="relative z-[12] mt-10 lg:mt-12 w-full">

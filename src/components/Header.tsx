@@ -94,7 +94,10 @@ export function Header() {
     };
   }, [mobileOpen]);
 
-  const overIvoryHero = isPublicRoot && !scrolled && !mobileOpen;
+  const overDarkHero =
+    location.pathname === '/' && !isSinglePageMode && !scrolled && !mobileOpen;
+  const overIvoryHero =
+    isSinglePageMode && isPublicRoot && !scrolled && !mobileOpen;
 
   const singlePageNavItems = [
     { id: 'phase-apercu', label: 'La phase', num: '01' },
@@ -124,9 +127,11 @@ export function Header() {
     <>
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-          overIvoryHero
-            ? 'h-16 lg:h-[78px] bg-[#F7E6C8]/88 backdrop-blur-sm border-b border-[#4E2A1E]/14 text-[#4E2A1E]'
-            : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
+          overDarkHero
+            ? 'h-16 lg:h-[82px] bg-gradient-to-b from-[#0C0705]/88 via-[#0C0705]/58 to-[#0C0705]/10 backdrop-blur-[3px] border-b border-white/12 text-[#FBF9F5]'
+            : overIvoryHero
+              ? 'h-16 lg:h-[78px] bg-[#F7E6C8]/88 backdrop-blur-sm border-b border-[#4E2A1E]/14 text-[#4E2A1E]'
+              : 'h-16 bg-ucaep-paper/95 backdrop-blur-md border-b border-ucaep-brown/14 text-ucaep-ink'
         }`}
       >
         <div className="w-full h-full px-4 sm:px-8 lg:px-14 flex items-center justify-between gap-8">
@@ -136,7 +141,7 @@ export function Header() {
             aria-label="Accueil — Et si on lisait à haute voix ?"
             className="whitespace-nowrap shrink-0 focus-visible:rounded-sm"
           >
-            <UcaepMark light={false} />
+            <UcaepMark light={overDarkHero} />
           </Link>
 
           {/* Zone 2: Navigation Links (Multi-page routes OR Single-page section anchors) */}
@@ -165,13 +170,17 @@ export function Header() {
                     to={item.to}
                     className={({ isActive }) =>
                       `relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
-                        overIvoryHero
+                        overDarkHero
                           ? isActive
-                            ? 'text-[#4E2A1E] font-semibold'
-                            : 'text-[#4E2A1E]/80 hover:text-[#4E2A1E]'
-                          : isActive
-                            ? 'text-ucaep-brown font-semibold'
-                            : 'text-ucaep-ink/75 hover:text-ucaep-brown'
+                            ? 'text-white font-semibold'
+                            : 'text-[#F7E6C8]/85 hover:text-white'
+                          : overIvoryHero
+                            ? isActive
+                              ? 'text-[#4E2A1E] font-semibold'
+                              : 'text-[#4E2A1E]/80 hover:text-[#4E2A1E]'
+                            : isActive
+                              ? 'text-ucaep-brown font-semibold'
+                              : 'text-ucaep-ink/75 hover:text-ucaep-brown'
                       }`
                     }
                   >
@@ -220,8 +229,8 @@ export function Header() {
                 to="/depot"
                 title={`Dossier ${candidateSession.referenceCode}`}
                 className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
-                  overIvoryHero
-                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
+                  overDarkHero || overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
                     : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
                 }`}
               >
@@ -232,8 +241,8 @@ export function Header() {
               <Link
                 to="/inscription"
                 className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
-                  overIvoryHero
-                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
+                  overDarkHero || overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
                     : 'bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]'
                 }`}
               >
@@ -248,9 +257,11 @@ export function Header() {
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               className={`lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-sm transition-colors active:scale-95 ${
-                overIvoryHero
-                  ? 'text-[#4E2A1E] hover:bg-[#4E2A1E]/8'
-                  : 'text-ucaep-brown hover:bg-ucaep-brown/8'
+                overDarkHero
+                  ? 'text-[#F7E6C8] hover:bg-white/10'
+                  : overIvoryHero
+                    ? 'text-[#4E2A1E] hover:bg-[#4E2A1E]/8'
+                    : 'text-ucaep-brown hover:bg-ucaep-brown/8'
               }`}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

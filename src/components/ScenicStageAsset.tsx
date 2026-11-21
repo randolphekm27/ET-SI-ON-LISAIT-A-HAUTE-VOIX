@@ -53,12 +53,7 @@ const MOTION_PRESETS: Record<
   livres: { x: [0, 0], y: [16, -20], rotate: [-1.5, 1.5], opacity: [0.95, 1] },
 };
 
-/**
- * Conteneur Motion pour les assets PNG scénographiques.
- * Garantit : aspect-ratio intact, object-fit: contain, z-index documenté,
- * parallaxe fluide accélérée GPU et respect de prefers-reduced-motion.
- */
-export function ScenicStageAsset({
+function AnimatedScenicStageAsset({
   assetKey,
   plan = 3,
   motionId,
@@ -66,7 +61,7 @@ export function ScenicStageAsset({
   className = '',
   imgClassName = '',
   priority = false,
-}: ScenicStageAssetProps) {
+}: ScenicStageAssetProps & { motionId: ScenicMotionKind }) {
   const ref = useRef<HTMLDivElement>(null);
   const shouldReduce = useReducedMotion();
   const meta = SCENIC_ASSETS[assetKey];
@@ -82,26 +77,18 @@ export function ScenicStageAsset({
     mass: 0.45,
   });
 
-  const preset = motionId ? MOTION_PRESETS[motionId] : null;
-  const x = useTransform(
-    smooth,
-    [0, 1],
-    preset && !shouldReduce ? preset.x : [0, 0],
-  );
-  const y = useTransform(
-    smooth,
-    [0, 1],
-    preset && !shouldReduce ? preset.y : [0, 0],
-  );
+  const preset = MOTION_PRESETS[motionId];
+  const x = useTransform(smooth, [0, 1], !shouldReduce ? preset.x : [0, 0]);
+  const y = useTransform(smooth, [0, 1], !shouldReduce ? preset.y : [0, 0]);
   const rotate = useTransform(
     smooth,
     [0, 1],
-    preset && !shouldReduce ? preset.rotate : [0, 0],
+    !shouldReduce ? preset.rotate : [0, 0],
   );
   const opacity = useTransform(
     smooth,
     [0, 0.55],
-    preset && !shouldReduce ? preset.opacity : [1, 1],
+    !shouldReduce ? preset.opacity : [1, 1],
   );
 
   return (
@@ -110,7 +97,7 @@ export function ScenicStageAsset({
       aria-hidden="true"
       data-scenic-asset={assetKey}
       data-scenic-plan={plan}
-      style={preset ? { x, y, rotate, opacity } : undefined}
+      style={{ x, y, rotate, opacity }}
       className={`pointer-events-none select-none ${planClass} ${meta.aspect} ${className}`}
     >
       <div className={`w-full h-full ${flipX ? '-scale-x-100' : ''}`}>
@@ -123,5 +110,46 @@ export function ScenicStageAsset({
         />
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * Conteneur Motion pour les assets PNG scénographiques.
+ * Garantit : aspect-ratio intact, object-fit: contain, z-index documenté,
+ * parallaxe fluide accélérée GPU et respect de prefers-reduced-motion.
+ */
+export function ScenicStageAsset(props: ScenicStageAssetProps) {
+  if (props.motionId) {
+    return <AnimatedScenicStageAsset {...props} motionId={props.motionId} />;
+  }
+
+  const {
+    assetKey,
+    plan = 3,
+    flipX = false,
+    className = '',
+    imgClassName = '',
+    priority = false,
+  } = props;
+  const meta = SCENIC_ASSETS[assetKey];
+  const planClass = PLAN_Z_CLASSES[plan];
+
+  return (
+    <div
+      aria-hidden="true"
+      data-scenic-asset={assetKey}
+      data-scenic-plan={plan}
+      className={`pointer-events-none select-none ${planClass} ${meta.aspect} ${className}`}
+    >
+      <div className={`w-full h-full ${flipX ? '-scale-x-100' : ''}`}>
+        <img
+          src={meta.src}
+          alt=""
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          className={`scenic-object w-full h-full object-contain ${imgClassName}`}
+        />
+      </div>
+    </div>
   );
 }
