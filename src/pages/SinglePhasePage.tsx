@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDown,
   ArrowRight,
@@ -18,10 +18,18 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'motion/react';
 import {
   BrandPatternBand,
   BrandPatternCircle,
+  BrandPatternEdge,
   BrandPatternSurface,
   BrandPatternWave,
 } from '../components/BrandPattern';
@@ -42,6 +50,7 @@ import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { EDITORIAL_EASE, EDITORIAL_SPRING } from '../lib/motion';
 import { useSiteConfig } from '../lib/site-config';
+import type { CompetitionPhase, PublicSiteConfigPayload } from '../types/competition';
 
 interface PhaseEpreuveCard {
   number: string;
@@ -509,6 +518,324 @@ function formatDeadline(iso?: string | null): string | null {
   }).format(date);
 }
 
+function PlumeDarkStageHero({
+  activePhase,
+  phasesSummary,
+  deadlineLabel,
+  hasNotice,
+  customNotice,
+}: {
+  activePhase: CompetitionPhase;
+  phasesSummary: PublicSiteConfigPayload['phasesSummary'];
+  deadlineLabel: string | null;
+  hasNotice: boolean;
+  customNotice: string;
+}) {
+  const heroRef = useRef<HTMLElement>(null);
+  const shouldReduce = useReducedMotion();
+
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const smoothHeroProgress = useSpring(heroProgress, {
+    stiffness: 160,
+    damping: 28,
+    mass: 0.45,
+  });
+
+  const stageBgY = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? ['0%', '0%'] : ['0%', '10%'],
+  );
+  const stageBgScale = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? [1, 1] : [1.02, 1.09],
+  );
+  const heroContentY = useTransform(
+    smoothHeroProgress,
+    [0, 1],
+    shouldReduce ? [0, 0] : [0, -24],
+  );
+
+  return (
+    <section
+      id="phase-apercu"
+      ref={heroRef}
+      className="relative z-20 w-full min-h-[100dvh] bg-[#0C0705] text-[#FBF9F5] pt-[104px] sm:pt-[114px] lg:pt-[108px] flex flex-col justify-between overflow-hidden"
+    >
+      {/* Photographie scénique plein écran en fond + voiles de contraste */}
+      <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-[#0C0705]">
+        <motion.div
+          style={{ y: stageBgY, scale: stageBgScale }}
+          initial={{ opacity: 0.72, scale: 1.07 }}
+          animate={{ opacity: 1, scale: 1.02 }}
+          transition={{ duration: 1.15, ease: EDITORIAL_EASE }}
+          className="w-full h-full"
+        >
+          <img
+            src="/assets/aistudio/Sous_le_projecteur_dor__f9397ed6.png"
+            alt="Un étudiant de l'ENSET de Lokossa debout sous un projecteur doré, lisant son texte à haute voix"
+            loading="eager"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover object-[50%_16%] lg:object-[48%_16%] lg:translate-x-[13%] brightness-[0.9] contrast-[1.04]"
+          />
+        </motion.div>
+
+        <div
+          aria-hidden="true"
+          className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#0C0705] via-[#0C0705]/74 via-[46%] to-[#0C0705]/18"
+        />
+        <div
+          aria-hidden="true"
+          className="lg:hidden absolute inset-0 bg-gradient-to-t from-[#0C0705] via-[#0C0705]/72 via-[50%] to-[#0C0705]/42"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-b from-[#0C0705]/72 via-transparent via-[28%] to-[#0C0705]/88"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_66%_20%,rgba(209,154,58,0.14)_0%,transparent_54%)]"
+        />
+        <BrandPatternEdge
+          variant="gold"
+          side="left"
+          className="w-2.5 sm:w-3 lg:w-3.5 opacity-25"
+        />
+      </div>
+
+      {/* Contenu éditorial sur la zone sombre gauche */}
+      <motion.div
+        style={{ y: heroContentY }}
+        className="relative z-20 max-w-[1520px] mx-auto w-full px-5 sm:px-8 lg:px-14 xl:px-20 my-auto pt-44 sm:pt-52 lg:pt-8 pb-6 sm:pb-8 lg:pb-10"
+      >
+        {hasNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EDITORIAL_EASE }}
+            className="mb-8 px-4 py-3 bg-[#1A120D]/85 border border-[#D19A3A]/35 rounded-sm text-xs sm:text-sm text-[#F7E6C8] flex flex-wrap items-center justify-between gap-3 max-w-3xl"
+          >
+            <p className="font-medium leading-relaxed">{customNotice}</p>
+            <a
+              href="#informations"
+              className="text-xs font-semibold underline text-[#D19A3A] hover:text-white shrink-0"
+            >
+              Consulter les annonces
+            </a>
+          </motion.div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+          <div className="lg:col-span-7 xl:col-span-6 space-y-6 sm:space-y-7">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08, ease: EDITORIAL_EASE }}
+              className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D19A3A]"
+            >
+              <span>Session Théâtre UCAEP · ENSET de Lokossa</span>
+              <span aria-hidden="true" className="h-3 w-px bg-[#F7E6C8]/30" />
+              <span className="text-[#F7E6C8]/90">
+                Phase {activePhase.number} — {activePhase.statusLabel}
+              </span>
+            </motion.div>
+
+            <h1 className="font-serif text-[#FBF9F5] tracking-tight text-balance">
+              <span className="block overflow-hidden">
+                <motion.span
+                  initial={{ y: '104%' }}
+                  animate={{ y: '0%' }}
+                  transition={{ duration: 0.72, delay: 0.14, ease: EDITORIAL_EASE }}
+                  className="block text-[2.75rem] sm:text-[4.15rem] lg:text-[4.75rem] xl:text-[5.25rem] font-semibold leading-[0.98]"
+                >
+                  {activePhase.title}
+                </motion.span>
+              </span>
+              <span className="block overflow-hidden mt-2">
+                <motion.span
+                  initial={{ y: '104%' }}
+                  animate={{ y: '0%' }}
+                  transition={{ duration: 0.72, delay: 0.24, ease: EDITORIAL_EASE }}
+                  className="block text-xl sm:text-3xl lg:text-[2.15rem] italic font-normal text-[#F7E6C8] leading-[1.12] pr-2"
+                >
+                  Et si on lisait à haute voix ? — Édition 2026
+                </motion.span>
+              </span>
+            </h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.54, delay: 0.3, ease: EDITORIAL_EASE }}
+              className="text-base sm:text-lg text-[#F7E6C8]/90 max-w-[565px] leading-relaxed font-normal"
+            >
+              {activePhase.shortDescription}
+            </motion.p>
+
+            {/* Repères essentiels */}
+            <motion.dl
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.52, delay: 0.36, ease: EDITORIAL_EASE }}
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-t border-b border-white/18 tabular-nums max-w-[640px]"
+            >
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#D19A3A]">
+                  Format
+                </dt>
+                <dd className="text-sm font-semibold text-[#FBF9F5] mt-1">
+                  {activePhase.format}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#D19A3A]">
+                  Statut
+                </dt>
+                <dd className="text-sm font-semibold text-[#F7E6C8] mt-1">
+                  {activePhase.statusLabel}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#D19A3A]">
+                  Temps max
+                </dt>
+                <dd className="text-sm font-semibold text-[#FBF9F5] mt-1">
+                  5 min · / 20 pts
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#D19A3A]">
+                  Clôture dépôt
+                </dt>
+                <dd className="text-sm font-semibold text-[#FBF9F5] mt-1">
+                  {deadlineLabel ||
+                    (activePhase.submissionsOpen ? 'Dépôts ouverts' : 'Voir calendrier')}
+                </dd>
+              </div>
+            </motion.dl>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.44, ease: EDITORIAL_EASE }}
+              className="flex flex-wrap items-center gap-4 pt-1"
+            >
+              <a
+                href="#depot-production"
+                className="btn-tactile group inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#D19A3A] text-[#1A120D] hover:bg-[#dfb05c] whitespace-nowrap shrink-0"
+              >
+                <span>
+                  {activePhase.submissionsOpen
+                    ? 'Déposer mes productions'
+                    : 'Accéder à mon espace candidat'}
+                </span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </a>
+              <a
+                href="#comprendre-phase"
+                className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#D19A3A]/75 bg-[#0C0705]/45 text-[#F7E6C8] hover:bg-[#D19A3A]/15 whitespace-nowrap shrink-0"
+              >
+                <span>Consulter les consignes</span>
+                <ArrowDown className="w-3.5 h-3.5" />
+              </a>
+              {activePhase.isRevealed && (
+                <a
+                  href="#exemple-texte"
+                  className="editorial-underline py-2 text-xs sm:text-sm font-semibold text-[#F7E6C8] hover:text-[#D19A3A] transition-colors whitespace-nowrap shrink-0"
+                >
+                  Lire l&apos;exemple de texte
+                </a>
+              )}
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.48, ease: EDITORIAL_EASE }}
+            className="hidden lg:flex lg:col-span-5 xl:col-span-6 justify-end items-end pb-2"
+          >
+            <div className="text-right space-y-1">
+              <p className="font-serif italic text-base text-[#F7E6C8]/90">
+                Phase {activePhase.number} · {activePhase.title}
+              </p>
+              <p className="font-mono uppercase tracking-[0.22em] text-[10px] text-[#D19A3A]/90 tabular-nums">
+                Session Théâtre UCAEP · Édition 2026
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Transition organique inférieure brun profond (#4E2A1E) */}
+      <div className="relative z-[12] mt-8 lg:mt-10 w-full">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 1440 84"
+          preserveAspectRatio="none"
+          className="block w-full h-10 sm:h-12 lg:h-[64px] -mb-px pointer-events-none select-none"
+        >
+          <path
+            d="M0,14 C240,54 520,58 840,46 C1120,35 1295,12 1440,26 L1440,84 L0,84 Z"
+            fill="#9C5B25"
+            fillOpacity="0.72"
+          />
+          <path
+            d="M0,28 C255,66 530,54 845,48 C1130,42 1300,18 1440,34 L1440,84 L0,84 Z"
+            fill="#4E2A1E"
+          />
+          <path
+            d="M0,28 C255,66 530,54 845,48 C1130,42 1300,18 1440,34"
+            fill="none"
+            stroke="#D19A3A"
+            strokeOpacity="0.45"
+            strokeWidth="1.2"
+          />
+        </svg>
+
+        <div className="relative bg-[#4E2A1E] text-[#F7E6C8] overflow-hidden">
+          <BrandPatternSurface
+            variant="gold"
+            tileWidth={190}
+            opacityClass="opacity-[0.06]"
+          />
+          <div className="relative z-10 max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 tabular-nums">
+              {phasesSummary.map((p) => {
+                const isCurrent = p.id === activePhase.id;
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-2 ${
+                      isCurrent ? 'text-ucaep-gold font-semibold' : 'text-[#F7E6C8]/60'
+                    }`}
+                  >
+                    <span className="font-mono">{p.number}</span>
+                    <span>{p.title}</span>
+                    {isCurrent && (
+                      <span className="text-[10px] uppercase tracking-widest text-[#FBF9F5]/85">
+                        (phase active)
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[#F7E6C8]/75">
+              Guide complet du candidat : consignes, préparation, barème et dépôt réunis ici.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   const { siteConfig, activePhase, phasesSummary, announcements } = useSiteConfig();
   const guideTabGroupId = useId();
@@ -609,191 +936,201 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
   return (
     <div className="bg-ucaep-paper text-ucaep-ink">
       {/* SECTION 1 : HERO PLEIN ÉCRAN CENTRÉ SUR LA PHASE ACTIVE */}
-      <section
-        id="phase-apercu"
-        className="relative min-h-[100dvh] flex flex-col justify-between bg-[#F7E6C8] text-[#4E2A1E] pt-24 lg:pt-28 overflow-hidden"
-      >
-        <BrandPatternSurface
-          variant="gold"
-          tileWidth={210}
-          opacityClass="opacity-[0.06]"
-          blendMultiply
+      {activePhase.id === 'phase-1' ? (
+        <PlumeDarkStageHero
+          activePhase={activePhase}
+          phasesSummary={phasesSummary}
+          deadlineLabel={deadlineLabel}
+          hasNotice={hasNotice}
+          customNotice={siteConfig.customNotice || ''}
         />
-        <BrandPatternCircle
-          variant="gold"
-          tileWidth={140}
-          blendMultiply
-          doubleRing
-          orbit
-          className="hidden lg:block -top-24 -right-16 w-72 h-72 opacity-[0.09]"
-        />
+      ) : (
+        <section
+          id="phase-apercu"
+          className="relative min-h-[100dvh] flex flex-col justify-between bg-[#F7E6C8] text-[#4E2A1E] pt-24 lg:pt-28 overflow-hidden"
+        >
+          <BrandPatternSurface
+            variant="gold"
+            tileWidth={210}
+            opacityClass="opacity-[0.06]"
+            blendMultiply
+          />
+          <BrandPatternCircle
+            variant="gold"
+            tileWidth={140}
+            blendMultiply
+            doubleRing
+            orbit
+            className="hidden lg:block -top-24 -right-16 w-72 h-72 opacity-[0.09]"
+          />
 
-        <div className="relative z-10 w-full max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 my-auto py-8 lg:py-12">
-          {hasNotice && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EDITORIAL_EASE }}
-              className="mb-8 px-4 py-3 bg-[#FBF9F5]/90 border border-[#4E2A1E]/20 rounded-sm text-xs sm:text-sm text-[#4E2A1E] flex flex-wrap items-center justify-between gap-3"
-            >
-              <p className="font-medium leading-relaxed">{siteConfig.customNotice}</p>
-              <a
-                href="#informations"
-                className="text-xs font-semibold underline hover:text-ucaep-green shrink-0"
+          <div className="relative z-10 w-full max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 my-auto py-8 lg:py-12">
+            {hasNotice && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EDITORIAL_EASE }}
+                className="mb-8 px-4 py-3 bg-[#FBF9F5]/90 border border-[#4E2A1E]/20 rounded-sm text-xs sm:text-sm text-[#4E2A1E] flex flex-wrap items-center justify-between gap-3"
               >
-                Consulter les annonces
-              </a>
-            </motion.div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            {/* Colonne gauche */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.56, ease: EDITORIAL_EASE }}
-              className="lg:col-span-7 space-y-6"
-            >
-              <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#4E2A1E]/80">
-                <span>Session Théâtre UCAEP · ENSET de Lokossa</span>
-                <span aria-hidden="true">·</span>
-                <span className="text-ucaep-green">
-                  Phase {activePhase.number} — {activePhase.statusLabel}
-                </span>
-              </div>
-
-              <h1 className="font-serif text-4xl sm:text-6xl lg:text-[4.25rem] font-semibold tracking-tight leading-[1.03] text-[#4E2A1E] text-balance">
-                {activePhase.title}
-                <span className="block text-2xl sm:text-3xl lg:text-4xl font-normal italic text-[#4E2A1E]/80 mt-2">
-                  Et si on lisait à haute voix ? — Édition 2026
-                </span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-[#171412]/85 leading-relaxed max-w-prose">
-                {activePhase.shortDescription}
-              </p>
-
-              {/* Repères essentiels sans répétition */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-t border-b border-[#4E2A1E]/18 tabular-nums">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
-                    Format
-                  </p>
-                  <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
-                    {activePhase.format}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
-                    Statut
-                  </p>
-                  <p className="text-sm font-semibold text-ucaep-green mt-1">
-                    {activePhase.statusLabel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
-                    Temps max
-                  </p>
-                  <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
-                    5 min · / 20 pts
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
-                    {isPresentiel ? 'Lieu' : 'Clôture dépôt'}
-                  </p>
-                  <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
-                    {isPresentiel
-                      ? 'ENSET de Lokossa'
-                      : deadlineLabel ||
-                        (activePhase.submissionsOpen ? 'Dépôts ouverts' : 'Voir calendrier')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <p className="font-medium leading-relaxed">{siteConfig.customNotice}</p>
                 <a
-                  href="#depot-production"
-                  className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]"
+                  href="#informations"
+                  className="text-xs font-semibold underline hover:text-ucaep-green shrink-0"
                 >
-                  <span>
-                    {isPresentiel
-                      ? 'Consulter le programme sur le campus'
-                      : activePhase.submissionsOpen
-                        ? 'Déposer mes productions'
-                        : 'Accéder à mon espace candidat'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
+                  Consulter les annonces
                 </a>
-                <a
-                  href="#comprendre-phase"
-                  className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#4E2A1E]/35 text-[#4E2A1E] hover:bg-[#4E2A1E]/6"
-                >
-                  <span>Consulter les consignes</span>
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
-            {/* Colonne droite : Photographie documentaire */}
-            <div className="lg:col-span-5">
-              <div className="relative bg-[#4E2A1E] p-3 sm:p-4 rounded-sm shadow-xl">
-                <PhotographicPlate
-                  immediate
-                  parallaxAmount={8}
-                  className="aspect-[4/5] max-h-[540px] w-full rounded-[2px]"
-                >
-                  <EditorialImage
-                    assetKey={activePhase.imageKey}
-                    priority
-                    className="w-full h-full object-cover"
-                  />
-                </PhotographicPlate>
-                <div className="pt-3.5 px-1 flex items-center justify-between text-xs text-[#F7E6C8]/85">
-                  <span className="font-serif italic">
-                    Phase {activePhase.number} · {activePhase.title}
-                  </span>
-                  <span className="font-mono uppercase tracking-widest text-[10px] text-ucaep-gold">
-                    ENSET Lokossa
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+              {/* Colonne gauche */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.56, ease: EDITORIAL_EASE }}
+                className="lg:col-span-7 space-y-6"
+              >
+                <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#4E2A1E]/80">
+                  <span>Session Théâtre UCAEP · ENSET de Lokossa</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-ucaep-green">
+                    Phase {activePhase.number} — {activePhase.statusLabel}
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Bandeau inférieur brun profond : repère des 3 phases */}
-        <div className="relative z-10 bg-[#4E2A1E] text-[#F7E6C8] border-t border-ucaep-gold/25">
-          <BrandPatternBand variant="obsidian" tileWidth={140} className="h-2 opacity-80" />
-          <div className="max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 tabular-nums">
-              {phasesSummary.map((p) => {
-                const isCurrent = p.id === activePhase.id;
-                return (
-                  <div
-                    key={p.id}
-                    className={`flex items-center gap-2 ${
-                      isCurrent ? 'text-ucaep-gold font-semibold' : 'text-[#F7E6C8]/60'
-                    }`}
-                  >
-                    <span className="font-mono">{p.number}</span>
-                    <span>{p.title}</span>
-                    {isCurrent && (
-                      <span className="text-[10px] uppercase tracking-widest text-[#FBF9F5]/85">
-                        (phase active)
-                      </span>
-                    )}
+                <h1 className="font-serif text-4xl sm:text-6xl lg:text-[4.25rem] font-semibold tracking-tight leading-[1.03] text-[#4E2A1E] text-balance">
+                  {activePhase.title}
+                  <span className="block text-2xl sm:text-3xl lg:text-4xl font-normal italic text-[#4E2A1E]/80 mt-2">
+                    Et si on lisait à haute voix ? — Édition 2026
+                  </span>
+                </h1>
+
+                <p className="text-base sm:text-lg text-[#171412]/85 leading-relaxed max-w-prose">
+                  {activePhase.shortDescription}
+                </p>
+
+                {/* Repères essentiels sans répétition */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-t border-b border-[#4E2A1E]/18 tabular-nums">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
+                      Format
+                    </p>
+                    <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
+                      {activePhase.format}
+                    </p>
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
+                      Statut
+                    </p>
+                    <p className="text-sm font-semibold text-ucaep-green mt-1">
+                      {activePhase.statusLabel}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
+                      Temps max
+                    </p>
+                    <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
+                      5 min · / 20 pts
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#4E2A1E]/65">
+                      {isPresentiel ? 'Lieu' : 'Clôture dépôt'}
+                    </p>
+                    <p className="text-sm font-semibold text-[#4E2A1E] mt-1">
+                      {isPresentiel
+                        ? 'ENSET de Lokossa'
+                        : deadlineLabel ||
+                          (activePhase.submissionsOpen ? 'Dépôts ouverts' : 'Voir calendrier')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <a
+                    href="#depot-production"
+                    className="btn-tactile inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] bg-[#4E2A1E] text-[#FBF9F5] hover:bg-[#3a1f16]"
+                  >
+                    <span>
+                      {isPresentiel
+                        ? 'Consulter le programme sur le campus'
+                        : activePhase.submissionsOpen
+                          ? 'Déposer mes productions'
+                          : 'Accéder à mon espace candidat'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <a
+                    href="#comprendre-phase"
+                    className="btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider rounded-[4px] border border-[#4E2A1E]/35 text-[#4E2A1E] hover:bg-[#4E2A1E]/6"
+                  >
+                    <span>Consulter les consignes</span>
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </motion.div>
+
+              {/* Colonne droite : Photographie documentaire */}
+              <div className="lg:col-span-5">
+                <div className="relative bg-[#4E2A1E] p-3 sm:p-4 rounded-sm shadow-xl">
+                  <PhotographicPlate
+                    immediate
+                    parallaxAmount={8}
+                    className="aspect-[4/5] max-h-[540px] w-full rounded-[2px]"
+                  >
+                    <EditorialImage
+                      assetKey={activePhase.imageKey}
+                      priority
+                      className="w-full h-full object-cover"
+                    />
+                  </PhotographicPlate>
+                  <div className="pt-3.5 px-1 flex items-center justify-between text-xs text-[#F7E6C8]/85">
+                    <span className="font-serif italic">
+                      Phase {activePhase.number} · {activePhase.title}
+                    </span>
+                    <span className="font-mono uppercase tracking-widest text-[10px] text-ucaep-gold">
+                      ENSET Lokossa
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-[#F7E6C8]/75">
-              Guide complet du candidat : consignes, préparation, barème et dépôt réunis ici.
-            </p>
           </div>
-        </div>
-      </section>
+
+          {/* Bandeau inférieur brun profond : repère des 3 phases */}
+          <div className="relative z-10 bg-[#4E2A1E] text-[#F7E6C8] border-t border-ucaep-gold/25">
+            <BrandPatternBand variant="obsidian" tileWidth={140} className="h-2 opacity-80" />
+            <div className="max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-14 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 tabular-nums">
+                {phasesSummary.map((p) => {
+                  const isCurrent = p.id === activePhase.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-2 ${
+                        isCurrent ? 'text-ucaep-gold font-semibold' : 'text-[#F7E6C8]/60'
+                      }`}
+                    >
+                      <span className="font-mono">{p.number}</span>
+                      <span>{p.title}</span>
+                      {isCurrent && (
+                        <span className="text-[10px] uppercase tracking-widest text-[#FBF9F5]/85">
+                          (phase active)
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[#F7E6C8]/75">
+                Guide complet du candidat : consignes, préparation, barème et dépôt réunis ici.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <SectionAnchorRail
         items={[

@@ -94,10 +94,18 @@ export function Header() {
     };
   }, [mobileOpen]);
 
+  const isPlumeSingleHero =
+    isSinglePageMode &&
+    isPublicRoot &&
+    (activePhase?.id === 'phase-1' ||
+      (!activePhase && siteConfig.activePhaseId === 'phase-1'));
+
   const overDarkHero =
-    location.pathname === '/' && !isSinglePageMode && !scrolled && !mobileOpen;
+    !scrolled &&
+    !mobileOpen &&
+    ((location.pathname === '/' && !isSinglePageMode) || isPlumeSingleHero);
   const overIvoryHero =
-    isSinglePageMode && isPublicRoot && !scrolled && !mobileOpen;
+    !scrolled && !mobileOpen && isSinglePageMode && isPublicRoot && !isPlumeSingleHero;
 
   const singlePageNavItems = [
     { id: 'phase-apercu', label: 'La phase', num: '01' },
@@ -156,9 +164,11 @@ export function Header() {
                     type="button"
                     onClick={() => handleSectionJump(item.id)}
                     className={`relative py-1.5 whitespace-nowrap shrink-0 editorial-underline transition-colors duration-150 ${
-                      overIvoryHero
-                        ? 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
-                        : 'text-ucaep-ink/75 hover:text-ucaep-brown'
+                      overDarkHero
+                        ? 'text-[#F7E6C8]/88 hover:text-white'
+                        : overIvoryHero
+                          ? 'text-[#4E2A1E]/85 hover:text-[#4E2A1E]'
+                          : 'text-ucaep-ink/75 hover:text-ucaep-brown'
                     }`}
                   >
                     {item.label}
@@ -210,8 +220,8 @@ export function Header() {
                   handleSectionJump(isPresentielPhase ? 'consignes' : 'depot-production')
                 }
                 className={`hidden sm:inline-flex btn-tactile items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-[4px] whitespace-nowrap shrink-0 group ${
-                  overIvoryHero
-                    ? 'bg-ucaep-gold text-[#1A1A1A] hover:bg-[#c58d2e]'
+                  overDarkHero || overIvoryHero
+                    ? 'bg-ucaep-gold text-[#1A120D] hover:bg-[#dfb05c]'
                     : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
                 }`}
               >
