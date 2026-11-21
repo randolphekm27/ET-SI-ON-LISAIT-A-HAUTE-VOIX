@@ -477,6 +477,25 @@ const PHASE_EDITORIAL_DOSSIERS: Record<string, PhaseEditorialDossier> = {
   },
 };
 
+const PLUME_EXAMPLE_STANZAS: readonly string[] = [
+  'Je suis le fils de mon père, né de son sang, dans un village dont le chiendent a fait le nom.',
+  "Non à ces hommes qui croient encore qu'on n'est rien sans eux, \nQue sans eux on n'a pas d'origine. \nEt l'histoire n'est pas celle de ceux qu'on n'écrit pas.",
+  "Je suis Randolphe, \nfils de joie, au cœur pur et plein d'amour. \nAmour de père, amour de mère ne m'ont pas manqué.",
+  'Je suis plein. Ne le vois-tu pas assez ?',
+  "Je suis beau, bel et bien, et le zèle me mêle au ciel. \nFidèle à l'appel, je suis l'archer public pour vous dire qui je suis.",
+  "Je suis d'origine sud ; \nle fleuve Ouémé est ma cour de maison. \nJe suis béninois, et les gens qui me voient m'appellent « venu de Chine ».",
+  "Face à cela, je m'intrigue :",
+  "Je me demande à quel moment j'ai passé ce cap,",
+  'Cet "apparentistique" cap. \nDe toute façon, je vous l\'aurais dit : je suis africain, béninois, sudiste. Et je suis là pour gagner.',
+  'Je suis Randolphe',
+];
+
+const PLUME_EXAMPLE_WORD_COUNT = PLUME_EXAMPLE_STANZAS.join(' ')
+  .replace(/[«»"?,.;:]/g, ' ')
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean).length;
+
 function formatDeadline(iso?: string | null): string | null {
   if (!iso) return null;
   const date = new Date(iso);
@@ -997,6 +1016,111 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
               </div>
             )}
           </EditorialReveal>
+
+          {/* EXEMPLE DE TEXTE (ACTIF UNIQUEMENT LORSQUE « LA PLUME » SEULE EST ACTIVÉE ET RÉVÉLÉE) */}
+          {activePhase.id === 'phase-1' && activePhase.isRevealed && (
+            <div id="exemple-texte" className="scroll-mt-24">
+              <EditorialReveal className="space-y-6 pt-8 border-t border-ucaep-brown/14">
+              <div className="space-y-2 max-w-prose">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-gold">
+                  Exemple de texte · Épreuve 01 — « Je suis… »
+                </p>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-ucaep-brown text-balance">
+                  Lire un texte personnel à haute voix : l&apos;exemple de Randolphe
+                </h3>
+                <p className="text-sm sm:text-base text-ucaep-ink/78 leading-relaxed">
+                  Pour voir concrètement comment une voix personnelle trouve son rythme avant de passer devant la caméra, parcourez cet extrait complet d&apos;autoportrait littéraire.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <ParallaxDepthCard offset={5} className="lg:col-span-7">
+                  <article className="bg-white border border-ucaep-brown/16 rounded-sm p-6 sm:p-10 space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-4 text-xs text-ucaep-brown/70 tabular-nums">
+                      <span>Autoportrait littéraire · Texte d&apos;illustration</span>
+                      <span className="font-mono text-[11px] text-ucaep-green font-semibold">
+                        {PLUME_EXAMPLE_WORD_COUNT} mots · ~ 1 min 30 à l&apos;oral
+                      </span>
+                    </div>
+
+                    <div className="space-y-4 font-serif text-[16.5px] sm:text-[17.5px] leading-[1.82] text-ucaep-ink max-w-prose">
+                      {PLUME_EXAMPLE_STANZAS.map((stanza, idx) => {
+                        const isFirst = idx === 0;
+                        const isSignature = idx === PLUME_EXAMPLE_STANZAS.length - 1;
+                        return (
+                          <p
+                            key={idx}
+                            className={`whitespace-pre-line ${
+                              isFirst
+                                ? 'first-letter:text-4xl sm:first-letter:text-5xl first-letter:font-serif first-letter:font-semibold first-letter:text-ucaep-brown first-letter:float-left first-letter:mr-2.5 first-letter:mt-1 first-letter:leading-none'
+                                : ''
+                            } ${
+                              isSignature
+                                ? 'pt-2 font-semibold text-ucaep-brown tracking-tight'
+                                : ''
+                            }`}
+                          >
+                            {stanza}
+                          </p>
+                        );
+                      })}
+                    </div>
+                  </article>
+                </ParallaxDepthCard>
+
+                <ParallaxDepthCard offset={-4} delay={0.06} className="lg:col-span-5">
+                  <aside className="bg-[#F7E6C8]/32 border border-ucaep-brown/15 rounded-sm p-6 sm:p-7 space-y-5">
+                    <div className="space-y-1 border-b border-ucaep-brown/12 pb-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ucaep-green">
+                        Repères de lecture
+                      </p>
+                      <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                        Pourquoi ce texte fonctionne à l&apos;oral
+                      </h4>
+                    </div>
+
+                    <ol className="space-y-4 text-xs sm:text-sm text-ucaep-ink/85 leading-relaxed">
+                      <li className="space-y-1">
+                        <p className="font-semibold text-ucaep-brown">
+                          01. Un ancrage personnel concret
+                        </p>
+                        <p>
+                          Au lieu d&apos;une fiche d&apos;état civil, le texte s&apos;appuie sur des images vécues : un village, une lignée familiale et le fleuve Ouémé.
+                        </p>
+                      </li>
+                      <li className="space-y-1">
+                        <p className="font-semibold text-ucaep-brown">
+                          02. Des respirations pensées pour la voix
+                        </p>
+                        <p>
+                          L&apos;alternance entre phrases brèves, questions directes et allitérations laisse le temps de poser le souffle et le regard face caméra.
+                        </p>
+                      </li>
+                      <li className="space-y-1">
+                        <p className="font-semibold text-ucaep-brown">
+                          03. Inspiration uniquement, écriture personnelle exigée
+                        </p>
+                        <p>
+                          Cet extrait illustre le ton et la liberté de forme attendus pour « Je suis… ». Votre propre copie doit rester entièrement originale.
+                        </p>
+                      </li>
+                    </ol>
+
+                    <div className="pt-3 border-t border-ucaep-brown/12">
+                      <a
+                        href="#atelier-video"
+                        className="btn-tactile inline-flex items-center justify-center gap-2 w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider rounded-sm bg-ucaep-brown text-ucaep-paper hover:bg-[#3a1f16]"
+                      >
+                        <span>Chronométrer mon propre texte</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </aside>
+                </ParallaxDepthCard>
+              </div>
+            </EditorialReveal>
+            </div>
+          )}
 
           {/* ÉTAPES 3, 4 & 5 : CE QU'IL FAUT PRODUIRE, MÉTHODE ET PRÉPARATION */}
           {activePhase.isRevealed && (
