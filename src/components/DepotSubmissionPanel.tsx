@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Download,
+  ExternalLink,
   Lock,
   RefreshCw,
   Upload,
@@ -39,7 +41,10 @@ import {
   getPhaseVideoSlotLabels,
   validateSubmissionFileClient,
 } from '../lib/submissions-config';
-import { uploadFileToSignedStorageUrl } from '../lib/supabase';
+import {
+  StorageFileTooLargeError,
+  uploadFileToSignedStorageUrl,
+} from '../lib/supabase';
 import type {
   CandidateSubmissionSummary,
   PublicVideoSlotSummary,
@@ -99,12 +104,25 @@ interface DepotSubmissionPanelProps {
   hideRegistrationHint?: boolean;
 }
 
+const DEFAULT_COMPRESSOR_URL =
+  'https://play.google.com/store/apps/details?id=com.arthur.hritik.proton.video.compressor';
+
+function isSafeHttpLink(raw?: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function DepotSubmissionPanel({
   lockedPhaseId,
   hideRegistrationHint = false,
 }: DepotSubmissionPanelProps) {
   const [searchParams] = useSearchParams();
-  const { activePhase } = useSiteConfig();
+  const { activePhase, siteConfig } = useSiteConfig();
   const initialStored = useMemo(() => getCandidateSession(), []);
   const [referenceCode, setReferenceCode] = useState(
     () =>
@@ -141,6 +159,8 @@ export function DepotSubmissionPanel({
   const [mimeVideo2, setMimeVideo2] = useState('');
   const [video1Error, setVideo1Error] = useState('');
   const [video2Error, setVideo2Error] = useState('');
+  const [video1TooLarge, setVideo1TooLarge] = useState(false);
+  const [video2TooLarge, setVideo2TooLarge] = useState(false);
   const [video1Dragging, setVideo1Dragging] = useState(false);
   const [video2Dragging, setVideo2Dragging] = useState(false);
   const [video1Progress, setVideo1Progress] = useState<number | null>(null);
@@ -155,6 +175,24 @@ export function DepotSubmissionPanel({
   const [replaceVideo2Mode, setReplaceVideo2Mode] = useState(false);
   const video1InputRef = useRef<HTMLInputElement>(null);
   const video2InputRef = useRef<HTMLInputElement>(null);
+
+  const compressionTool = useMemo(() => {
+    const resources = siteConfig?.depotResources || [];
+    const match = resources.find(
+      (r) =>
+        r.active !== false &&
+        isSafeHttpLink(r.actionUrl) &&
+        (r.kind === 'tool' ||
+          r.kind === 'video_help' ||
+          /compress|taille|vid[eé]o/i.test(`${r.title} ${r.body}`)),
+    );
+    return {
+      url: match?.actionUrl || DEFAULT_COMPRESSOR_URL,
+      label:
+        match?.actionLabel ||
+        'Télécharger l’outil de compression vidéo (Proton Video Compressor)',
+    };
+  }, [siteConfig?.depotResources]);
 
   useEffect(() => {
     if (lockedPhaseId) {
@@ -193,6 +231,8 @@ export function DepotSubmissionPanel({
     setSelectedVideo2(null);
     setVideo1Error('');
     setVideo2Error('');
+    setVideo1TooLarge(false);
+    setVideo2TooLarge(false);
     setVideo1SubmitError('');
     setVideo2SubmitError('');
     setVideo1Success('');
@@ -277,11 +317,13 @@ export function DepotSubmissionPanel({
 
   function handleVideoSelection(slot: 1 | 2, file: File | null) {
     const setErr = slot === 1 ? setVideo1Error : setVideo2Error;
+    const setTooLarge = slot === 1 ? setVideo1TooLarge : setVideo2TooLarge;
     const setSubmitErr = slot === 1 ? setVideo1SubmitError : setVideo2SubmitError;
     const setFile = slot === 1 ? setSelectedVideo1 : setSelectedVideo2;
     const setMime = slot === 1 ? setMimeVideo1 : setMimeVideo2;
 
     setErr('');
+    setTooLarge(false);
     setSubmitErr('');
     if (!file) {
       setFile(null);
@@ -293,6 +335,7 @@ export function DepotSubmissionPanel({
     if (check.ok === false) {
       setFile(null);
       setMime('');
+      setTooLarge(Boolean(check.isTooLarge));
       setErr(check.error);
       return;
     }
@@ -320,6 +363,7 @@ export function DepotSubmissionPanel({
     const validatedMime = slot === 1 ? mimeVideo1 : mimeVideo2;
 
     const setErr = slot === 1 ? setVideo1Error : setVideo2Error;
+    const setTooLarge = slot === 1 ? setVideo1TooLarge : setVideo2TooLarge;
     const setSubmitErr = slot === 1 ? setVideo1SubmitError : setVideo2SubmitError;
     const setOk = slot === 1 ? setVideo1Success : setVideo2Success;
     const setLoading = slot === 1 ? setVideo1Loading : setVideo2Loading;
@@ -329,6 +373,7 @@ export function DepotSubmissionPanel({
     const inputRef = slot === 1 ? video1InputRef : video2InputRef;
 
     setErr('');
+    setTooLarge(false);
     setSubmitErr('');
     setOk('');
 
@@ -346,6 +391,7 @@ export function DepotSubmissionPanel({
 
     const check = validateSubmissionFileClient(selectedFile, { videoOnly: true });
     if (check.ok === false) {
+      setTooLarge(Boolean(check.isTooLarge));
       setErr(check.error);
       return;
     }
@@ -413,11 +459,15 @@ export function DepotSubmissionPanel({
       await refreshCandidateStatus(sessionData.candidate.referenceCode, email);
     } catch (err) {
       setProgress(null);
-      setSubmitErr(
+      const errMsg =
         err instanceof Error
           ? err.message
-          : `L’envoi de la Vidéo ${slot} a été interrompu. Réessayez dans un instant.`,
-      );
+          : `L’envoi de la Vidéo ${slot} a été interrompu. Réessayez dans un instant.`;
+      const tooLarge =
+        err instanceof StorageFileTooLargeError ||
+        /volumineux|taille|dépasse la limite|50 mo|100 mo/i.test(errMsg);
+      setTooLarge(tooLarge);
+      setSubmitErr(errMsg);
     } finally {
       setLoading(false);
     }
@@ -794,6 +844,7 @@ export function DepotSubmissionPanel({
     const existingVideo = isSlot1 ? submittedVideo1 : submittedVideo2;
     const selectedFile = isSlot1 ? selectedVideo1 : selectedVideo2;
     const fileError = isSlot1 ? video1Error : video2Error;
+    const isTooLarge = isSlot1 ? video1TooLarge : video2TooLarge;
     const submitError = isSlot1 ? video1SubmitError : video2SubmitError;
     const okMsg = isSlot1 ? video1Success : video2Success;
     const isDragging = isSlot1 ? video1Dragging : video2Dragging;
@@ -872,10 +923,26 @@ export function DepotSubmissionPanel({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
-              className="p-3.5 bg-red-50 border border-red-300 rounded-[2px] text-xs sm:text-sm text-red-900 flex items-start gap-2.5"
+              className="p-3.5 bg-red-50 border border-red-300 rounded-[2px] text-xs sm:text-sm text-red-900 space-y-2.5"
             >
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{submitError}</span>
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{submitError}</span>
+              </div>
+              {isTooLarge && (
+                <div className="pl-6">
+                  <a
+                    href={compressionTool.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    <span>{compressionTool.label}</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  </a>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1010,10 +1077,26 @@ export function DepotSubmissionPanel({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: EDITORIAL_EASE }}
-                  className="p-3.5 bg-red-50 border border-red-300 rounded-[2px] text-xs sm:text-sm text-red-900 flex items-start gap-2.5"
+                  className="p-3.5 bg-red-50 border border-red-300 rounded-[2px] text-xs sm:text-sm text-red-900 space-y-2.5"
                 >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{fileError}</span>
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{fileError}</span>
+                  </div>
+                  {isTooLarge && (
+                    <div className="pl-6">
+                      <a
+                        href={compressionTool.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-[2px] bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        <span>{compressionTool.label}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      </a>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

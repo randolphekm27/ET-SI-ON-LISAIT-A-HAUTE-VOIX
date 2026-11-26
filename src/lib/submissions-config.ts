@@ -126,7 +126,7 @@ export function validateSubmissionFileClient(
     return {
       ok: false,
       isTooLarge: true,
-      error: `Votre vidéo pèse ${formatFileSize(file.size)}, ce qui dépasse la limite de 100 Mo. Compressez-la (ex. avec Proton Video Compressor dans « Annonces & Outils » ou en MP4 720p) avant de réessayer.`,
+      error: `Votre vidéo pèse ${formatFileSize(file.size)}, ce qui dépasse la taille maximale autorisée. Veuillez vérifier la taille du fichier et utilisez si besoin l'outil de compression ci-dessous avant de réessayer.`,
     };
   }
 

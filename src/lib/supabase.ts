@@ -93,16 +93,32 @@ function sendXhrWithProgress(opts: {
   });
 }
 
-function formatStorageUploadError(status: number, rawMessage?: string): string {
+export class StorageFileTooLargeError extends Error {
+  readonly isTooLarge = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'StorageFileTooLargeError';
+  }
+}
+
+export function isPayloadTooLargeResponse(
+  status: number,
+  rawMessage?: string,
+): boolean {
   const lower = (rawMessage || '').toLowerCase();
-  if (
+  return (
     status === 413 ||
     lower.includes('exceeded the maximum allowed size') ||
     lower.includes('payload too large') ||
     lower.includes('maximum allowed size') ||
     lower.includes('entity too large')
-  ) {
-    return "Votre vidéo dépasse le plafond d'envoi du stockage gratuit (50 Mo max par fichier côté serveur Supabase). Compressez-la en dessous de 50 Mo avec Proton Video Compressor (onglet « Annonces & Outils ») puis réessayez.";
+  );
+}
+
+export function formatStorageUploadError(status: number, rawMessage?: string): string {
+  if (isPayloadTooLargeResponse(status, rawMessage)) {
+    return "Ce fichier vidéo est trop volumineux pour être envoyé. Veuillez vérifier la taille de votre vidéo (visez moins de 50 Mo si l'envoi bloque) et utilisez si besoin l'outil de compression ci-dessous avant de réessayer.";
   }
   return rawMessage || "Le stockage n'a pas accepté ce fichier.";
 }
@@ -140,7 +156,11 @@ export async function uploadFileToSignedStorageUrl(params: {
       } catch {
         // ignore JSON parse error
       }
-      throw new Error(formatStorageUploadError(response.status, msg));
+      const formatted = formatStorageUploadError(response.status, msg);
+      if (isPayloadTooLargeResponse(response.status, msg)) {
+        throw new StorageFileTooLargeError(formatted);
+      }
+      throw new Error(formatted);
     }
     return;
   }
@@ -178,7 +198,11 @@ export async function uploadFileToSignedStorageUrl(params: {
       } catch {
         // ignore parse error
       }
-      throw new Error(formatStorageUploadError(response.status, msg));
+      const formatted = formatStorageUploadError(response.status, msg);
+      if (isPayloadTooLargeResponse(response.status, msg)) {
+        throw new StorageFileTooLargeError(formatted);
+      }
+      throw new Error(formatted);
     }
     return;
   }
@@ -237,6 +261,10 @@ export async function uploadFileToSignedStorageUrl(params: {
     });
 
   if (error) {
-    throw new Error(formatStorageUploadError(0, error.message));
+    const formatted = formatStorageUploadError(0, error.message);
+    if (isPayloadTooLargeResponse(0, error.message)) {
+      throw new StorageFileTooLargeError(formatted);
+    }
+    throw new Error(formatted);
   }
 }
