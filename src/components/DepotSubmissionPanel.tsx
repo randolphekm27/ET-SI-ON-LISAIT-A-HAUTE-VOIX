@@ -29,6 +29,7 @@ import { useSiteConfig } from '../lib/site-config';
 import {
   ACCEPT_ATTRIBUTE,
   MAX_TEXT_SUBMISSION_LENGTH,
+  findGluedTextIssue,
   formatFileSize,
   getPhaseTextSlotLabels,
   validateSubmissionFileClient,
@@ -559,6 +560,8 @@ export function DepotSubmissionPanel({
     const statusMeta = slotStatus ? SUBMISSION_STATUS_BADGE[slotStatus] : null;
     const showEditor =
       selectedPhase.acceptingNow && !isLocked && (!submittedText || editing);
+    const previewGlued = findGluedTextIssue(submittedText);
+    const draftGlued = findGluedTextIssue(draft);
 
     return (
       <div
@@ -638,10 +641,19 @@ export function DepotSubmissionPanel({
               className="space-y-3"
             >
               <div className="p-4 bg-ucaep-paper border border-ucaep-brown/12 rounded-sm">
-                <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto">
+                <p className="text-sm text-ucaep-ink/85 whitespace-pre-wrap break-words leading-relaxed max-h-52 overflow-y-auto">
                   {submittedText}
                 </p>
               </div>
+
+              {!isLocked && previewGlued.hasGluedText && (
+                <div
+                  role="note"
+                  className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 leading-relaxed"
+                >
+                  <strong>Vérification conseillée :</strong> ce texte contient des mots collés sans espaces (souvent causé par un copier-coller depuis un PDF ou une capture d&apos;écran). Cliquez sur « Remplacer / Mettre à jour » pour espacer et relire votre texte avant l&apos;évaluation du jury.
+                </div>
+              )}
 
               {slotNote && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-950">
@@ -725,6 +737,11 @@ export function DepotSubmissionPanel({
                   placeholder={`Rédigez ou collez ici votre Texte ${slot} (${title})...`}
                   className="w-full px-4 py-3 text-sm leading-relaxed border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
                 />
+                {draftGlued.hasGluedText && (
+                  <p className="p-2.5 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 leading-relaxed">
+                    <strong>Attention aux espaces :</strong> plusieurs mots apparaissent collés sans espace (probable copier-coller depuis un PDF ou une image). Pensez à vérifier et corriger l&apos;espacement avant de soumettre.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-3">

@@ -236,3 +236,28 @@ export function serializeDualTextContent(input: {
   };
   return JSON.stringify(payload);
 }
+
+/**
+ * Détecte les suites anormalement longues de lettres sans espaces (≥ 28 lettres consécutives),
+ * typiques d'un copier-coller depuis un PDF, un scan OCR ou une capture d'écran.
+ */
+export function findGluedTextIssue(text?: string | null): {
+  hasGluedText: boolean;
+  gluedCount: number;
+  longestTokenLength: number;
+} {
+  if (!text) {
+    return { hasGluedText: false, gluedCount: 0, longestTokenLength: 0 };
+  }
+  const matches = text.match(/\p{L}{28,}/gu) || [];
+  let longest = 0;
+  for (const m of matches) {
+    if (m.length > longest) longest = m.length;
+  }
+  return {
+    hasGluedText: matches.length > 0,
+    gluedCount: matches.length,
+    longestTokenLength: longest,
+  };
+}
+

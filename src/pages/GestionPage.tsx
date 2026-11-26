@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   AlertCircle,
   CheckCircle2,
+  Copy,
   Download,
   Edit3,
   ExternalLink,
@@ -28,7 +29,11 @@ import {
 import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { useSiteConfig } from '../lib/site-config';
-import { formatFileSize, getPhaseTextSlotLabels } from '../lib/submissions-config';
+import {
+  findGluedTextIssue,
+  formatFileSize,
+  getPhaseTextSlotLabels,
+} from '../lib/submissions-config';
 import type {
   AdminSubmissionAccess,
   AdminSubmissionItem,
@@ -180,6 +185,7 @@ export function GestionPage() {
   const [reviewNote2Draft, setReviewNote2Draft] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [copiedTextSlot, setCopiedTextSlot] = useState<1 | 2 | null>(null);
   const [phaseDeadlines, setPhaseDeadlines] = useState<Record<string, string>>({});
   const [phaseSavingId, setPhaseSavingId] = useState<string | null>(null);
   const [phaseActionError, setPhaseActionError] = useState('');
@@ -3570,7 +3576,7 @@ export function GestionPage() {
                                       : 'Vide'}
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-ucaep-ink/65 line-clamp-2">
+                                <p className="text-[11px] text-ucaep-ink/65 line-clamp-2 break-words">
                                   {item.textPreview}
                                 </p>
                               </div>
@@ -3706,8 +3712,37 @@ export function GestionPage() {
 
                                   {t1HasContent ? (
                                     <>
-                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
-                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
+                                      {findGluedTextIssue(inspectingAccess.text1Content)
+                                        .hasGluedText && (
+                                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 leading-relaxed">
+                                          <strong>Mise en forme détectée :</strong> des mots sont collés sans espaces dans le texte soumis par le candidat (copier-coller depuis un PDF ou un scan). Vous pouvez lui demander une reprise via « À reprendre ».
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between gap-2 text-[11px] text-ucaep-ink/65 tabular-nums">
+                                        <span>
+                                          {(inspectingAccess.text1Content || '').length.toLocaleString('fr-FR')} caractères
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (navigator.clipboard && inspectingAccess.text1Content) {
+                                              navigator.clipboard
+                                                .writeText(inspectingAccess.text1Content)
+                                                .catch(() => {});
+                                              setCopiedTextSlot(1);
+                                              setTimeout(() => setCopiedTextSlot(null), 2000);
+                                            }
+                                          }}
+                                          className="inline-flex items-center gap-1 px-2 py-1 border border-ucaep-brown/20 bg-white rounded-sm text-ucaep-brown hover:bg-ucaep-paper"
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                          <span>
+                                            {copiedTextSlot === 1 ? 'Copié' : 'Copier le texte'}
+                                          </span>
+                                        </button>
+                                      </div>
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-72 overflow-y-auto">
+                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap break-words leading-relaxed">
                                           {inspectingAccess.text1Content}
                                         </p>
                                       </div>
@@ -3840,8 +3875,37 @@ export function GestionPage() {
 
                                   {t2HasContent ? (
                                     <>
-                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
-                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap leading-relaxed">
+                                      {findGluedTextIssue(inspectingAccess.text2Content)
+                                        .hasGluedText && (
+                                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 leading-relaxed">
+                                          <strong>Mise en forme détectée :</strong> des mots sont collés sans espaces dans le texte soumis par le candidat (copier-coller depuis un PDF ou un scan). Vous pouvez lui demander une reprise via « À reprendre ».
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between gap-2 text-[11px] text-ucaep-ink/65 tabular-nums">
+                                        <span>
+                                          {(inspectingAccess.text2Content || '').length.toLocaleString('fr-FR')} caractères
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (navigator.clipboard && inspectingAccess.text2Content) {
+                                              navigator.clipboard
+                                                .writeText(inspectingAccess.text2Content)
+                                                .catch(() => {});
+                                              setCopiedTextSlot(2);
+                                              setTimeout(() => setCopiedTextSlot(null), 2000);
+                                            }
+                                          }}
+                                          className="inline-flex items-center gap-1 px-2 py-1 border border-ucaep-brown/20 bg-white rounded-sm text-ucaep-brown hover:bg-ucaep-paper"
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                          <span>
+                                            {copiedTextSlot === 2 ? 'Copié' : 'Copier le texte'}
+                                          </span>
+                                        </button>
+                                      </div>
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-72 overflow-y-auto">
+                                        <p className="text-sm text-ucaep-ink whitespace-pre-wrap break-words leading-relaxed">
                                           {inspectingAccess.text2Content}
                                         </p>
                                       </div>
