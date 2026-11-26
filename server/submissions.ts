@@ -12,13 +12,17 @@ import {
 import {
   MAX_TEXT_SUBMISSION_LENGTH,
   MAX_UPLOAD_BYTES,
+  SUPABASE_FREE_QUOTA_BYTES,
+  buildBundleCombinedNote,
+  computeBundleOverallStatus,
+  isVideoMimeType,
   normalizeSubmissionMimeType,
   parseDualTextContent,
   serializeDualTextContent,
+  type DualTextSubmissionPayload,
 } from '../src/lib/submissions-config.ts';
 import {
   getLocalDataDir,
-  getSiteDisplayConfig,
   readJsonStore,
   withJsonStoreLock,
   type LocalSubmissionRecord,
@@ -48,12 +52,16 @@ import {
   verifyCandidateViaSupabaseRest,
 } from './supabase-db.ts';
 import type {
+  AdminStorageStats,
   AdminSubmissionAccess,
   AdminSubmissionItem,
+  AdminVideoSlotAccess,
   CandidateSubmissionSummary,
+  PublicVideoSlotSummary,
   SubmissionKind,
   SubmissionPublicPhaseStatus,
   SubmissionStatus,
+  VideoSlotSubmission,
 } from '../src/types/competition';
 
 export type SubmissionUploadMode = 'supabase_signed' | 'local_server';
@@ -361,17 +369,104 @@ function evaluatePhaseAcceptance(phase: DbPhaseRowLike): {
   return { acceptingNow: true, closedReason: null };
 }
 
-function buildTextSummaryPreview(rawText: string | null | undefined, fallbackStatus: SubmissionStatus): string | null {
-  if (!rawText) return null;
-  const dual = parseDualTextContent(rawText, fallbackStatus);
-  const parts: string[] = [];
-  if (dual.text1.trim()) {
-    const snippet = dual.text1.trim().slice(0, 75).replace(/\s+/g, ' ');
-    parts.push(`T1 : ${snippet}${dual.text1.trim().length > 75 ? '…' : ''}`);
+function extractSubmissionBundle(
+  row: DbSubmissionRowLike | LocalSubmissionRecord,
+): DualTextSubmissionPayload {
+  const parsed = parseDualTextContent(row.textContent, row.status);
+  let video1 = parsed.video1;
+  const video2 = parsed.video2;
+
+  if (!video1 && row.kind === 'file' && row.storagePath) {
+    const updatedIso =
+      row.updatedAt instanceof Date
+        ? row.updatedAt.toISOString()
+        : String(row.updatedAt || new Date().toISOString());
+    video1 = {
+      storagePath: row.storagePath,
+      fileName: row.fileName || 'video-1.mp4',
+      mimeType: row.mimeType || 'video/mp4',
+      sizeBytes: Number(row.sizeBytes) > 0 ? Number(row.sizeBytes) : 1,
+      status: row.status,
+      note: row.organizerNote || '',
+      uploadedAt: updatedIso,
+    };
   }
-  if (dual.text2.trim()) {
-    const snippet = dual.text2.trim().slice(0, 75).replace(/\s+/g, ' ');
-    parts.push(`T2 : ${snippet}${dual.text2.trim().length > 75 ? '…' : ''}`);
+
+  return {
+    __ucaepDualText: 1,
+    text1: row.kind === 'file' && !parsed.isStructured ? '' : parsed.text1,
+    text2: parsed.text2,
+    text1Status: parsed.text1Status,
+    text2Status: parsed.text2Status,
+    text1Note: parsed.text1Note,
+    text2Note: parsed.text2Note,
+    video1,
+    video2,
+  };
+}
+
+function toPublicVideoSlot(
+  slot: VideoSlotSubmission | null | undefined,
+): PublicVideoSlotSummary | null {
+  if (!slot) return null;
+  return {
+    fileName: slot.fileName,
+    mimeType: slot.mimeType,
+    sizeBytes: slot.sizeBytes,
+    status: slot.status,
+    note: slot.note || '',
+    uploadedAt: slot.uploadedAt,
+  };
+}
+
+function buildPersistedBundleFields(bundle: DualTextSubmissionPayload): {
+  kind: SubmissionKind;
+  storagePath: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number;
+  textContent: string;
+  status: SubmissionStatus;
+  organizerNote: string;
+} {
+  const hasAnyText = Boolean(bundle.text1.trim() || bundle.text2.trim());
+  const primaryVideo = bundle.video1 || bundle.video2 || null;
+  const kind: SubmissionKind = hasAnyText ? 'text' : primaryVideo ? 'file' : 'text';
+  const textContent = serializeDualTextContent(bundle);
+  const totalVideoBytes =
+    (bundle.video1?.sizeBytes || 0) + (bundle.video2?.sizeBytes || 0);
+  const sizeBytes = primaryVideo
+    ? totalVideoBytes
+    : Buffer.byteLength(textContent, 'utf8');
+  const status = computeBundleOverallStatus(bundle);
+  const organizerNote = buildBundleCombinedNote({
+    text1Note: bundle.text1Note,
+    text2Note: bundle.text2Note,
+    video1Note: bundle.video1?.note,
+    video2Note: bundle.video2?.note,
+  });
+
+  return {
+    kind,
+    storagePath: primaryVideo ? primaryVideo.storagePath : null,
+    fileName: primaryVideo ? primaryVideo.fileName : null,
+    mimeType: primaryVideo ? primaryVideo.mimeType : null,
+    sizeBytes,
+    textContent,
+    status,
+    organizerNote,
+  };
+}
+
+function buildTextSummaryPreview(bundle: DualTextSubmissionPayload): string | null {
+  const parts: string[] = [];
+  if (bundle.text1.trim()) {
+    const snippet = bundle.text1.trim().slice(0, 75).replace(/\s+/g, ' ');
+    parts.push(`T1 : ${snippet}${bundle.text1.trim().length > 75 ? '…' : ''}`);
+  }
+  if (bundle.text2.trim()) {
+    const snippet = bundle.text2.trim().slice(0, 75).replace(/\s+/g, ' ');
+    parts.push(`T2 : ${snippet}${bundle.text2.trim().length > 75 ? '…' : ''}`);
   }
   if (parts.length === 0) return null;
   const joined = parts.join(' · ');
@@ -381,25 +476,27 @@ function buildTextSummaryPreview(rawText: string | null | undefined, fallbackSta
 function mapCandidateSubmissionSummary(
   row: DbSubmissionRowLike | LocalSubmissionRecord,
 ): CandidateSubmissionSummary {
-  const isText = row.kind === 'text';
-  const dual = isText ? parseDualTextContent(row.textContent, row.status) : null;
-  const excerpt = isText ? buildTextSummaryPreview(row.textContent, row.status) : null;
+  const bundle = extractSubmissionBundle(row);
+  const excerpt = buildTextSummaryPreview(bundle);
+  const primaryVideo = bundle.video1 || bundle.video2 || null;
 
   return {
     id: row.id,
     phaseId: row.phaseId,
     kind: row.kind,
-    fileName: row.fileName ?? null,
-    mimeType: row.mimeType ?? null,
-    sizeBytes: row.sizeBytes ?? null,
+    fileName: primaryVideo?.fileName ?? row.fileName ?? null,
+    mimeType: primaryVideo?.mimeType ?? row.mimeType ?? null,
+    sizeBytes: primaryVideo?.sizeBytes ?? row.sizeBytes ?? null,
     textExcerpt: excerpt,
-    textContent: dual ? dual.text1 || null : null,
-    text1Content: dual ? dual.text1 || null : null,
-    text2Content: dual ? dual.text2 || null : null,
-    text1Status: dual && dual.text1.trim() ? dual.text1Status : undefined,
-    text2Status: dual && dual.text2.trim() ? dual.text2Status : undefined,
-    text1Note: dual ? dual.text1Note || '' : undefined,
-    text2Note: dual ? dual.text2Note || '' : undefined,
+    textContent: bundle.text1 || null,
+    text1Content: bundle.text1 || null,
+    text2Content: bundle.text2 || null,
+    text1Status: bundle.text1.trim() ? bundle.text1Status : undefined,
+    text2Status: bundle.text2.trim() ? bundle.text2Status : undefined,
+    text1Note: bundle.text1Note || '',
+    text2Note: bundle.text2Note || '',
+    video1: toPublicVideoSlot(bundle.video1),
+    video2: toPublicVideoSlot(bundle.video2),
     status: row.status,
     organizerNote: row.organizerNote || '',
     createdAt:
@@ -454,33 +551,29 @@ export async function getCandidateSubmissionStatus(input: {
   await assertDatabaseReady();
   const candidate = await verifyCandidateCredentials(input.referenceCode, input.email);
 
-  const [siteDisplay, dbData] = await Promise.all([
-    getSiteDisplayConfig(),
-    withDbMode<[DbPhaseRowLike[], DbSubmissionRowLike[]]>({
-      pg: () =>
-        Promise.all([
-          db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
-          db
-            .select()
-            .from(submissionsTable)
-            .where(eq(submissionsTable.registrationId, candidate.id)),
-        ]),
-      rest: () =>
-        Promise.all([
-          listPhasesViaSupabaseRest(),
-          getCandidateSubmissionsViaSupabaseRest(candidate.id),
-        ]),
-      local: async () => {
-        const store = await readJsonStore();
-        return [
-          store.phases.map((p, idx) => toDbPhaseLikeFromLocal(p, idx)),
-          (store.submissions || []).filter((s) => s.registrationId === candidate.id),
-        ];
-      },
-    }),
-  ]);
+  const [phaseRows, submissionRows] = await withDbMode<[DbPhaseRowLike[], DbSubmissionRowLike[]]>({
+    pg: () =>
+      Promise.all([
+        db.select().from(phasesTable).orderBy(asc(phasesTable.sortOrder)),
+        db
+          .select()
+          .from(submissionsTable)
+          .where(eq(submissionsTable.registrationId, candidate.id)),
+      ]),
+    rest: () =>
+      Promise.all([
+        listPhasesViaSupabaseRest(),
+        getCandidateSubmissionsViaSupabaseRest(candidate.id),
+      ]),
+    local: async () => {
+      const store = await readJsonStore();
+      return [
+        store.phases.map((p, idx) => toDbPhaseLikeFromLocal(p, idx)),
+        (store.submissions || []).filter((s) => s.registrationId === candidate.id),
+      ];
+    },
+  });
 
-  const [phaseRows, submissionRows] = dbData;
   const byPhase = new Map<string, DbSubmissionRowLike>(
     submissionRows.map((s) => [s.phaseId, s]),
   );
@@ -488,12 +581,6 @@ export async function getCandidateSubmissionStatus(input: {
   const phaseStatuses: SubmissionPublicPhaseStatus[] = phaseRows.map((phase) => {
     const acceptance = evaluatePhaseAcceptance(phase);
     const existing = byPhase.get(phase.id);
-    const isPresentiel = phase.id === 'phase-3' || phase.format === 'En présentiel';
-    const rawExternal = !isPresentiel ? siteDisplay.externalForms?.[phase.id] : undefined;
-    const externalForm =
-      rawExternal && (rawExternal.enabled || rawExternal.googleFormUrl)
-        ? rawExternal
-        : null;
 
     return {
       id: phase.id,
@@ -511,7 +598,7 @@ export async function getCandidateSubmissionStatus(input: {
       acceptingNow: acceptance.acceptingNow,
       closedReason: acceptance.closedReason,
       testDetails: phase.isRevealed ? phase.testDetails || null : null,
-      externalForm,
+      externalForm: null,
       existingSubmission: existing ? mapCandidateSubmissionSummary(existing) : null,
     };
   });
@@ -585,6 +672,7 @@ export async function initCandidateSubmission(input: {
   phaseId: string;
   kind: SubmissionKind;
   textSlot?: 1 | 2;
+  videoSlot?: 1 | 2;
   fileName?: string;
   mimeType?: string;
   sizeBytes?: number;
@@ -614,34 +702,22 @@ export async function initCandidateSubmission(input: {
     );
   }
 
-  const [siteDisplay, previous] = await Promise.all([
-    getSiteDisplayConfig(),
-    getExistingSubmissionForCandidatePhase(candidate.id, phase.id),
-  ]);
-
-  if (previous?.kind === 'file' && previous.status === 'validated') {
-    throw new SubmissionHttpError(
-      403,
-      'Votre dépôt pour cette phase a déjà été validé par le jury : la resoumission est désactivée.',
-    );
-  }
+  const previous = await getExistingSubmissionForCandidatePhase(candidate.id, phase.id);
+  const prevBundle = previous ? extractSubmissionBundle(previous) : null;
 
   if (input.kind === 'text') {
-    if (previous?.kind === 'text') {
-      const dual = parseDualTextContent(previous.textContent, previous.status);
-      const slot = input.textSlot === 2 ? 2 : 1;
-      if (slot === 1 && dual.text1.trim() && dual.text1Status === 'validated') {
-        throw new SubmissionHttpError(
-          403,
-          'Votre Texte 1 a déjà été validé par le jury : la resoumission est désactivée.',
-        );
-      }
-      if (slot === 2 && dual.text2.trim() && dual.text2Status === 'validated') {
-        throw new SubmissionHttpError(
-          403,
-          'Votre Texte 2 a déjà été validé par le jury : la resoumission est désactivée.',
-        );
-      }
+    const slot = input.textSlot === 2 ? 2 : 1;
+    if (slot === 1 && prevBundle?.text1.trim() && prevBundle.text1Status === 'validated') {
+      throw new SubmissionHttpError(
+        403,
+        'Votre Texte 1 a déjà été validé par le jury : la resoumission est désactivée.',
+      );
+    }
+    if (slot === 2 && prevBundle?.text2.trim() && prevBundle.text2Status === 'validated') {
+      throw new SubmissionHttpError(
+        403,
+        'Votre Texte 2 a déjà été validé par le jury : la resoumission est désactivée.',
+      );
     }
     return {
       kind: 'text',
@@ -654,18 +730,24 @@ export async function initCandidateSubmission(input: {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide (fichier ou texte requis).');
   }
 
-  const externalForm = siteDisplay.externalForms?.[phase.id];
-  if (externalForm?.enabled && externalForm.googleFormUrl) {
+  const vSlot: 1 | 2 = input.videoSlot === 2 ? 2 : 1;
+  if (vSlot === 1 && prevBundle?.video1?.status === 'validated') {
     throw new SubmissionHttpError(
       403,
-      'Le dépôt de fichiers pour cette phase est redirigé vers le formulaire Google Form officiel.',
+      'Votre Vidéo 1 a déjà été validée par le jury : la resoumission est désactivée.',
+    );
+  }
+  if (vSlot === 2 && prevBundle?.video2?.status === 'validated') {
+    throw new SubmissionHttpError(
+      403,
+      'Votre Vidéo 2 a déjà été validée par le jury : la resoumission est désactivée.',
     );
   }
 
   const rawFileName = (input.fileName || '').trim();
   const sizeBytes = Number(input.sizeBytes);
   if (!rawFileName) {
-    throw new SubmissionHttpError(400, 'Le nom du fichier est obligatoire.');
+    throw new SubmissionHttpError(400, 'Le nom du fichier vidéo est obligatoire.');
   }
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
     throw new SubmissionHttpError(400, 'Ce fichier semble vide (0 octet).');
@@ -673,20 +755,20 @@ export async function initCandidateSubmission(input: {
   if (sizeBytes > MAX_UPLOAD_BYTES) {
     throw new SubmissionHttpError(
       400,
-      'Votre fichier dépasse la limite autorisée de 50 Mo. Exportez en MP4 720p ou compressez-le avant de réessayer.',
+      'Votre vidéo dépasse la limite autorisée de 100 Mo. Compressez-la (ex. avec Proton Video Compressor) avant de réessayer.',
     );
   }
 
   const normalizedMime = normalizeSubmissionMimeType(rawFileName, input.mimeType);
-  if (!normalizedMime) {
+  if (!normalizedMime || !isVideoMimeType(normalizedMime)) {
     throw new SubmissionHttpError(
       400,
-      'Format non autorisé. Utilisez une vidéo (MP4, MOV, WebM), un audio (MP3, M4A, WAV, OGG) ou un document (PDF, DOCX, DOC).',
+      'Format non autorisé pour le dépôt vidéo. Utilisez exclusivement une vidéo MP4, MOV ou WebM (max 100 Mo).',
     );
   }
 
   const cleanName = sanitizeFileName(rawFileName);
-  const storagePath = `${candidate.referenceCode}/${phase.id}/${Date.now()}-${cleanName}`;
+  const storagePath = `${candidate.referenceCode}/${phase.id}/video-${vSlot}-${Date.now()}-${cleanName}`;
 
   if (isSupabaseAdminConfigured()) {
     await ensureSubmissionsBucket();
@@ -760,7 +842,7 @@ export async function handleLocalFileUpload(
   if (buffer.length > MAX_UPLOAD_BYTES) {
     throw new SubmissionHttpError(
       400,
-      'Votre fichier dépasse la limite autorisée de 50 Mo.',
+      'Votre vidéo dépasse la limite autorisée de 100 Mo.',
     );
   }
 
@@ -792,12 +874,106 @@ async function deleteStoredFileIfExists(storagePath: string | null | undefined):
   }
 }
 
+async function persistSubmissionBundleRow(params: {
+  previous: DbSubmissionRowLike | null;
+  registrationId: string;
+  phaseId: string;
+  bundle: DualTextSubmissionPayload;
+}): Promise<DbSubmissionRowLike> {
+  const fields = buildPersistedBundleFields(params.bundle);
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  return withDbMode<DbSubmissionRowLike>({
+    pg: async () => {
+      const savedRows = await db
+        .insert(submissionsTable)
+        .values({
+          id: params.previous?.id || crypto.randomUUID(),
+          registrationId: params.registrationId,
+          phaseId: params.phaseId,
+          kind: fields.kind,
+          storagePath: fields.storagePath,
+          fileName: fields.fileName,
+          mimeType: fields.mimeType,
+          sizeBytes: fields.sizeBytes,
+          textContent: fields.textContent,
+          status: fields.status,
+          organizerNote: fields.organizerNote,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [submissionsTable.registrationId, submissionsTable.phaseId],
+          set: {
+            kind: fields.kind,
+            storagePath: fields.storagePath,
+            fileName: fields.fileName,
+            mimeType: fields.mimeType,
+            sizeBytes: fields.sizeBytes,
+            textContent: fields.textContent,
+            status: fields.status,
+            organizerNote: fields.organizerNote,
+            updatedAt: now,
+          },
+        })
+        .returning();
+      return savedRows[0];
+    },
+    rest: () =>
+      upsertSubmissionViaSupabaseRest({
+        id: params.previous?.id || crypto.randomUUID(),
+        registrationId: params.registrationId,
+        phaseId: params.phaseId,
+        kind: fields.kind,
+        storagePath: fields.storagePath,
+        fileName: fields.fileName,
+        mimeType: fields.mimeType,
+        sizeBytes: fields.sizeBytes,
+        textContent: fields.textContent,
+        status: fields.status,
+        organizerNote: fields.organizerNote,
+      }),
+    local: () =>
+      withJsonStoreLock((store) => {
+        const list = store.submissions || (store.submissions = []);
+        const existingIdx = list.findIndex(
+          (s) =>
+            s.registrationId === params.registrationId &&
+            s.phaseId === params.phaseId,
+        );
+        const nextRecord: LocalSubmissionRecord = {
+          id: existingIdx !== -1 ? list[existingIdx].id : crypto.randomUUID(),
+          registrationId: params.registrationId,
+          phaseId: params.phaseId,
+          kind: fields.kind,
+          storagePath: fields.storagePath,
+          fileName: fields.fileName,
+          mimeType: fields.mimeType,
+          sizeBytes: fields.sizeBytes,
+          textContent: fields.textContent,
+          status: fields.status,
+          organizerNote: fields.organizerNote,
+          createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
+          updatedAt: nowIso,
+        };
+        if (existingIdx !== -1) {
+          list[existingIdx] = nextRecord;
+        } else {
+          list.unshift(nextRecord);
+        }
+        return nextRecord;
+      }),
+  });
+}
+
 export async function completeCandidateSubmission(input: {
   referenceCode: string;
   email: string;
   phaseId: string;
   kind: SubmissionKind;
   textSlot?: 1 | 2;
+  videoSlot?: 1 | 2;
   storagePath?: string;
   fileName?: string;
   mimeType?: string;
@@ -820,33 +996,19 @@ export async function completeCandidateSubmission(input: {
     );
   }
 
-  const [siteDisplay, previous] = await Promise.all([
-    getSiteDisplayConfig(),
-    getExistingSubmissionForCandidatePhase(candidate.id, phase.id),
-  ]);
-  const oldStoragePath = previous?.storagePath || null;
-
-  if (previous?.kind === 'file' && previous.status === 'validated') {
-    throw new SubmissionHttpError(
-      403,
-      'Votre dépôt pour cette phase a déjà été validé par le jury : la resoumission est désactivée.',
-    );
-  }
+  const previous = await getExistingSubmissionForCandidatePhase(candidate.id, phase.id);
+  const prevBundle = previous ? extractSubmissionBundle(previous) : null;
 
   if (input.kind === 'text') {
     const slot: 1 | 2 = input.textSlot === 2 ? 2 : 1;
-    const existingDual =
-      previous?.kind === 'text'
-        ? parseDualTextContent(previous.textContent, previous.status)
-        : null;
 
-    if (slot === 1 && existingDual?.text1.trim() && existingDual.text1Status === 'validated') {
+    if (slot === 1 && prevBundle?.text1.trim() && prevBundle.text1Status === 'validated') {
       throw new SubmissionHttpError(
         403,
         'Votre Texte 1 a déjà été validé par le jury : la resoumission est désactivée.',
       );
     }
-    if (slot === 2 && existingDual?.text2.trim() && existingDual.text2Status === 'validated') {
+    if (slot === 2 && prevBundle?.text2.trim() && prevBundle.text2Status === 'validated') {
       throw new SubmissionHttpError(
         403,
         'Votre Texte 2 a déjà été validé par le jury : la resoumission est désactivée.',
@@ -864,124 +1026,24 @@ export async function completeCandidateSubmission(input: {
       );
     }
 
-    const nextText1 = slot === 1 ? cleanText : existingDual?.text1 || '';
-    const nextText2 = slot === 2 ? cleanText : existingDual?.text2 || '';
-    const nextText1Status: SubmissionStatus =
-      slot === 1 ? 'received' : existingDual?.text1Status || 'received';
-    const nextText2Status: SubmissionStatus =
-      slot === 2 ? 'received' : existingDual?.text2Status || 'received';
-    const nextText1Note = slot === 1 ? '' : existingDual?.text1Note || '';
-    const nextText2Note = slot === 2 ? '' : existingDual?.text2Note || '';
+    const nextBundle: DualTextSubmissionPayload = {
+      __ucaepDualText: 1,
+      text1: slot === 1 ? cleanText : prevBundle?.text1 || '',
+      text2: slot === 2 ? cleanText : prevBundle?.text2 || '',
+      text1Status: slot === 1 ? 'received' : prevBundle?.text1Status || 'received',
+      text2Status: slot === 2 ? 'received' : prevBundle?.text2Status || 'received',
+      text1Note: slot === 1 ? '' : prevBundle?.text1Note || '',
+      text2Note: slot === 2 ? '' : prevBundle?.text2Note || '',
+      video1: prevBundle?.video1 || null,
+      video2: prevBundle?.video2 || null,
+    };
 
-    const has1 = Boolean(nextText1.trim());
-    const has2 = Boolean(nextText2.trim());
-    const overallStatus: SubmissionStatus =
-      has1 && has2 && nextText1Status === 'validated' && nextText2Status === 'validated'
-        ? 'validated'
-        : (has1 && nextText1Status === 'rejected') || (has2 && nextText2Status === 'rejected')
-          ? 'rejected'
-          : 'received';
-
-    const noteParts: string[] = [];
-    if (nextText1Note) noteParts.push(`T1 : ${nextText1Note}`);
-    if (nextText2Note) noteParts.push(`T2 : ${nextText2Note}`);
-    const combinedNote = noteParts.join(' | ').slice(0, 1500);
-
-    const serializedText = serializeDualTextContent({
-      text1: nextText1,
-      text2: nextText2,
-      text1Status: nextText1Status,
-      text2Status: nextText2Status,
-      text1Note: nextText1Note,
-      text2Note: nextText2Note,
+    const savedRow = await persistSubmissionBundleRow({
+      previous,
+      registrationId: candidate.id,
+      phaseId: phase.id,
+      bundle: nextBundle,
     });
-
-    const now = new Date();
-    const nowIso = now.toISOString();
-    const byteSize = Buffer.byteLength(serializedText, 'utf8');
-    const savedRow = await withDbMode<DbSubmissionRowLike>({
-      pg: async () => {
-        const savedRows = await db
-          .insert(submissionsTable)
-          .values({
-            id: previous?.id || crypto.randomUUID(),
-            registrationId: candidate.id,
-            phaseId: phase.id,
-            kind: 'text',
-            storagePath: null,
-            fileName: null,
-            mimeType: 'text/plain',
-            sizeBytes: byteSize,
-            textContent: serializedText,
-            status: overallStatus,
-            organizerNote: combinedNote,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .onConflictDoUpdate({
-            target: [submissionsTable.registrationId, submissionsTable.phaseId],
-            set: {
-              kind: 'text',
-              storagePath: null,
-              fileName: null,
-              mimeType: 'text/plain',
-              sizeBytes: byteSize,
-              textContent: serializedText,
-              status: overallStatus,
-              organizerNote: combinedNote,
-              updatedAt: now,
-            },
-          })
-          .returning();
-        return savedRows[0];
-      },
-      rest: () =>
-        upsertSubmissionViaSupabaseRest({
-          id: previous?.id || crypto.randomUUID(),
-          registrationId: candidate.id,
-          phaseId: phase.id,
-          kind: 'text',
-          storagePath: null,
-          fileName: null,
-          mimeType: 'text/plain',
-          sizeBytes: byteSize,
-          textContent: serializedText,
-          status: overallStatus,
-          organizerNote: combinedNote,
-        }),
-      local: () =>
-        withJsonStoreLock((store) => {
-          const list = store.submissions || (store.submissions = []);
-          const existingIdx = list.findIndex(
-            (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
-          );
-          const nextRecord: LocalSubmissionRecord = {
-            id: existingIdx !== -1 ? list[existingIdx].id : crypto.randomUUID(),
-            registrationId: candidate.id,
-            phaseId: phase.id,
-            kind: 'text',
-            storagePath: null,
-            fileName: null,
-            mimeType: 'text/plain',
-            sizeBytes: byteSize,
-            textContent: serializedText,
-            status: overallStatus,
-            organizerNote: combinedNote,
-            createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
-            updatedAt: nowIso,
-          };
-          if (existingIdx !== -1) {
-            list[existingIdx] = nextRecord;
-          } else {
-            list.unshift(nextRecord);
-          }
-          return nextRecord;
-        }),
-    });
-
-    if (oldStoragePath) {
-      await deleteStoredFileIfExists(oldStoragePath);
-    }
 
     return mapCandidateSubmissionSummary(savedRow);
   }
@@ -990,11 +1052,17 @@ export async function completeCandidateSubmission(input: {
     throw new SubmissionHttpError(400, 'Type de dépôt invalide.');
   }
 
-  const externalForm = siteDisplay.externalForms?.[phase.id];
-  if (externalForm?.enabled && externalForm.googleFormUrl) {
+  const vSlot: 1 | 2 = input.videoSlot === 2 ? 2 : 1;
+  if (vSlot === 1 && prevBundle?.video1?.status === 'validated') {
     throw new SubmissionHttpError(
       403,
-      'Le dépôt de fichiers pour cette phase est redirigé vers le formulaire Google Form officiel.',
+      'Votre Vidéo 1 a déjà été validée par le jury : la resoumission est désactivée.',
+    );
+  }
+  if (vSlot === 2 && prevBundle?.video2?.status === 'validated') {
+    throw new SubmissionHttpError(
+      403,
+      'Votre Vidéo 2 a déjà été validée par le jury : la resoumission est désactivée.',
     );
   }
 
@@ -1011,8 +1079,11 @@ export async function completeCandidateSubmission(input: {
 
   const rawFileName = (input.fileName || '').trim() || storagePath.slice(expectedPrefix.length);
   const normalizedMime = normalizeSubmissionMimeType(rawFileName, input.mimeType);
-  if (!normalizedMime) {
-    throw new SubmissionHttpError(400, 'Format de fichier non autorisé.');
+  if (!normalizedMime || !isVideoMimeType(normalizedMime)) {
+    throw new SubmissionHttpError(
+      400,
+      'Format de vidéo non autorisé (MP4, MOV ou WebM requis).',
+    );
   }
 
   let storedSize = 0;
@@ -1036,7 +1107,7 @@ export async function completeCandidateSubmission(input: {
     if (!matchedObject) {
       throw new SubmissionHttpError(
         400,
-        'Le fichier n’a pas encore été reçu dans le stockage. Relancez le téléversement.',
+        'La vidéo n’a pas encore été reçue dans le stockage. Relancez le téléversement.',
       );
     }
 
@@ -1047,7 +1118,7 @@ export async function completeCandidateSubmission(input: {
       await admin.storage.from(SUBMISSIONS_BUCKET).remove([storagePath]).catch(() => {});
       throw new SubmissionHttpError(
         400,
-        'La taille du fichier envoyé est invalide ou dépasse 50 Mo.',
+        'La taille de la vidéo envoyée est invalide ou dépasse 100 Mo.',
       );
     }
   } else {
@@ -1058,7 +1129,7 @@ export async function completeCandidateSubmission(input: {
     } catch {
       throw new SubmissionHttpError(
         400,
-        'Le fichier n’a pas encore été reçu par le serveur. Relancez le téléversement.',
+        'La vidéo n’a pas encore été reçue par le serveur. Relancez le téléversement.',
       );
     }
     storedSize = stat.size;
@@ -1066,96 +1137,46 @@ export async function completeCandidateSubmission(input: {
       await fs.unlink(diskPath).catch(() => {});
       throw new SubmissionHttpError(
         400,
-        'La taille du fichier envoyé est invalide ou dépasse 50 Mo.',
+        'La taille de la vidéo envoyée est invalide ou dépasse 100 Mo.',
       );
     }
   }
 
   const safeDisplayName = rawFileName.slice(0, 180);
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const savedRow = await withDbMode<DbSubmissionRowLike>({
-    pg: async () => {
-      const savedRows = await db
-        .insert(submissionsTable)
-        .values({
-          id: previous?.id || crypto.randomUUID(),
-          registrationId: candidate.id,
-          phaseId: phase.id,
-          kind: 'file',
-          storagePath,
-          fileName: safeDisplayName,
-          mimeType: normalizedMime,
-          sizeBytes: storedSize,
-          textContent: null,
-          status: 'received',
-          organizerNote: '',
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [submissionsTable.registrationId, submissionsTable.phaseId],
-          set: {
-            kind: 'file',
-            storagePath,
-            fileName: safeDisplayName,
-            mimeType: normalizedMime,
-            sizeBytes: storedSize,
-            textContent: null,
-            status: 'received',
-            organizerNote: '',
-            updatedAt: now,
-          },
-        })
-        .returning();
-      return savedRows[0];
-    },
-    rest: () =>
-      upsertSubmissionViaSupabaseRest({
-        id: previous?.id || crypto.randomUUID(),
-        registrationId: candidate.id,
-        phaseId: phase.id,
-        kind: 'file',
-        storagePath,
-        fileName: safeDisplayName,
-        mimeType: normalizedMime,
-        sizeBytes: storedSize,
-        textContent: null,
-        status: 'received',
-        organizerNote: '',
-      }),
-    local: () =>
-      withJsonStoreLock((store) => {
-        const list = store.submissions || (store.submissions = []);
-        const existingIdx = list.findIndex(
-          (s) => s.registrationId === candidate.id && s.phaseId === phase.id,
-        );
-        const nextRecord: LocalSubmissionRecord = {
-          id: existingIdx !== -1 ? list[existingIdx].id : crypto.randomUUID(),
-          registrationId: candidate.id,
-          phaseId: phase.id,
-          kind: 'file',
-          storagePath,
-          fileName: safeDisplayName,
-          mimeType: normalizedMime,
-          sizeBytes: storedSize,
-          textContent: null,
-          status: 'received',
-          organizerNote: '',
-          createdAt: existingIdx !== -1 ? list[existingIdx].createdAt : nowIso,
-          updatedAt: nowIso,
-        };
-        if (existingIdx !== -1) {
-          list[existingIdx] = nextRecord;
-        } else {
-          list.unshift(nextRecord);
-        }
-        return nextRecord;
-      }),
+  const nowIso = new Date().toISOString();
+  const newVideoSlot: VideoSlotSubmission = {
+    storagePath,
+    fileName: safeDisplayName,
+    mimeType: normalizedMime,
+    sizeBytes: storedSize,
+    status: 'received',
+    note: '',
+    uploadedAt: nowIso,
+  };
+
+  const nextBundle: DualTextSubmissionPayload = {
+    __ucaepDualText: 1,
+    text1: prevBundle?.text1 || '',
+    text2: prevBundle?.text2 || '',
+    text1Status: prevBundle?.text1Status || 'received',
+    text2Status: prevBundle?.text2Status || 'received',
+    text1Note: prevBundle?.text1Note || '',
+    text2Note: prevBundle?.text2Note || '',
+    video1: vSlot === 1 ? newVideoSlot : prevBundle?.video1 || null,
+    video2: vSlot === 2 ? newVideoSlot : prevBundle?.video2 || null,
+  };
+
+  const savedRow = await persistSubmissionBundleRow({
+    previous,
+    registrationId: candidate.id,
+    phaseId: phase.id,
+    bundle: nextBundle,
   });
 
-  if (oldStoragePath && oldStoragePath !== storagePath) {
-    await deleteStoredFileIfExists(oldStoragePath);
+  const oldSlotPath =
+    vSlot === 1 ? prevBundle?.video1?.storagePath : prevBundle?.video2?.storagePath;
+  if (oldSlotPath && oldSlotPath !== storagePath) {
+    await deleteStoredFileIfExists(oldSlotPath);
   }
 
   return mapCandidateSubmissionSummary(savedRow);
@@ -1167,11 +1188,13 @@ export async function listAdminSubmissions(filters?: {
 }): Promise<{
   storageConfigured: boolean;
   uploadMode: SubmissionUploadMode;
+  storageStats: AdminStorageStats;
   submissions: AdminSubmissionItem[];
 }> {
   await assertDatabaseReady();
 
-  const rows = await withDbMode<
+  // Récupération de l'ensemble des dépôts pour garantir une jauge de quota 1 Go exacte même si un filtre est actif
+  const allRows = await withDbMode<
     Array<{
       submission: DbSubmissionRowLike;
       registration: DbRegistrationRowLike;
@@ -1179,18 +1202,7 @@ export async function listAdminSubmissions(filters?: {
     }>
   >({
     pg: async () => {
-      const conditions = [];
-      if (filters?.phaseId && filters.phaseId !== 'all') {
-        conditions.push(eq(submissionsTable.phaseId, filters.phaseId));
-      }
-      if (
-        filters?.status &&
-        ['received', 'validated', 'rejected'].includes(filters.status)
-      ) {
-        conditions.push(eq(submissionsTable.status, filters.status as SubmissionStatus));
-      }
-
-      const baseQuery = db
+      return db
         .select({
           submission: submissionsTable,
           registration: registrationsTable,
@@ -1201,15 +1213,10 @@ export async function listAdminSubmissions(filters?: {
           registrationsTable,
           eq(submissionsTable.registrationId, registrationsTable.id),
         )
-        .innerJoin(phasesTable, eq(submissionsTable.phaseId, phasesTable.id));
-
-      return conditions.length > 0
-        ? baseQuery
-            .where(and(...conditions))
-            .orderBy(desc(submissionsTable.updatedAt))
-        : baseQuery.orderBy(desc(submissionsTable.updatedAt));
+        .innerJoin(phasesTable, eq(submissionsTable.phaseId, phasesTable.id))
+        .orderBy(desc(submissionsTable.updatedAt));
     },
-    rest: () => listAdminSubmissionsViaSupabaseRest(filters),
+    rest: () => listAdminSubmissionsViaSupabaseRest(),
     local: async () => {
       const store = await readJsonStore();
       const regById = new Map(store.registrations.map((r) => [r.id, r]));
@@ -1218,19 +1225,6 @@ export async function listAdminSubmissions(filters?: {
       );
 
       return (store.submissions || [])
-        .filter((s) => {
-          if (filters?.phaseId && filters.phaseId !== 'all' && s.phaseId !== filters.phaseId) {
-            return false;
-          }
-          if (
-            filters?.status &&
-            ['received', 'validated', 'rejected'].includes(filters.status) &&
-            s.status !== filters.status
-          ) {
-            return false;
-          }
-          return true;
-        })
         .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
         .map((submission) => {
           const registration = regById.get(submission.registrationId);
@@ -1243,49 +1237,151 @@ export async function listAdminSubmissions(filters?: {
     },
   });
 
-  const items: AdminSubmissionItem[] = rows.map(({ submission, registration, phase }) => {
-    const dual =
-      submission.kind === 'text'
-        ? parseDualTextContent(submission.textContent, submission.status)
-        : null;
+  let totalBytes = 0;
+  let fileCount = 0;
 
-    return {
-      id: submission.id,
-      registrationId: registration.id,
-      referenceCode: registration.referenceCode,
-      candidateName: `${registration.firstName} ${registration.lastName}`,
-      candidateDepartment: registration.department,
-      candidateStudyLevel: registration.studyLevel,
-      phaseId: phase.id,
-      phaseNumber: String(phase.number).padStart(2, '0'),
-      phaseTitle: phase.title,
-      kind: submission.kind,
-      fileName: submission.fileName ?? null,
-      mimeType: submission.mimeType ?? null,
-      sizeBytes: submission.sizeBytes ?? null,
-      textPreview:
-        submission.kind === 'text'
-          ? buildTextSummaryPreview(submission.textContent, submission.status)
-          : null,
-      text1Status: dual && dual.text1.trim() ? dual.text1Status : undefined,
-      text2Status: dual && dual.text2.trim() ? dual.text2Status : undefined,
-      status: submission.status,
-      organizerNote: submission.organizerNote || '',
-      createdAt:
-        submission.createdAt instanceof Date
-          ? submission.createdAt.toISOString()
-          : String(submission.createdAt),
-      updatedAt:
-        submission.updatedAt instanceof Date
-          ? submission.updatedAt.toISOString()
-          : String(submission.updatedAt),
-    };
+  for (const { submission } of allRows) {
+    const bundle = extractSubmissionBundle(submission);
+    if (bundle.video1) {
+      totalBytes += bundle.video1.sizeBytes;
+      fileCount += 1;
+    }
+    if (bundle.video2) {
+      totalBytes += bundle.video2.sizeBytes;
+      fileCount += 1;
+    }
+  }
+
+  const storageStats: AdminStorageStats = {
+    totalBytes,
+    quotaBytes: SUPABASE_FREE_QUOTA_BYTES,
+    fileCount,
+    usagePercent: Math.min(
+      100,
+      Math.round((totalBytes / SUPABASE_FREE_QUOTA_BYTES) * 1000) / 10,
+    ),
+  };
+
+  const filteredRows = allRows.filter(({ submission }) => {
+    if (filters?.phaseId && filters.phaseId !== 'all' && submission.phaseId !== filters.phaseId) {
+      return false;
+    }
+    if (
+      filters?.status &&
+      ['received', 'validated', 'rejected'].includes(filters.status) &&
+      submission.status !== filters.status
+    ) {
+      return false;
+    }
+    return true;
   });
+
+  const items: AdminSubmissionItem[] = filteredRows.map(
+    ({ submission, registration, phase }) => {
+      const bundle = extractSubmissionBundle(submission);
+      const v1Size = bundle.video1?.sizeBytes || 0;
+      const v2Size = bundle.video2?.sizeBytes || 0;
+      const primaryVideo = bundle.video1 || bundle.video2 || null;
+
+      return {
+        id: submission.id,
+        registrationId: registration.id,
+        referenceCode: registration.referenceCode,
+        candidateName: `${registration.firstName} ${registration.lastName}`,
+        candidateDepartment: registration.department,
+        candidateStudyLevel: registration.studyLevel,
+        phaseId: phase.id,
+        phaseNumber: String(phase.number).padStart(2, '0'),
+        phaseTitle: phase.title,
+        kind: submission.kind,
+        fileName: primaryVideo?.fileName ?? submission.fileName ?? null,
+        mimeType: primaryVideo?.mimeType ?? submission.mimeType ?? null,
+        sizeBytes: primaryVideo?.sizeBytes ?? submission.sizeBytes ?? null,
+        textPreview: buildTextSummaryPreview(bundle),
+        text1Status: bundle.text1.trim() ? bundle.text1Status : undefined,
+        text2Status: bundle.text2.trim() ? bundle.text2Status : undefined,
+        video1Name: bundle.video1?.fileName ?? null,
+        video1SizeBytes: bundle.video1?.sizeBytes ?? null,
+        video1Status: bundle.video1 ? bundle.video1.status : undefined,
+        video2Name: bundle.video2?.fileName ?? null,
+        video2SizeBytes: bundle.video2?.sizeBytes ?? null,
+        video2Status: bundle.video2 ? bundle.video2.status : undefined,
+        totalFileBytes: v1Size + v2Size,
+        status: submission.status,
+        organizerNote: submission.organizerNote || '',
+        createdAt:
+          submission.createdAt instanceof Date
+            ? submission.createdAt.toISOString()
+            : String(submission.createdAt),
+        updatedAt:
+          submission.updatedAt instanceof Date
+            ? submission.updatedAt.toISOString()
+            : String(submission.updatedAt),
+      };
+    },
+  );
 
   return {
     storageConfigured: true,
     uploadMode: getUploadMode(),
+    storageStats,
     submissions: items,
+  };
+}
+
+async function resolveVideoSlotAccess(
+  slot: VideoSlotSubmission | null | undefined,
+): Promise<AdminVideoSlotAccess | null> {
+  if (!slot || !slot.storagePath) return null;
+
+  if (isSupabaseAdminConfigured()) {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(SUBMISSIONS_BUCKET)
+      .createSignedUrl(slot.storagePath, 600);
+
+    return {
+      fileName: slot.fileName,
+      mimeType: slot.mimeType,
+      sizeBytes: slot.sizeBytes,
+      signedUrl: !error && data?.signedUrl ? data.signedUrl : null,
+      expiresInSeconds: !error && data?.signedUrl ? 600 : null,
+      status: slot.status,
+      note: slot.note || '',
+      uploadedAt: slot.uploadedAt,
+    };
+  }
+
+  const diskPath = resolveSafeUploadDiskPath(slot.storagePath);
+  let exists = false;
+  try {
+    await fs.access(diskPath);
+    exists = true;
+  } catch {
+    exists = false;
+  }
+
+  let signedUrl: string | null = null;
+  if (exists) {
+    const downloadToken = signTokenPayload({
+      purpose: 'local-download',
+      storagePath: slot.storagePath,
+      fileName: slot.fileName || 'video.mp4',
+      mimeType: slot.mimeType || 'video/mp4',
+      exp: Date.now() + 600 * 1000,
+    });
+    signedUrl = `/api/submissions/local-file?token=${encodeURIComponent(downloadToken)}`;
+  }
+
+  return {
+    fileName: slot.fileName,
+    mimeType: slot.mimeType,
+    sizeBytes: slot.sizeBytes,
+    signedUrl,
+    expiresInSeconds: signedUrl ? 600 : null,
+    status: slot.status,
+    note: slot.note || '',
+    uploadedAt: slot.uploadedAt,
   };
 }
 
@@ -1313,79 +1409,30 @@ export async function getAdminSubmissionAccess(
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
   }
 
-  if (submission.kind === 'text') {
-    const dual = parseDualTextContent(submission.textContent, submission.status);
-    return {
-      id: submission.id,
-      kind: 'text',
-      fileName: null,
-      mimeType: 'text/plain',
-      sizeBytes: submission.sizeBytes ?? null,
-      signedUrl: null,
-      expiresInSeconds: null,
-      textContent: dual.text1 || '',
-      text1Content: dual.text1 || null,
-      text2Content: dual.text2 || null,
-      text1Status: dual.text1.trim() ? dual.text1Status : undefined,
-      text2Status: dual.text2.trim() ? dual.text2Status : undefined,
-      text1Note: dual.text1Note || '',
-      text2Note: dual.text2Note || '',
-    };
-  }
-
-  if (!submission.storagePath) {
-    throw new SubmissionHttpError(404, 'Aucun fichier associé à ce dépôt.');
-  }
-
-  if (isSupabaseAdminConfigured()) {
-    const admin = getSupabaseAdmin();
-    const { data, error } = await admin.storage
-      .from(SUBMISSIONS_BUCKET)
-      .createSignedUrl(submission.storagePath, 600);
-
-    if (error || !data?.signedUrl) {
-      throw new SubmissionHttpError(
-        502,
-        'Impossible de générer le lien temporaire de lecture.',
-      );
-    }
-
-    return {
-      id: submission.id,
-      kind: 'file',
-      fileName: submission.fileName ?? null,
-      mimeType: submission.mimeType ?? null,
-      sizeBytes: submission.sizeBytes ?? null,
-      signedUrl: data.signedUrl,
-      expiresInSeconds: 600,
-      textContent: null,
-    };
-  }
-
-  const diskPath = resolveSafeUploadDiskPath(submission.storagePath);
-  try {
-    await fs.access(diskPath);
-  } catch {
-    throw new SubmissionHttpError(404, 'Le fichier n’est plus disponible sur le disque.');
-  }
-
-  const downloadToken = signTokenPayload({
-    purpose: 'local-download',
-    storagePath: submission.storagePath,
-    fileName: submission.fileName || 'production',
-    mimeType: submission.mimeType || 'application/octet-stream',
-    exp: Date.now() + 600 * 1000,
-  });
+  const bundle = extractSubmissionBundle(submission);
+  const [video1Access, video2Access] = await Promise.all([
+    resolveVideoSlotAccess(bundle.video1),
+    resolveVideoSlotAccess(bundle.video2),
+  ]);
+  const primaryVideo = video1Access || video2Access || null;
 
   return {
     id: submission.id,
-    kind: 'file',
-    fileName: submission.fileName ?? null,
-    mimeType: submission.mimeType ?? null,
-    sizeBytes: submission.sizeBytes ?? null,
-    signedUrl: `/api/submissions/local-file?token=${encodeURIComponent(downloadToken)}`,
-    expiresInSeconds: 600,
-    textContent: null,
+    kind: submission.kind,
+    fileName: primaryVideo?.fileName ?? submission.fileName ?? null,
+    mimeType: primaryVideo?.mimeType ?? submission.mimeType ?? null,
+    sizeBytes: primaryVideo?.sizeBytes ?? submission.sizeBytes ?? null,
+    signedUrl: primaryVideo?.signedUrl ?? null,
+    expiresInSeconds: primaryVideo?.expiresInSeconds ?? null,
+    textContent: bundle.text1 || null,
+    text1Content: bundle.text1 || null,
+    text2Content: bundle.text2 || null,
+    text1Status: bundle.text1.trim() ? bundle.text1Status : undefined,
+    text2Status: bundle.text2.trim() ? bundle.text2Status : undefined,
+    text1Note: bundle.text1Note || '',
+    text2Note: bundle.text2Note || '',
+    video1: video1Access,
+    video2: video2Access,
   };
 }
 
@@ -1421,12 +1468,72 @@ export async function resolveLocalSubmissionFile(token: string): Promise<{
   };
 }
 
+async function persistBundleReviewUpdate(
+  submissionId: string,
+  bundle: DualTextSubmissionPayload,
+): Promise<DbSubmissionRowLike> {
+  const fields = buildPersistedBundleFields(bundle);
+  return withDbMode<DbSubmissionRowLike>({
+    pg: async () => {
+      const updated = await db
+        .update(submissionsTable)
+        .set({
+          kind: fields.kind,
+          storagePath: fields.storagePath,
+          fileName: fields.fileName,
+          mimeType: fields.mimeType,
+          sizeBytes: fields.sizeBytes,
+          textContent: fields.textContent,
+          status: fields.status,
+          organizerNote: fields.organizerNote,
+          updatedAt: new Date(),
+        })
+        .where(eq(submissionsTable.id, submissionId))
+        .returning();
+      return updated[0];
+    },
+    rest: () =>
+      updateSubmissionReviewViaSupabaseRest(submissionId, {
+        status: fields.status,
+        organizerNote: fields.organizerNote,
+        kind: fields.kind,
+        storagePath: fields.storagePath,
+        fileName: fields.fileName,
+        mimeType: fields.mimeType,
+        textContent: fields.textContent,
+        sizeBytes: fields.sizeBytes,
+      }),
+    local: () =>
+      withJsonStoreLock((store) => {
+        const list = store.submissions || [];
+        const idx = list.findIndex((s) => s.id === submissionId);
+        if (idx === -1) {
+          throw new SubmissionHttpError(404, 'Dépôt introuvable.');
+        }
+        list[idx] = {
+          ...list[idx],
+          kind: fields.kind,
+          storagePath: fields.storagePath,
+          fileName: fields.fileName,
+          mimeType: fields.mimeType,
+          sizeBytes: fields.sizeBytes,
+          textContent: fields.textContent,
+          status: fields.status,
+          organizerNote: fields.organizerNote,
+          updatedAt: new Date().toISOString(),
+        };
+        return list[idx];
+      }),
+  });
+}
+
 export async function updateAdminSubmissionReview(
   submissionId: string,
   patch: {
     status?: SubmissionStatus;
     organizerNote?: string;
     textSlot?: 1 | 2;
+    videoSlot?: 1 | 2;
   },
 ): Promise<{
   id: string;
@@ -1437,6 +1544,10 @@ export async function updateAdminSubmissionReview(
   text2Status?: SubmissionStatus;
   text1Note?: string;
   text2Note?: string;
+  video1Status?: SubmissionStatus;
+  video2Status?: SubmissionStatus;
+  video1Note?: string;
+  video2Note?: string;
 }> {
   await assertDatabaseReady();
 
@@ -1460,16 +1571,20 @@ export async function updateAdminSubmissionReview(
     throw new SubmissionHttpError(404, 'Dépôt introuvable.');
   }
 
-  if (current.kind === 'text' && (patch.textSlot === 1 || patch.textSlot === 2)) {
-    const dual = parseDualTextContent(current.textContent, current.status);
+  const bundle = extractSubmissionBundle(current);
+  const validPatchStatus =
+    patch.status && ['received', 'validated', 'rejected'].includes(patch.status)
+      ? patch.status
+      : undefined;
 
-    if (patch.textSlot === 1 && !dual.text1.trim()) {
+  if (patch.textSlot === 1 || patch.textSlot === 2) {
+    if (patch.textSlot === 1 && !bundle.text1.trim()) {
       throw new SubmissionHttpError(
         400,
         "Le Texte 1 n'a pas encore été soumis par ce candidat.",
       );
     }
-    if (patch.textSlot === 2 && !dual.text2.trim()) {
+    if (patch.textSlot === 2 && !bundle.text2.trim()) {
       throw new SubmissionHttpError(
         400,
         "Le Texte 2 n'a pas encore été soumis par ce candidat.",
@@ -1478,8 +1593,8 @@ export async function updateAdminSubmissionReview(
 
     if (
       patch.textSlot === 2 &&
-      patch.status === 'validated' &&
-      dual.text1Status !== 'validated'
+      validPatchStatus === 'validated' &&
+      bundle.text1Status !== 'validated'
     ) {
       throw new SubmissionHttpError(
         400,
@@ -1487,113 +1602,83 @@ export async function updateAdminSubmissionReview(
       );
     }
 
-    const nextText1Status: SubmissionStatus =
-      patch.textSlot === 1 &&
-      patch.status &&
-      ['received', 'validated', 'rejected'].includes(patch.status)
-        ? patch.status
-        : dual.text1Status;
+    const nextBundle: DualTextSubmissionPayload = {
+      ...bundle,
+      text1Status:
+        patch.textSlot === 1 && validPatchStatus ? validPatchStatus : bundle.text1Status,
+      text2Status:
+        patch.textSlot === 2 && validPatchStatus ? validPatchStatus : bundle.text2Status,
+      text1Note:
+        patch.textSlot === 1 && typeof patch.organizerNote === 'string'
+          ? patch.organizerNote.trim().slice(0, 700)
+          : bundle.text1Note,
+      text2Note:
+        patch.textSlot === 2 && typeof patch.organizerNote === 'string'
+          ? patch.organizerNote.trim().slice(0, 700)
+          : bundle.text2Note,
+    };
 
-    const nextText2Status: SubmissionStatus =
-      patch.textSlot === 2 &&
-      patch.status &&
-      ['received', 'validated', 'rejected'].includes(patch.status)
-        ? patch.status
-        : dual.text2Status;
-
-    const nextText1Note =
-      patch.textSlot === 1 && typeof patch.organizerNote === 'string'
-        ? patch.organizerNote.trim().slice(0, 700)
-        : dual.text1Note;
-
-    const nextText2Note =
-      patch.textSlot === 2 && typeof patch.organizerNote === 'string'
-        ? patch.organizerNote.trim().slice(0, 700)
-        : dual.text2Note;
-
-    const has1 = Boolean(dual.text1.trim());
-    const has2 = Boolean(dual.text2.trim());
-    const overallStatus: SubmissionStatus =
-      has1 && has2 && nextText1Status === 'validated' && nextText2Status === 'validated'
-        ? 'validated'
-        : (has1 && nextText1Status === 'rejected') || (has2 && nextText2Status === 'rejected')
-          ? 'rejected'
-          : 'received';
-
-    const noteParts: string[] = [];
-    if (nextText1Note) noteParts.push(`T1 : ${nextText1Note}`);
-    if (nextText2Note) noteParts.push(`T2 : ${nextText2Note}`);
-    const combinedNote = noteParts.join(' | ').slice(0, 1500);
-
-    const nextSerialized = serializeDualTextContent({
-      text1: dual.text1,
-      text2: dual.text2,
-      text1Status: nextText1Status,
-      text2Status: nextText2Status,
-      text1Note: nextText1Note,
-      text2Note: nextText2Note,
-    });
-    const byteSize = Buffer.byteLength(nextSerialized, 'utf8');
-
-    const row = await withDbMode<DbSubmissionRowLike>({
-      pg: async () => {
-        const updated = await db
-          .update(submissionsTable)
-          .set({
-            status: overallStatus,
-            organizerNote: combinedNote,
-            textContent: nextSerialized,
-            sizeBytes: byteSize,
-            updatedAt: new Date(),
-          })
-          .where(eq(submissionsTable.id, submissionId))
-          .returning();
-        return updated[0];
-      },
-      rest: () =>
-        updateSubmissionReviewViaSupabaseRest(submissionId, {
-          status: overallStatus,
-          organizerNote: combinedNote,
-          textContent: nextSerialized,
-          sizeBytes: byteSize,
-        }),
-      local: () =>
-        withJsonStoreLock((store) => {
-          const list = store.submissions || [];
-          const idx = list.findIndex((s) => s.id === submissionId);
-          if (idx === -1) {
-            throw new SubmissionHttpError(404, 'Dépôt introuvable.');
-          }
-          list[idx] = {
-            ...list[idx],
-            status: overallStatus,
-            organizerNote: combinedNote,
-            textContent: nextSerialized,
-            sizeBytes: byteSize,
-            updatedAt: new Date().toISOString(),
-          };
-          return list[idx];
-        }),
-    });
-
+    const row = await persistBundleReviewUpdate(submissionId, nextBundle);
     return {
       id: row.id,
       status: row.status,
       organizerNote: row.organizerNote,
       updatedAt:
         row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
-      text1Status: has1 ? nextText1Status : undefined,
-      text2Status: has2 ? nextText2Status : undefined,
-      text1Note: nextText1Note,
-      text2Note: nextText2Note,
+      text1Status: nextBundle.text1.trim() ? nextBundle.text1Status : undefined,
+      text2Status: nextBundle.text2.trim() ? nextBundle.text2Status : undefined,
+      text1Note: nextBundle.text1Note,
+      text2Note: nextBundle.text2Note,
+      video1Status: nextBundle.video1?.status,
+      video2Status: nextBundle.video2?.status,
+      video1Note: nextBundle.video1?.note || '',
+      video2Note: nextBundle.video2?.note || '',
     };
   }
 
-  const nextStatus: SubmissionStatus =
-    patch.status && ['received', 'validated', 'rejected'].includes(patch.status)
-      ? patch.status
-      : current.status;
+  if (patch.videoSlot === 1 || patch.videoSlot === 2) {
+    const target = patch.videoSlot === 1 ? bundle.video1 : bundle.video2;
+    if (!target) {
+      throw new SubmissionHttpError(
+        400,
+        `La Vidéo ${patch.videoSlot} n'a pas encore été déposée par ce candidat.`,
+      );
+    }
 
+    const updatedSlot: VideoSlotSubmission = {
+      ...target,
+      status: validPatchStatus ?? target.status,
+      note:
+        typeof patch.organizerNote === 'string'
+          ? patch.organizerNote.trim().slice(0, 700)
+          : target.note || '',
+    };
+
+    const nextBundle: DualTextSubmissionPayload = {
+      ...bundle,
+      video1: patch.videoSlot === 1 ? updatedSlot : bundle.video1,
+      video2: patch.videoSlot === 2 ? updatedSlot : bundle.video2,
+    };
+
+    const row = await persistBundleReviewUpdate(submissionId, nextBundle);
+    return {
+      id: row.id,
+      status: row.status,
+      organizerNote: row.organizerNote,
+      updatedAt:
+        row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+      text1Status: nextBundle.text1.trim() ? nextBundle.text1Status : undefined,
+      text2Status: nextBundle.text2.trim() ? nextBundle.text2Status : undefined,
+      text1Note: nextBundle.text1Note,
+      text2Note: nextBundle.text2Note,
+      video1Status: nextBundle.video1?.status,
+      video2Status: nextBundle.video2?.status,
+      video1Note: nextBundle.video1?.note || '',
+      video2Note: nextBundle.video2?.note || '',
+    };
+  }
+
+  const nextStatus: SubmissionStatus = validPatchStatus ?? current.status;
   const nextNote =
     typeof patch.organizerNote === 'string'
       ? patch.organizerNote.trim().slice(0, 1500)
@@ -1640,6 +1725,63 @@ export async function updateAdminSubmissionReview(
     organizerNote: row.organizerNote,
     updatedAt:
       row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+  };
+}
+
+export async function purgeAdminSubmissionVideo(
+  submissionId: string,
+  videoSlot: 1 | 2,
+): Promise<{
+  id: string;
+  freedBytes: number;
+  status: SubmissionStatus;
+  organizerNote: string;
+}> {
+  await assertDatabaseReady();
+
+  const current = await withDbMode<DbSubmissionRowLike | null>({
+    pg: async () => {
+      const existingRows = await db
+        .select()
+        .from(submissionsTable)
+        .where(eq(submissionsTable.id, submissionId))
+        .limit(1);
+      return existingRows[0] || null;
+    },
+    rest: () => getSubmissionByIdViaSupabaseRest(submissionId),
+    local: async () => {
+      const store = await readJsonStore();
+      return (store.submissions || []).find((s) => s.id === submissionId) || null;
+    },
+  });
+
+  if (!current) {
+    throw new SubmissionHttpError(404, 'Dépôt introuvable.');
+  }
+
+  const bundle = extractSubmissionBundle(current);
+  const target = videoSlot === 1 ? bundle.video1 : bundle.video2;
+  if (!target) {
+    throw new SubmissionHttpError(
+      404,
+      `Aucune Vidéo ${videoSlot} enregistrée pour ce dossier.`,
+    );
+  }
+
+  const nextBundle: DualTextSubmissionPayload = {
+    ...bundle,
+    video1: videoSlot === 1 ? null : bundle.video1,
+    video2: videoSlot === 2 ? null : bundle.video2,
+  };
+
+  const saved = await persistBundleReviewUpdate(submissionId, nextBundle);
+  await deleteStoredFileIfExists(target.storagePath);
+
+  return {
+    id: saved.id,
+    freedBytes: target.sizeBytes,
+    status: saved.status,
+    organizerNote: saved.organizerNote,
   };
 }
 

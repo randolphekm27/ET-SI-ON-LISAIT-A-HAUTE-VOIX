@@ -1,5 +1,7 @@
 -- ==============================================================================
--- Script Storage : Création du bucket privé « candidatures » (50 Mo max)
+-- Script Storage : Création du bucket privé « candidatures » (100 Mo max)
+-- Note : Le Plan Gratuit Supabase plafonne l'upload côté serveur à 50 Mo ;
+-- passez au Plan Pro (ou compressez sous 50 Mo) pour dépasser 50 Mo.
 -- ==============================================================================
 -- Exécutez ce script une seule fois dans le SQL Editor de Supabase.
 -- Aucune politique publique n'est ajoutée sur storage.objects :
@@ -18,7 +20,7 @@ VALUES (
   'candidatures',
   'candidatures',
   false,
-  52428800,
+  104857600,
   ARRAY[
     'video/mp4',
     'video/quicktime',
@@ -37,5 +39,5 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET
   public = false,
-  file_size_limit = 52428800,
+  file_size_limit = 104857600,
   allowed_mime_types = EXCLUDED.allowed_mime_types;

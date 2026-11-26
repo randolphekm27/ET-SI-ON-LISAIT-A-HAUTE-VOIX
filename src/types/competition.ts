@@ -53,6 +53,43 @@ export interface PhaseExternalFormConfig {
   instructions?: string;
 }
 
+export interface VideoSlotSubmission {
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: SubmissionStatus;
+  note?: string;
+  uploadedAt: string;
+}
+
+export interface PublicVideoSlotSummary {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: SubmissionStatus;
+  note?: string;
+  uploadedAt: string;
+}
+
+export interface AdminVideoSlotAccess {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  signedUrl: string | null;
+  expiresInSeconds: number | null;
+  status: SubmissionStatus;
+  note: string;
+  uploadedAt: string;
+}
+
+export interface AdminStorageStats {
+  totalBytes: number;
+  quotaBytes: number;
+  fileCount: number;
+  usagePercent: number;
+}
+
 export interface CandidateSubmissionSummary {
   id: string;
   phaseId: string;
@@ -68,6 +105,8 @@ export interface CandidateSubmissionSummary {
   text2Status?: SubmissionStatus;
   text1Note?: string;
   text2Note?: string;
+  video1?: PublicVideoSlotSummary | null;
+  video2?: PublicVideoSlotSummary | null;
   status: SubmissionStatus;
   organizerNote?: string;
   createdAt: string;
@@ -107,6 +146,13 @@ export interface AdminSubmissionItem {
   textPreview: string | null;
   text1Status?: SubmissionStatus;
   text2Status?: SubmissionStatus;
+  video1Name?: string | null;
+  video1SizeBytes?: number | null;
+  video1Status?: SubmissionStatus;
+  video2Name?: string | null;
+  video2SizeBytes?: number | null;
+  video2Status?: SubmissionStatus;
+  totalFileBytes?: number;
   status: SubmissionStatus;
   organizerNote: string;
   createdAt: string;
@@ -128,6 +174,8 @@ export interface AdminSubmissionAccess {
   text2Status?: SubmissionStatus;
   text1Note?: string;
   text2Note?: string;
+  video1?: AdminVideoSlotAccess | null;
+  video2?: AdminVideoSlotAccess | null;
 }
 
 export interface NewsArticle {

@@ -123,7 +123,7 @@ function buildFaqChapters(phases: CompetitionPhase[]): FaqChapter[] {
         },
         {
           q: 'Quels formats de fichiers sont acceptés et peut-on intégrer des langues nationales ?',
-          a: "Les textes sont rédigés en français (des touches ou proverbes en langues nationales béninoises sont admis s'ils enrichissent naturellement le propos). Dans l'espace de dépôt, chaque vidéo ou audio doit rester sous 5 minutes (formats MP4, MOV, WebM, audio, PDF ou Word, 50 Mo maximum par envoi), sauf si un formulaire Google Form officiel est activé pour les vidéos de la phase.",
+          a: "Les textes sont rédigés en français (des touches ou proverbes en langues nationales béninoises sont admis s'ils enrichissent naturellement le propos). Dans l'espace de dépôt, chaque phase en ligne attend 2 textes saisis directement et 2 vidéos distinctes (Vidéo 1 et Vidéo 2, formats MP4, MOV ou WebM, moins de 5 minutes et 100 Mo maximum par vidéo).",
         },
         {
           q: 'Peut-on recommencer une prise vidéo ou modifier un texte après l’envoi ?',

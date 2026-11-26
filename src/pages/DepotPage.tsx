@@ -37,7 +37,7 @@ type DepotWorkspaceTab = 'depot' | 'ressources' | 'support';
 
 type SupportCategory =
   | 'video_compression'
-  | 'google_form'
+  | 'video_upload'
   | 'textes'
   | 'connexion'
   | 'autre';
@@ -45,11 +45,11 @@ type SupportCategory =
 const SUPPORT_CATEGORIES: Array<{ value: SupportCategory; label: string }> = [
   {
     value: 'video_compression',
-    label: 'Vidéo trop lourde (> 100 Mo) / Compression',
+    label: 'Vidéo trop lourde (> 100 Mo ou > 50 Mo mobile) / Compression',
   },
   {
-    value: 'google_form',
-    label: 'Accès ou envoi sur le Google Form vidéo',
+    value: 'video_upload',
+    label: 'Difficulté d’envoi des vidéos (Vidéo 1 / Vidéo 2)',
   },
   {
     value: 'textes',
@@ -166,14 +166,6 @@ export function DepotPage() {
 
   const isSinglePage = siteConfig.mode === 'phase_single_page';
   const currentPhase = isSinglePage ? activePhase : null;
-  const activeExternal = currentPhase
-    ? siteConfig.externalForms?.[currentPhase.id]
-    : undefined;
-  const hasAnyExternalForm = Boolean(
-    activeExternal?.enabled ||
-      siteConfig.externalForms?.['phase-1']?.enabled ||
-      siteConfig.externalForms?.['phase-2']?.enabled,
-  );
   const deadlineText = useMemo(
     () => formatHeaderDeadline(currentPhase?.submissionDeadline),
     [currentPhase?.submissionDeadline],
@@ -227,19 +219,18 @@ export function DepotPage() {
       },
       {
         num: '03',
-        verb: 'Envoyez vos vidéos',
-        detail: hasAnyExternalForm
-          ? 'Transmettez vos vidéos face caméra via le bouton Google Form officiel avec votre code UCAEP.'
-          : 'Déposez vos enregistrements vidéo (MP4, MOV, WebM ≤ 50 Mo) ou via le lien prévu.',
+        verb: 'Envoyez vos 2 vidéos',
+        detail:
+          'Déposez directement ici votre Vidéo 1 et votre Vidéo 2 (MP4, MOV ou WebM · max 100 Mo par vidéo).',
       },
       {
         num: '04',
         verb: 'Suivez la validation',
         detail:
-          'Chaque texte reste modifiable tant que le jury ne l’a pas encore validé.',
+          'Chaque pièce (Texte 1, Texte 2, Vidéo 1, Vidéo 2) reste modifiable jusqu’à validation par le jury.',
       },
     ],
-    [hasAnyExternalForm],
+    [],
   );
 
   function switchToTab(nextTab: DepotWorkspaceTab) {
@@ -329,8 +320,8 @@ export function DepotPage() {
             </h1>
             <p className="text-sm sm:text-base text-[#FBF9F5]/82 leading-relaxed">
               {currentPhase
-                ? `Espace complet pour la Phase ${currentPhase.number} — ${currentPhase.title}. Soumettez vos textes et vidéos, consultez les notes officielles et outils recommandés par les organisateurs, ou signalez une difficulté en direct.`
-                : 'Votre espace candidat complet : déposez vos deux textes, accédez au formulaire vidéo officiel, téléchargez les outils utiles recommandés par le comité et signalez toute difficulté.'}
+                ? `Espace complet pour la Phase ${currentPhase.number} — ${currentPhase.title}. Soumettez vos deux textes et vos deux vidéos directement ici, consultez les notes officielles et outils recommandés, ou signalez une difficulté en direct.`
+                : 'Votre espace candidat complet : déposez vos deux textes et vos deux vidéos directement sur la plateforme, téléchargez les outils recommandés par le comité et signalez toute difficulté.'}
             </p>
           </div>
 
@@ -370,9 +361,7 @@ export function DepotPage() {
                 Mode vidéo
               </dt>
               <dd className="mt-1 text-sm font-semibold text-[#FBF9F5]">
-                {hasAnyExternalForm
-                  ? 'Google Form officiel (max 100 Mo)'
-                  : 'MP4, MOV, WebM ≤ 50 Mo'}
+                2 vidéos directes (max 100 Mo/vidéo)
               </dd>
             </div>
           </dl>
@@ -641,7 +630,7 @@ export function DepotPage() {
                     Un blocage pendant votre dépôt ?
                   </h2>
                   <p className="text-xs text-[#FBF9F5]/80 leading-relaxed">
-                    Vidéo supérieure à 100 Mo, code UCAEP introuvable ou question sur le Google Form : signalez votre difficulté directement ici à l&apos;équipe organisatrice.
+                    Vidéo trop lourde, échec d&apos;envoi de la Vidéo 1 ou Vidéo 2, ou code UCAEP introuvable : signalez votre difficulté directement ici à l&apos;équipe organisatrice.
                   </p>
                   <button
                     type="button"
@@ -831,7 +820,7 @@ export function DepotPage() {
                     Signaler une difficulté de dépôt
                   </h2>
                   <p className="text-sm text-ucaep-ink/78 leading-relaxed">
-                    Ce formulaire transmet directement votre demande au tableau de suivi des organisateurs. Utilisez-le si vous rencontrez un blocage technique (taille vidéo, accès Google Form, textes ou code UCAEP).
+                    Ce formulaire transmet directement votre demande au tableau de suivi des organisateurs. Utilisez-le si vous rencontrez un blocage technique (compression vidéo, envoi de la Vidéo 1/2, textes ou code UCAEP).
                   </p>
                 </div>
 
@@ -1067,7 +1056,7 @@ export function DepotPage() {
                   </h3>
                   <ul className="space-y-2.5 text-xs text-ucaep-ink/80 leading-relaxed">
                     <li>
-                      <strong>Vidéo &gt; 100 Mo :</strong> Google Form limite l&apos;envoi à 100 Mo par fichier. Utilisez l&apos;application conseillée dans l&apos;onglet <em>Annonces &amp; Outils</em>.
+                      <strong>Vidéo &gt; 100 Mo (ou &gt; 50 Mo) :</strong> chaque vidéo est limitée à 100 Mo maximum (50 Mo conseillés sur l&apos;hébergement gratuit). Utilisez l&apos;application de compression recommandée dans l&apos;onglet <em>Annonces &amp; Outils</em>.
                     </li>
                     <li>
                       <strong>Code UCAEP :</strong> vérifiez les majuscules (<span className="font-mono">UCAEP-2026-XXXX</span>) et l&apos;e-mail exact utilisé lors de l&apos;inscription.

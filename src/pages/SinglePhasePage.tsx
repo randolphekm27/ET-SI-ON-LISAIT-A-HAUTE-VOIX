@@ -221,7 +221,7 @@ const PHASE_EDITORIAL_DOSSIERS: Record<string, PhaseEditorialDossier> = {
       'J’ai relu mes deux textes personnels et vérifié qu’aucun passage n’est copié.',
       'J’ai vérifié que chaque vidéo dure moins de 5 minutes et que le son est audible.',
       'Chaque vidéo lit fidèlement le texte correspondant soumis dans l’espace dépôt.',
-      'Mon code UCAEP-2026-XXXX est correctement renseigné (notamment si un Google Form est actif).',
+      'Mes deux vidéos (Vidéo 1 et Vidéo 2) sont au format MP4, MOV ou WebM et pèsent chacune moins de 100 Mo.',
     ],
     practicalNote:
       'Notation sur 20 points en double correction anonyme. Après affichage des résultats sous code, vous disposez de 24 heures pour signaler par écrit toute erreur matérielle.',
@@ -1876,9 +1876,7 @@ export function SinglePhasePage({ initialAnchor }: { initialAnchor?: string }) {
                     03 · Vidéos face caméra
                   </p>
                   <p className="font-semibold text-ucaep-brown">
-                    {siteConfig.externalForms?.[activePhase.id]?.enabled
-                      ? 'Google Form officiel actif'
-                      : 'Envoi sécurisé en ligne'}
+                    2 vidéos directes (max 100 Mo)
                   </p>
                   <p className="text-xs text-ucaep-ink/75 leading-relaxed">
                     {deadlineLabel

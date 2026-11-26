@@ -48,8 +48,8 @@ export function isSafeHttpUrl(raw: string): boolean {
 export const DEFAULT_DEPOT_RESOURCES: DepotResourceItem[] = [
   {
     id: 'default-video-compressor',
-    title: 'Réduire la taille de votre vidéo (max 100 Mo sur Google Form)',
-    body: "Le formulaire Google Form officiel n'accepte pas les vidéos dépassant 100 Mo. Si votre enregistrement dépasse cette taille, compressez-le avant l'envoi avec Proton Video Compressor (Android) tout en conservant une image nette et un son audible.",
+    title: 'Réduire la taille de votre vidéo (max 100 Mo par vidéo · 50 Mo conseillés)',
+    body: "Vos deux vidéos (Vidéo 1 et Vidéo 2) se déposent directement ici sur la plateforme (maximum 100 Mo par fichier ; sur l'hébergement gratuit, viser ≤ 50 Mo garantit un envoi sans erreur). Si votre enregistrement dépasse cette taille, compressez-le avec Proton Video Compressor (Android) tout en gardant une image nette et une voix claire.",
     kind: 'tool',
     actionLabel: 'Télécharger Proton Video Compressor (Play Store)',
     actionUrl:
@@ -1447,6 +1447,10 @@ export async function updateSubmissionReviewViaSupabaseRest(
   patch: {
     status: SubmissionStatus;
     organizerNote: string;
+    kind?: SubmissionKind;
+    storagePath?: string | null;
+    fileName?: string | null;
+    mimeType?: string | null;
     textContent?: string | null;
     sizeBytes?: number | null;
   },
@@ -1457,6 +1461,18 @@ export async function updateSubmissionReviewViaSupabaseRest(
     organizer_note: patch.organizerNote,
     updated_at: new Date().toISOString(),
   };
+  if (patch.kind !== undefined) {
+    payload.kind = patch.kind;
+  }
+  if (patch.storagePath !== undefined) {
+    payload.storage_path = patch.storagePath;
+  }
+  if (patch.fileName !== undefined) {
+    payload.file_name = patch.fileName;
+  }
+  if (patch.mimeType !== undefined) {
+    payload.mime_type = patch.mimeType;
+  }
   if (patch.textContent !== undefined) {
     payload.text_content = patch.textContent;
   }

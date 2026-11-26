@@ -123,16 +123,40 @@ export async function ensureSubmissionsBucket(): Promise<void> {
     throw new Error(`Impossible de vérifier le stockage Supabase (${listError.message}).`);
   }
 
-  const exists = (buckets || []).some((b) => b.id === SUBMISSIONS_BUCKET || b.name === SUBMISSIONS_BUCKET);
-  if (!exists) {
+  const existing = (buckets || []).find(
+    (b) => b.id === SUBMISSIONS_BUCKET || b.name === SUBMISSIONS_BUCKET,
+  );
+  if (!existing) {
     const { error: createError } = await admin.storage.createBucket(SUBMISSIONS_BUCKET, {
       public: false,
       fileSizeLimit: MAX_UPLOAD_BYTES,
       allowedMimeTypes: [...ALLOWED_SUBMISSION_MIME_TYPES],
     });
     if (createError && !createError.message.toLowerCase().includes('already exists')) {
-      throw new Error(`Impossible de créer le bucket privé (${createError.message}).`);
+      // Sur le Plan Gratuit Supabase, fileSizeLimit > 50 Mo est refusé côté API :
+      // on retombe automatiquement sur 50 Mo pour que la création du bucket réussisse.
+      const fallbackLimit = 50 * 1024 * 1024;
+      const { error: fallbackError } = await admin.storage.createBucket(SUBMISSIONS_BUCKET, {
+        public: false,
+        fileSizeLimit: fallbackLimit,
+        allowedMimeTypes: [...ALLOWED_SUBMISSION_MIME_TYPES],
+      });
+      if (fallbackError && !fallbackError.message.toLowerCase().includes('already exists')) {
+        throw new Error(`Impossible de créer le bucket privé (${fallbackError.message}).`);
+      }
     }
+  } else if (
+    typeof existing.file_size_limit === 'number' &&
+    existing.file_size_limit < MAX_UPLOAD_BYTES
+  ) {
+    // Tente de relever le plafond du bucket existant jusqu'à 100 Mo (sans bloquer si Plan Gratuit)
+    await admin.storage
+      .updateBucket(SUBMISSIONS_BUCKET, {
+        public: false,
+        fileSizeLimit: MAX_UPLOAD_BYTES,
+        allowedMimeTypes: [...ALLOWED_SUBMISSION_MIME_TYPES],
+      })
+      .catch(() => {});
   }
 
   bucketEnsured = true;

@@ -93,6 +93,20 @@ function sendXhrWithProgress(opts: {
   });
 }
 
+function formatStorageUploadError(status: number, rawMessage?: string): string {
+  const lower = (rawMessage || '').toLowerCase();
+  if (
+    status === 413 ||
+    lower.includes('exceeded the maximum allowed size') ||
+    lower.includes('payload too large') ||
+    lower.includes('maximum allowed size') ||
+    lower.includes('entity too large')
+  ) {
+    return "Votre vidéo dépasse le plafond d'envoi du stockage gratuit (50 Mo max par fichier côté serveur Supabase). Compressez-la en dessous de 50 Mo avec Proton Video Compressor (onglet « Annonces & Outils ») puis réessayez.";
+  }
+  return rawMessage || "Le stockage n'a pas accepté ce fichier.";
+}
+
 export async function uploadFileToSignedStorageUrl(params: {
   path: string;
   token: string;
@@ -126,7 +140,7 @@ export async function uploadFileToSignedStorageUrl(params: {
       } catch {
         // ignore JSON parse error
       }
-      throw new Error(msg);
+      throw new Error(formatStorageUploadError(response.status, msg));
     }
     return;
   }
@@ -153,14 +167,18 @@ export async function uploadFileToSignedStorageUrl(params: {
     });
 
     if (!response.ok) {
-      let msg = "Le stockage n'a pas accepté ce fichier.";
+      let msg = '';
       try {
-        const data = (await response.json()) as { message?: string; error?: string };
-        if (data?.message || data?.error) msg = data.message || data.error || msg;
+        const data = (await response.json()) as {
+          message?: string;
+          error?: string;
+          statusCode?: string | number;
+        };
+        if (data?.message || data?.error) msg = data.message || data.error || '';
       } catch {
         // ignore parse error
       }
-      throw new Error(msg);
+      throw new Error(formatStorageUploadError(response.status, msg));
     }
     return;
   }
@@ -219,6 +237,6 @@ export async function uploadFileToSignedStorageUrl(params: {
     });
 
   if (error) {
-    throw new Error(error.message || "Le stockage n'a pas accepté ce fichier.");
+    throw new Error(formatStorageUploadError(0, error.message));
   }
 }

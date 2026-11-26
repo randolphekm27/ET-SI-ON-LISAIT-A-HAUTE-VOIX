@@ -42,13 +42,14 @@ interface CandidateProgressCardProps {
   isPresentiel: boolean;
   acceptingNow: boolean;
   submissionDeadline?: string | null;
-  hasGoogleForm: boolean;
   text1Submitted: boolean;
   text1Status: SubmissionStatus | null;
   text2Submitted: boolean;
   text2Status: SubmissionStatus | null;
-  fileSubmitted: boolean;
-  fileStatus: SubmissionStatus | null;
+  video1Submitted: boolean;
+  video1Status: SubmissionStatus | null;
+  video2Submitted: boolean;
+  video2Status: SubmissionStatus | null;
   onCopyReference?: () => void;
   copiedRef?: boolean;
 }
@@ -60,13 +61,14 @@ export function CandidateProgressCard({
   isPresentiel,
   acceptingNow,
   submissionDeadline,
-  hasGoogleForm,
   text1Submitted,
   text1Status,
   text2Submitted,
   text2Status,
-  fileSubmitted,
-  fileStatus,
+  video1Submitted,
+  video1Status,
+  video2Submitted,
+  video2Status,
   onCopyReference,
   copiedRef = false,
 }: CandidateProgressCardProps) {
@@ -86,33 +88,22 @@ export function CandidateProgressCard({
     return () => window.clearInterval(timer);
   }, [submissionDeadline]);
 
-  const step1Done = true; // Candidat identifié / inscrit
-  const step2Done = isPresentiel
-    ? true
-    : hasGoogleForm
-      ? text1Submitted
-      : text1Submitted || fileSubmitted;
-  const step2Validated = isPresentiel
-    ? false
-    : hasGoogleForm
-      ? text1Status === 'validated'
-      : text1Status === 'validated' || fileStatus === 'validated';
-  const step3Done = isPresentiel
-    ? false
-    : hasGoogleForm
-      ? text2Submitted
-      : text2Submitted || fileSubmitted;
-  const step3Validated = isPresentiel
-    ? false
-    : hasGoogleForm
-      ? text2Status === 'validated'
-      : text2Status === 'validated' || fileStatus === 'validated';
-  const step4Done = isPresentiel
-    ? false
-    : hasGoogleForm
-      ? text1Status === 'validated' && text2Status === 'validated'
-      : (text1Status === 'validated' && text2Status === 'validated') ||
-        fileStatus === 'validated';
+  const step1Done = true;
+  const t1Validated = text1Status === 'validated';
+  const t2Validated = text2Status === 'validated';
+  const v1Validated = video1Status === 'validated';
+  const v2Validated = video2Status === 'validated';
+  const allUploaded =
+    text1Submitted && text2Submitted && video1Submitted && video2Submitted;
+  const allValidated =
+    text1Submitted &&
+    text2Submitted &&
+    video1Submitted &&
+    video2Submitted &&
+    t1Validated &&
+    t2Validated &&
+    v1Validated &&
+    v2Validated;
 
   const milestones = isPresentiel
     ? [
@@ -150,45 +141,81 @@ export function CandidateProgressCard({
         },
         {
           num: '02',
-          title: 'Texte 1 (Épreuve 1)',
-          state: step2Validated
+          title: 'Texte 1',
+          state: t1Validated
             ? ('validated' as const)
-            : step2Done
+            : text1Submitted
               ? ('done' as const)
               : ('pending' as const),
-          detail: step2Validated
+          detail: t1Validated
             ? 'Validé · Verrouillé'
             : text1Status === 'rejected'
-              ? 'À modifier et renvoyer'
-              : step2Done
-                ? 'Reçu · En attente de validation'
+              ? 'À reprendre'
+              : text1Submitted
+                ? 'Reçu · En attente'
                 : 'À déposer',
         },
         {
           num: '03',
-          title: 'Texte 2 (Épreuve 2)',
-          state: step3Validated
+          title: 'Texte 2',
+          state: t2Validated
             ? ('validated' as const)
-            : step3Done
+            : text2Submitted
               ? ('done' as const)
               : ('pending' as const),
-          detail: step3Validated
+          detail: t2Validated
             ? 'Validé · Verrouillé'
             : text2Status === 'rejected'
-              ? 'À modifier et renvoyer'
-              : step3Done
-                ? 'Reçu · En attente de validation'
+              ? 'À reprendre'
+              : text2Submitted
+                ? 'Reçu · En attente'
                 : 'À déposer',
         },
         {
           num: '04',
+          title: 'Vidéo 1',
+          state: v1Validated
+            ? ('validated' as const)
+            : video1Submitted
+              ? ('done' as const)
+              : ('pending' as const),
+          detail: v1Validated
+            ? 'Validée · Verrouillée'
+            : video1Status === 'rejected'
+              ? 'À reprendre'
+              : video1Submitted
+                ? 'Reçue · En attente'
+                : 'À déposer',
+        },
+        {
+          num: '05',
+          title: 'Vidéo 2',
+          state: v2Validated
+            ? ('validated' as const)
+            : video2Submitted
+              ? ('done' as const)
+              : ('pending' as const),
+          detail: v2Validated
+            ? 'Validée · Verrouillée'
+            : video2Status === 'rejected'
+              ? 'À reprendre'
+              : video2Submitted
+                ? 'Reçue · En attente'
+                : 'À déposer',
+        },
+        {
+          num: '06',
           title: 'Dossier complet',
-          state: step4Done ? ('validated' as const) : ('pending' as const),
-          detail: step4Done
+          state: allValidated
+            ? ('validated' as const)
+            : allUploaded
+              ? ('done' as const)
+              : ('pending' as const),
+          detail: allValidated
             ? 'Tout est validé'
-            : hasGoogleForm
-              ? 'Textes + formulaire vidéo'
-              : 'En attente de validation',
+            : allUploaded
+              ? '4 pièces déposées'
+              : '2 textes + 2 vidéos',
         },
       ];
 
@@ -297,8 +324,12 @@ export function CandidateProgressCard({
         );
       })()}
 
-      {/* Frise des 4 jalons */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Frise des jalons */}
+      <div
+        className={`grid grid-cols-2 gap-3 ${
+          isPresentiel ? 'lg:grid-cols-4' : 'md:grid-cols-3 lg:grid-cols-6'
+        }`}
+      >
         {milestones.map((m, idx) => {
           const isValidated = m.state === 'validated';
           const isDone = m.state === 'done';

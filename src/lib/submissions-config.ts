@@ -1,12 +1,19 @@
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 Mo
+import type { SubmissionStatus, VideoSlotSubmission } from '../types/competition';
+
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 Mo par vidéo
+export const SUPABASE_FREE_QUOTA_BYTES = 1024 * 1024 * 1024; // 1 Go (Plan Gratuit Supabase)
 export const MAX_TEXT_SUBMISSION_LENGTH = 20_000;
 
-export const ALLOWED_SUBMISSION_MIME_TYPES = [
-  // Vidéo
+export const ALLOWED_VIDEO_MIME_TYPES = [
   'video/mp4',
   'video/quicktime',
   'video/webm',
-  // Audio
+] as const;
+
+export const ALLOWED_SUBMISSION_MIME_TYPES = [
+  // Vidéo
+  ...ALLOWED_VIDEO_MIME_TYPES,
+  // Audio (rétrocompatibilité)
   'audio/mpeg',
   'audio/mp3',
   'audio/mp4',
@@ -17,7 +24,7 @@ export const ALLOWED_SUBMISSION_MIME_TYPES = [
   'audio/x-wav',
   'audio/ogg',
   'audio/webm',
-  // Documents
+  // Documents (rétrocompatibilité)
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
@@ -37,6 +44,8 @@ export const ALLOWED_EXTENSION_TO_MIME: Record<string, string> = {
 };
 
 export const ALLOWED_SUBMISSION_EXTENSIONS = Object.keys(ALLOWED_EXTENSION_TO_MIME);
+
+export const VIDEO_ACCEPT_ATTRIBUTE = '.mp4,.mov,.webm,video/mp4,video/quicktime,video/webm';
 
 export const ACCEPT_ATTRIBUTE = [
   ...ALLOWED_SUBMISSION_EXTENSIONS,
@@ -69,19 +78,28 @@ export function normalizeSubmissionMimeType(
     cleanMime &&
     (ALLOWED_SUBMISSION_MIME_TYPES as readonly string[]).includes(cleanMime)
   ) {
-    // Normalise les variantes (audio/mp3 -> audio/mpeg, audio/x-m4a -> audio/mp4)
     if (cleanMime === 'audio/mp3') return 'audio/mpeg';
     if (cleanMime === 'audio/x-m4a' || cleanMime === 'audio/m4a') return 'audio/mp4';
     if (cleanMime === 'audio/x-wav') return 'audio/wav';
     return cleanMime;
   }
 
-  // Certains navigateurs renvoient '' ou 'application/octet-stream' pour .m4a, .mov ou .docx
-  if ((!cleanMime || cleanMime === 'application/octet-stream') && ext && ALLOWED_EXTENSION_TO_MIME[ext]) {
+  if (
+    (!cleanMime || cleanMime === 'application/octet-stream') &&
+    ext &&
+    ALLOWED_EXTENSION_TO_MIME[ext]
+  ) {
     return ALLOWED_EXTENSION_TO_MIME[ext];
   }
 
   return null;
+}
+
+export function isVideoMimeType(mimeType?: string | null): boolean {
+  if (!mimeType) return false;
+  return (ALLOWED_VIDEO_MIME_TYPES as readonly string[]).includes(
+    mimeType.trim().toLowerCase(),
+  );
 }
 
 export function formatFileSize(bytes?: number | null): string {
@@ -91,7 +109,10 @@ export function formatFileSize(bytes?: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
 }
 
-export function validateSubmissionFileClient(file: File):
+export function validateSubmissionFileClient(
+  file: File,
+  options?: { videoOnly?: boolean },
+):
   | { ok: true; mimeType: string }
   | { ok: false; error: string; isTooLarge?: boolean } {
   if (file.size <= 0) {
@@ -105,7 +126,7 @@ export function validateSubmissionFileClient(file: File):
     return {
       ok: false,
       isTooLarge: true,
-      error: `Votre fichier pèse ${formatFileSize(file.size)}, ce qui dépasse la limite de 50 Mo. Pour une vidéo, exportez en MP4 720p (par exemple avec HandBrake ou un compresseur vidéo) avant de réessayer.`,
+      error: `Votre vidéo pèse ${formatFileSize(file.size)}, ce qui dépasse la limite de 100 Mo. Compressez-la (ex. avec Proton Video Compressor dans « Annonces & Outils » ou en MP4 720p) avant de réessayer.`,
     };
   }
 
@@ -113,8 +134,16 @@ export function validateSubmissionFileClient(file: File):
   if (!normalizedMime) {
     return {
       ok: false,
-      error:
-        'Ce format de fichier n’est pas accepté. Formats autorisés : vidéo (MP4, MOV, WebM), audio (MP3, M4A, WAV, OGG), ou document (PDF, DOCX, DOC).',
+      error: options?.videoOnly
+        ? 'Format non accepté pour le dépôt vidéo. Utilisez un fichier MP4, MOV ou WebM.'
+        : 'Ce format de fichier n’est pas accepté. Formats autorisés : vidéo (MP4, MOV, WebM), audio (MP3, M4A, WAV, OGG), ou document (PDF, DOCX, DOC).',
+    };
+  }
+
+  if (options?.videoOnly && !isVideoMimeType(normalizedMime)) {
+    return {
+      ok: false,
+      error: 'Veuillez choisir une vidéo au format MP4, MOV ou WebM (maximum 100 Mo).',
     };
   }
 
@@ -154,37 +183,91 @@ export function getPhaseTextSlotLabels(phaseId: string): PhaseTextSlotLabels {
   );
 }
 
+export const PHASE_VIDEO_SLOTS: Record<string, PhaseTextSlotLabels> = {
+  'phase-1': {
+    slot1Title: 'Vidéo 1 — Lecture « Je suis… »',
+    slot1Subtitle: 'Interprétation face caméra de votre Texte 1 (jusqu’à 5 min · max 100 Mo)',
+    slot2Title: "Vidéo 2 — Lecture « Les mots que l'on n'ose pas dire »",
+    slot2Subtitle: 'Interprétation face caméra de votre Texte 2 (jusqu’à 5 min · max 100 Mo)',
+  },
+  'phase-2': {
+    slot1Title: 'Vidéo 1 — Exposé « La science dans notre quotidien »',
+    slot1Subtitle: 'Présentation filmée de votre Texte 1 (jusqu’à 5 min · max 100 Mo)',
+    slot2Title: "Vidéo 2 — Exposé « L'école, le savoir et l'avenir »",
+    slot2Subtitle: 'Présentation filmée de votre Texte 2 (jusqu’à 5 min · max 100 Mo)',
+  },
+};
+
+export function getPhaseVideoSlotLabels(phaseId: string): PhaseTextSlotLabels {
+  return (
+    PHASE_VIDEO_SLOTS[phaseId] || {
+      slot1Title: 'Vidéo 1 — Première prestation',
+      slot1Subtitle: 'Vidéo associée au Texte 1 (MP4, MOV, WebM · max 100 Mo)',
+      slot2Title: 'Vidéo 2 — Deuxième prestation',
+      slot2Subtitle: 'Vidéo associée au Texte 2 (MP4, MOV, WebM · max 100 Mo)',
+    }
+  );
+}
+
 export interface DualTextSubmissionPayload {
   __ucaepDualText: 1;
   text1: string;
   text2: string;
-  text1Status: 'received' | 'validated' | 'rejected';
-  text2Status: 'received' | 'validated' | 'rejected';
+  text1Status: SubmissionStatus;
+  text2Status: SubmissionStatus;
   text1Note: string;
   text2Note: string;
+  video1?: VideoSlotSubmission | null;
+  video2?: VideoSlotSubmission | null;
 }
 
-function normalizeTextStatus(
+function normalizeSlotStatus(
   val: unknown,
-  fallback: 'received' | 'validated' | 'rejected' = 'received',
-): 'received' | 'validated' | 'rejected' {
+  fallback: SubmissionStatus = 'received',
+): SubmissionStatus {
   if (val === 'received' || val === 'validated' || val === 'rejected') {
     return val;
   }
   return fallback;
 }
 
+function normalizeVideoSlot(raw: unknown): VideoSlotSubmission | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const storagePath = typeof r.storagePath === 'string' ? r.storagePath.trim() : '';
+  const fileName = typeof r.fileName === 'string' ? r.fileName.trim() : '';
+  const mimeType = typeof r.mimeType === 'string' ? r.mimeType.trim() : '';
+  const sizeBytes = Number(r.sizeBytes);
+  if (!storagePath || !fileName || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return null;
+  }
+  return {
+    storagePath,
+    fileName,
+    mimeType: mimeType || 'video/mp4',
+    sizeBytes,
+    status: normalizeSlotStatus(r.status, 'received'),
+    note: typeof r.note === 'string' ? r.note : '',
+    uploadedAt:
+      typeof r.uploadedAt === 'string' && r.uploadedAt.trim()
+        ? r.uploadedAt
+        : new Date().toISOString(),
+  };
+}
+
 export function parseDualTextContent(
   raw: string | null | undefined,
-  fallbackStatus: 'received' | 'validated' | 'rejected' = 'received',
+  fallbackStatus: SubmissionStatus = 'received',
 ): {
   isStructured: boolean;
   text1: string;
   text2: string;
-  text1Status: 'received' | 'validated' | 'rejected';
-  text2Status: 'received' | 'validated' | 'rejected';
+  text1Status: SubmissionStatus;
+  text2Status: SubmissionStatus;
   text1Note: string;
   text2Note: string;
+  video1: VideoSlotSubmission | null;
+  video2: VideoSlotSubmission | null;
 } {
   const trimmed = (raw || '').trim();
   if (trimmed.startsWith('{') && trimmed.includes('__ucaepDualText')) {
@@ -195,10 +278,12 @@ export function parseDualTextContent(
           isStructured: true,
           text1: typeof parsed.text1 === 'string' ? parsed.text1 : '',
           text2: typeof parsed.text2 === 'string' ? parsed.text2 : '',
-          text1Status: normalizeTextStatus(parsed.text1Status, fallbackStatus),
-          text2Status: normalizeTextStatus(parsed.text2Status, 'received'),
+          text1Status: normalizeSlotStatus(parsed.text1Status, fallbackStatus),
+          text2Status: normalizeSlotStatus(parsed.text2Status, 'received'),
           text1Note: typeof parsed.text1Note === 'string' ? parsed.text1Note : '',
           text2Note: typeof parsed.text2Note === 'string' ? parsed.text2Note : '',
+          video1: normalizeVideoSlot(parsed.video1),
+          video2: normalizeVideoSlot(parsed.video2),
         };
       }
     } catch {
@@ -214,16 +299,20 @@ export function parseDualTextContent(
     text2Status: 'received',
     text1Note: '',
     text2Note: '',
+    video1: null,
+    video2: null,
   };
 }
 
 export function serializeDualTextContent(input: {
   text1: string;
   text2: string;
-  text1Status: 'received' | 'validated' | 'rejected';
-  text2Status: 'received' | 'validated' | 'rejected';
+  text1Status: SubmissionStatus;
+  text2Status: SubmissionStatus;
   text1Note?: string;
   text2Note?: string;
+  video1?: VideoSlotSubmission | null;
+  video2?: VideoSlotSubmission | null;
 }): string {
   const payload: DualTextSubmissionPayload = {
     __ucaepDualText: 1,
@@ -233,8 +322,62 @@ export function serializeDualTextContent(input: {
     text2Status: input.text2Status,
     text1Note: (input.text1Note || '').trim(),
     text2Note: (input.text2Note || '').trim(),
+    ...(input.video1 ? { video1: input.video1 } : {}),
+    ...(input.video2 ? { video2: input.video2 } : {}),
   };
   return JSON.stringify(payload);
+}
+
+export function computeBundleOverallStatus(bundle: {
+  text1: string;
+  text2: string;
+  text1Status: SubmissionStatus;
+  text2Status: SubmissionStatus;
+  video1?: VideoSlotSubmission | null;
+  video2?: VideoSlotSubmission | null;
+}): SubmissionStatus {
+  const hasT1 = Boolean(bundle.text1.trim());
+  const hasT2 = Boolean(bundle.text2.trim());
+  const hasV1 = Boolean(bundle.video1);
+  const hasV2 = Boolean(bundle.video2);
+
+  if (
+    (hasT1 && bundle.text1Status === 'rejected') ||
+    (hasT2 && bundle.text2Status === 'rejected') ||
+    (hasV1 && bundle.video1?.status === 'rejected') ||
+    (hasV2 && bundle.video2?.status === 'rejected')
+  ) {
+    return 'rejected';
+  }
+
+  if (
+    hasT1 &&
+    hasT2 &&
+    hasV1 &&
+    hasV2 &&
+    bundle.text1Status === 'validated' &&
+    bundle.text2Status === 'validated' &&
+    bundle.video1?.status === 'validated' &&
+    bundle.video2?.status === 'validated'
+  ) {
+    return 'validated';
+  }
+
+  return 'received';
+}
+
+export function buildBundleCombinedNote(bundle: {
+  text1Note?: string;
+  text2Note?: string;
+  video1Note?: string;
+  video2Note?: string;
+}): string {
+  const parts: string[] = [];
+  if (bundle.text1Note?.trim()) parts.push(`T1 : ${bundle.text1Note.trim()}`);
+  if (bundle.text2Note?.trim()) parts.push(`T2 : ${bundle.text2Note.trim()}`);
+  if (bundle.video1Note?.trim()) parts.push(`V1 : ${bundle.video1Note.trim()}`);
+  if (bundle.video2Note?.trim()) parts.push(`V2 : ${bundle.video2Note.trim()}`);
+  return parts.join(' | ').slice(0, 1500);
 }
 
 /**

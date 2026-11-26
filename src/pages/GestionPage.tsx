@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  HardDrive,
   Layers,
   LayoutTemplate,
   Lock,
@@ -23,6 +24,7 @@ import {
   Smartphone,
   Trash2,
   Unlock,
+  Video,
   X,
   XCircle,
 } from 'lucide-react';
@@ -30,11 +32,14 @@ import { fetchApiJson } from '../lib/api';
 import { formatFrenchDate, usePageSeo } from '../lib/format';
 import { useSiteConfig } from '../lib/site-config';
 import {
+  SUPABASE_FREE_QUOTA_BYTES,
   findGluedTextIssue,
   formatFileSize,
   getPhaseTextSlotLabels,
+  getPhaseVideoSlotLabels,
 } from '../lib/submissions-config';
 import type {
+  AdminStorageStats,
   AdminSubmissionAccess,
   AdminSubmissionItem,
   Announcement,
@@ -44,7 +49,6 @@ import type {
   DepotResourceKind,
   MediaAssetKey,
   NewsArticle,
-  PhaseExternalFormConfig,
   PublicationStatus,
   RegistrationRecord,
   SiteDisplayConfig,
@@ -161,13 +165,19 @@ export function GestionPage() {
 
   // Dépôts des candidats state
   const [submissions, setSubmissions] = useState<AdminSubmissionItem[]>([]);
+  const [storageStats, setStorageStats] = useState<AdminStorageStats>({
+    totalBytes: 0,
+    quotaBytes: SUPABASE_FREE_QUOTA_BYTES,
+    fileCount: 0,
+    usagePercent: 0,
+  });
   const [submissionsStorageReady, setSubmissionsStorageReady] = useState<boolean>(true);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionsError, setSubmissionsError] = useState('');
   const [submissionPhaseFilter, setSubmissionPhaseFilter] = useState('all');
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('all');
   const [submissionQueueFilter, setSubmissionQueueFilter] = useState<
-    'all' | 'pending_t1' | 'pending_t2' | 'both_validated' | 'rejected'
+    'all' | 'pending_t1' | 'pending_t2' | 'pending_videos' | 'both_validated' | 'rejected'
   >('all');
   const [submissionSearch, setSubmissionSearch] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -183,6 +193,10 @@ export function GestionPage() {
   const [reviewNoteDraft, setReviewNoteDraft] = useState('');
   const [reviewNote1Draft, setReviewNote1Draft] = useState('');
   const [reviewNote2Draft, setReviewNote2Draft] = useState('');
+  const [reviewVideo1Draft, setReviewVideo1Draft] = useState('');
+  const [reviewVideo2Draft, setReviewVideo2Draft] = useState('');
+  const [purgeConfirmSlot, setPurgeConfirmSlot] = useState<1 | 2 | null>(null);
+  const [purgeLoadingSlot, setPurgeLoadingSlot] = useState<1 | 2 | null>(null);
   const [reviewError, setReviewError] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
   const [copiedTextSlot, setCopiedTextSlot] = useState<1 | 2 | null>(null);
@@ -269,16 +283,6 @@ export function GestionPage() {
   const [siteConfigError, setSiteConfigError] = useState('');
   const siteDraftInitializedRef = useRef(false);
 
-  // Google Form external submission link configurator state
-  const [externalFormsDraft, setExternalFormsDraft] = useState<
-    Record<string, { enabled: boolean; googleFormUrl: string; instructions: string }>
-  >({
-    'phase-1': { enabled: false, googleFormUrl: '', instructions: '' },
-    'phase-2': { enabled: false, googleFormUrl: '', instructions: '' },
-  });
-  const [externalFormSavingId, setExternalFormSavingId] = useState<string | null>(null);
-  const [externalFormError, setExternalFormError] = useState('');
-  const externalFormsInitializedRef = useRef(false);
 
   // Depot resources (infos, guides & tool buttons pushed to /depot)
   const [depotResources, setDepotResources] = useState<DepotResourceItem[]>([]);
@@ -335,22 +339,6 @@ export function GestionPage() {
         setDraftActivePhaseId(json.settings.siteDisplay.activePhaseId || 'phase-1');
         setDraftCustomNotice(json.settings.siteDisplay.customNotice || '');
       }
-      if (!externalFormsInitializedRef.current && json.settings?.siteDisplay) {
-        externalFormsInitializedRef.current = true;
-        const forms = json.settings.siteDisplay.externalForms || {};
-        setExternalFormsDraft({
-          'phase-1': {
-            enabled: Boolean(forms['phase-1']?.enabled),
-            googleFormUrl: forms['phase-1']?.googleFormUrl || '',
-            instructions: forms['phase-1']?.instructions || '',
-          },
-          'phase-2': {
-            enabled: Boolean(forms['phase-2']?.enabled),
-            googleFormUrl: forms['phase-2']?.googleFormUrl || '',
-            instructions: forms['phase-2']?.instructions || '',
-          },
-        });
-      }
       if (
         !depotResourcesInitializedRef.current &&
         json.settings?.siteDisplay?.depotResources
@@ -397,11 +385,15 @@ export function GestionPage() {
     try {
       const res = await fetchApiJson<{
         storageConfigured: boolean;
+        storageStats?: AdminStorageStats;
         submissions: AdminSubmissionItem[];
       }>('/api/admin/submissions', {
         headers: buildAuthHeaders(undefined, overrideAdminToken),
       });
       setSubmissions(res.submissions || []);
+      if (res.storageStats) {
+        setStorageStats(res.storageStats);
+      }
       setSubmissionsStorageReady(res.storageConfigured);
     } catch (err) {
       setSubmissionsError(
@@ -781,6 +773,10 @@ export function GestionPage() {
     setReviewNoteDraft(item.organizerNote || '');
     setReviewNote1Draft('');
     setReviewNote2Draft('');
+    setReviewVideo1Draft('');
+    setReviewVideo2Draft('');
+    setPurgeConfirmSlot(null);
+    setPurgeLoadingSlot(null);
     setInspectLoading(true);
     try {
       const access = await fetchApiJson<AdminSubmissionAccess>(
@@ -792,6 +788,8 @@ export function GestionPage() {
       setInspectingAccess(access);
       setReviewNote1Draft(access.text1Note || '');
       setReviewNote2Draft(access.text2Note || '');
+      setReviewVideo1Draft(access.video1?.note || '');
+      setReviewVideo2Draft(access.video2?.note || '');
     } catch (err) {
       setInspectError(
         err instanceof Error
@@ -805,7 +803,12 @@ export function GestionPage() {
 
   async function handleUpdateSubmissionReview(
     submissionId: string,
-    patch: { status?: SubmissionStatus; organizerNote?: string; textSlot?: 1 | 2 },
+    patch: {
+      status?: SubmissionStatus;
+      organizerNote?: string;
+      textSlot?: 1 | 2;
+      videoSlot?: 1 | 2;
+    },
   ) {
     setReviewSaving(true);
     setReviewError('');
@@ -820,6 +823,10 @@ export function GestionPage() {
           text2Status?: SubmissionStatus;
           text1Note?: string;
           text2Note?: string;
+          video1Status?: SubmissionStatus;
+          video2Status?: SubmissionStatus;
+          video1Note?: string;
+          video2Note?: string;
         };
       }>(`/api/admin/submissions/${submissionId}`, {
         method: 'PATCH',
@@ -840,6 +847,12 @@ export function GestionPage() {
                 ...(res.submission.text2Status !== undefined
                   ? { text2Status: res.submission.text2Status }
                   : {}),
+                ...(res.submission.video1Status !== undefined
+                  ? { video1Status: res.submission.video1Status }
+                  : {}),
+                ...(res.submission.video2Status !== undefined
+                  ? { video2Status: res.submission.video2Status }
+                  : {}),
               }
             : s,
         ),
@@ -856,6 +869,12 @@ export function GestionPage() {
                 : {}),
               ...(res.submission.text2Status !== undefined
                 ? { text2Status: res.submission.text2Status }
+                : {}),
+              ...(res.submission.video1Status !== undefined
+                ? { video1Status: res.submission.video1Status }
+                : {}),
+              ...(res.submission.video2Status !== undefined
+                ? { video2Status: res.submission.video2Status }
                 : {}),
             }
           : prev,
@@ -876,13 +895,37 @@ export function GestionPage() {
               ...(res.submission.text2Note !== undefined
                 ? { text2Note: res.submission.text2Note }
                 : {}),
+              ...(prev.video1 && res.submission.video1Status !== undefined
+                ? {
+                    video1: {
+                      ...prev.video1,
+                      status: res.submission.video1Status,
+                      ...(res.submission.video1Note !== undefined
+                        ? { note: res.submission.video1Note }
+                        : {}),
+                    },
+                  }
+                : {}),
+              ...(prev.video2 && res.submission.video2Status !== undefined
+                ? {
+                    video2: {
+                      ...prev.video2,
+                      status: res.submission.video2Status,
+                      ...(res.submission.video2Note !== undefined
+                        ? { note: res.submission.video2Note }
+                        : {}),
+                    },
+                  }
+                : {}),
             }
           : prev,
       );
       setNotice(
-        patch.textSlot
-          ? `Évaluation du Texte ${patch.textSlot} enregistrée.`
-          : 'Évaluation du dépôt enregistrée.',
+        patch.videoSlot
+          ? `Évaluation de la Vidéo ${patch.videoSlot} enregistrée.`
+          : patch.textSlot
+            ? `Évaluation du Texte ${patch.textSlot} enregistrée.`
+            : 'Évaluation du dépôt enregistrée.',
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Mise à jour impossible.';
@@ -893,83 +936,61 @@ export function GestionPage() {
     }
   }
 
-  async function handleSaveExternalForm(
-    phaseId: 'phase-1' | 'phase-2',
-    overrideEnabled?: boolean,
+  async function handlePurgeSubmissionVideo(
+    submissionId: string,
+    videoSlot: 1 | 2,
   ) {
-    const draft = externalFormsDraft[phaseId] || {
-      enabled: false,
-      googleFormUrl: '',
-      instructions: '',
-    };
-    const nextEnabled =
-      overrideEnabled !== undefined ? overrideEnabled : draft.enabled;
-
-    setExternalFormSavingId(phaseId);
-    setExternalFormError('');
-    setNotice('');
-
+    setPurgeLoadingSlot(videoSlot);
+    setReviewError('');
     try {
       const res = await fetchApiJson<{
-        siteDisplay: SiteDisplayConfig;
-        phases?: CompetitionPhase[];
-      }>('/api/admin/external-forms', {
-        method: 'PATCH',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          phaseId,
-          enabled: nextEnabled,
-          googleFormUrl: draft.googleFormUrl,
-          instructions: draft.instructions,
-        }),
+        ok: boolean;
+        freedBytes: number;
+        status: SubmissionStatus;
+        organizerNote: string;
+      }>(`/api/admin/submissions/${submissionId}/video/${videoSlot}`, {
+        method: 'DELETE',
+        headers: buildAuthHeaders(),
       });
+      setPurgeConfirmSlot(null);
 
-      const savedForm: PhaseExternalFormConfig = res.siteDisplay.externalForms?.[
-        phaseId
-      ] || {
-        enabled: false,
-        googleFormUrl: '',
-        instructions: '',
-      };
-
-      setExternalFormsDraft((prev) => ({
-        ...prev,
-        [phaseId]: {
-          enabled: savedForm.enabled,
-          googleFormUrl: savedForm.googleFormUrl || '',
-          instructions: savedForm.instructions || '',
-        },
-      }));
-      externalFormsInitializedRef.current = true;
-
-      setData((prev) =>
-        prev
+      setInspectingAccess((prev) =>
+        prev && prev.id === submissionId
           ? {
               ...prev,
-              phases: res.phases || prev.phases,
-              settings: {
-                ...prev.settings,
-                siteDisplay: res.siteDisplay,
-              },
+              ...(videoSlot === 1 ? { video1: null } : { video2: null }),
+            }
+          : prev,
+      );
+      if (videoSlot === 1) setReviewVideo1Draft('');
+      else setReviewVideo2Draft('');
+
+      setInspectingItem((prev) =>
+        prev && prev.id === submissionId
+          ? {
+              ...prev,
+              status: res.status,
+              organizerNote: res.organizerNote,
+              ...(videoSlot === 1
+                ? { video1Name: null, video1SizeBytes: null, video1Status: undefined }
+                : { video2Name: null, video2SizeBytes: null, video2Status: undefined }),
             }
           : prev,
       );
 
-      await Promise.all([loadOverview(), refreshSiteConfig()]);
+      await loadSubmissions();
       setNotice(
-        savedForm.enabled
-          ? `Lien Google Form activé pour la Phase ${phaseId === 'phase-1' ? '01' : '02'} (remplace les dépôts de fichiers Supabase).`
-          : `Configuration Google Form enregistrée pour la Phase ${phaseId === 'phase-1' ? '01' : '02'}.`,
+        `Vidéo ${videoSlot} supprimée du stockage (${formatFileSize(res.freedBytes)} libérés). Les textes restent intacts.`,
       );
     } catch (err) {
       const msg =
         err instanceof Error
           ? err.message
-          : "Impossible d'enregistrer le lien Google Form.";
-      setExternalFormError(msg);
+          : 'Impossible de supprimer cette vidéo pour le moment.';
+      setReviewError(msg);
       setNotice(msg);
     } finally {
-      setExternalFormSavingId(null);
+      setPurgeLoadingSlot(null);
     }
   }
 
@@ -988,9 +1009,9 @@ export function GestionPage() {
   function loadVideoCompressorPreset() {
     setEditingResourceId(null);
     setResKind('tool');
-    setResTitle('Réduire la taille de votre vidéo (max 100 Mo sur Google Form)');
+    setResTitle('Réduire la taille de votre vidéo (max 100 Mo / conseillé ≤ 50 Mo)');
     setResBody(
-      "Le Google Form officiel limite les vidéos à 100 Mo. Compressez votre vidéo sur Android avec Proton Video Compressor avant l'envoi tout en gardant un son clair.",
+      "Le dépôt vidéo direct accepte jusqu'à 100 Mo par vidéo (50 Mo conseillés pour un envoi rapide et fluide sur le Plan Gratuit Supabase). Compressez votre vidéo sur Android avec Proton Video Compressor avant l'envoi tout en gardant un son clair.",
     );
     setResActionLabel('Télécharger Proton Video Compressor (Play Store)');
     setResActionUrl(
@@ -1205,10 +1226,14 @@ export function GestionPage() {
       'Filière',
       'Niveau',
       'Phase',
-      'Type',
-      'Fichier',
-      'Taille (octets)',
-      'Statut',
+      'Statut Texte 1',
+      'Statut Texte 2',
+      'Vidéo 1',
+      'Statut Vidéo 1',
+      'Vidéo 2',
+      'Statut Vidéo 2',
+      'Poids total vidéos (octets)',
+      'Statut global',
       'Note interne',
       'Date dépôt',
     ];
@@ -1218,9 +1243,13 @@ export function GestionPage() {
       s.candidateDepartment,
       s.candidateStudyLevel,
       `Phase ${s.phaseNumber} — ${s.phaseTitle}`,
-      s.kind === 'file' ? 'Fichier' : 'Texte écrit',
-      s.fileName || (s.kind === 'text' ? 'Texte en ligne' : ''),
-      s.sizeBytes ?? '',
+      s.text1Status ? SUBMISSION_STATUS_META[s.text1Status].label : 'Non soumis',
+      s.text2Status ? SUBMISSION_STATUS_META[s.text2Status].label : 'Non soumis',
+      s.video1Name || '',
+      s.video1Status ? SUBMISSION_STATUS_META[s.video1Status].label : 'Non soumise',
+      s.video2Name || '',
+      s.video2Status ? SUBMISSION_STATUS_META[s.video2Status].label : 'Non soumise',
+      s.totalFileBytes ?? s.sizeBytes ?? 0,
       SUBMISSION_STATUS_META[s.status].label,
       s.organizerNote || '',
       s.updatedAt,
@@ -1457,6 +1486,7 @@ export function GestionPage() {
     let rejected = 0;
     let pendingT1 = 0;
     let pendingT2 = 0;
+    let pendingVideos = 0;
     let bothValidated = 0;
     let anyRejected = 0;
 
@@ -1465,19 +1495,22 @@ export function GestionPage() {
       else if (s.status === 'rejected') rejected += 1;
       else received += 1;
 
-      if (s.kind === 'text') {
-        const t1Status = s.text1Status || 'received';
-        const t2Status = s.text2Status || 'received';
-        if (t1Status === 'received') pendingT1 += 1;
-        if (t2Status === 'received') pendingT2 += 1;
-        if (t1Status === 'validated' && t2Status === 'validated') bothValidated += 1;
-        if (s.status === 'rejected' || t1Status === 'rejected' || t2Status === 'rejected') {
-          anyRejected += 1;
-        }
-      } else {
-        if (s.status === 'received') pendingT1 += 1;
-        if (s.status === 'validated') bothValidated += 1;
-        if (s.status === 'rejected') anyRejected += 1;
+      if (s.text1Status === 'received') pendingT1 += 1;
+      if (s.text2Status === 'received') pendingT2 += 1;
+      if (s.video1Status === 'received' || s.video2Status === 'received') {
+        pendingVideos += 1;
+      }
+      if (s.status === 'validated') {
+        bothValidated += 1;
+      }
+      if (
+        s.status === 'rejected' ||
+        s.text1Status === 'rejected' ||
+        s.text2Status === 'rejected' ||
+        s.video1Status === 'rejected' ||
+        s.video2Status === 'rejected'
+      ) {
+        anyRejected += 1;
       }
     }
     return {
@@ -1487,6 +1520,7 @@ export function GestionPage() {
       rejected,
       pendingT1,
       pendingT2,
+      pendingVideos,
       bothValidated,
       anyRejected,
     };
@@ -1544,23 +1578,24 @@ export function GestionPage() {
         return false;
       }
       if (submissionQueueFilter !== 'all') {
-        const isText = s.kind === 'text';
-        const t1Status = s.text1Status || 'received';
-        const t2Status = s.text2Status || 'received';
         if (submissionQueueFilter === 'pending_t1') {
-          if (isText ? t1Status !== 'received' : s.status !== 'received') {
-            return false;
-          }
+          if (s.text1Status !== 'received') return false;
         } else if (submissionQueueFilter === 'pending_t2') {
-          if (!isText || t2Status !== 'received') {
+          if (s.text2Status !== 'received') return false;
+        } else if (submissionQueueFilter === 'pending_videos') {
+          if (s.video1Status !== 'received' && s.video2Status !== 'received') {
             return false;
           }
         } else if (submissionQueueFilter === 'both_validated') {
-          if (isText ? t1Status !== 'validated' || t2Status !== 'validated' : s.status !== 'validated') {
-            return false;
-          }
+          if (s.status !== 'validated') return false;
         } else if (submissionQueueFilter === 'rejected') {
-          if (s.status !== 'rejected' && t1Status !== 'rejected' && t2Status !== 'rejected') {
+          if (
+            s.status !== 'rejected' &&
+            s.text1Status !== 'rejected' &&
+            s.text2Status !== 'rejected' &&
+            s.video1Status !== 'rejected' &&
+            s.video2Status !== 'rejected'
+          ) {
             return false;
           }
         }
@@ -1571,7 +1606,9 @@ export function GestionPage() {
           s.referenceCode.toLowerCase().includes(q) ||
           s.candidateName.toLowerCase().includes(q) ||
           s.candidateDepartment.toLowerCase().includes(q) ||
-          (s.fileName || '').toLowerCase().includes(q)
+          (s.fileName || '').toLowerCase().includes(q) ||
+          (s.video1Name || '').toLowerCase().includes(q) ||
+          (s.video2Name || '').toLowerCase().includes(q)
         );
       }
       return true;
@@ -2124,7 +2161,7 @@ export function GestionPage() {
                 </button>
                 <p className="text-xs text-ucaep-ink/65">
                   Vous pouvez modifier les consignes et dates limites de chaque phase dans{' '}
-                  <strong>Phases</strong>, et activer un lien Google Form de soumission dans{' '}
+                  <strong>Phases</strong>, et consulter les textes, vidéos et le quota de stockage dans{' '}
                   <button
                     type="button"
                     onClick={() => selectTab('depots')}
@@ -2865,182 +2902,140 @@ export function GestionPage() {
         {/* ONGLET DÉPÔTS */}
         {tab === 'depots' && (
           <div className="space-y-6">
-            {/* CONFIGURATEUR GOOGLE FORM PAR PHASE (REMPLACE LES FICHIERS SUPABASE) */}
+            {/* QUOTA DE STOCKAGE SUPABASE (1 Go PLAN GRATUIT) & OUVERTURE DES PHASES */}
             <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-ucaep-brown/12 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
                 <div className="space-y-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                    Mode de réception des vidéos &amp; fichiers
+                    Réception directe sur le site · Supabase Storage
                   </p>
                   <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
-                    Activer un lien Google Form de soumission
+                    Stockage des vidéos (max 100 Mo / vidéo · quota 1 Go)
                   </h2>
                   <p className="text-xs text-ucaep-ink/75 leading-relaxed">
-                    Lorsqu&apos;un lien Google Form est activé pour une phase, les dépôts de cette phase sont ouverts et le bouton d&apos;accès au formulaire vidéo reste visible et cliquable en permanence sur la page de dépôt, quel que soit l&apos;avancement des deux textes écrits (Texte 1 et Texte 2).
+                    Chaque candidat dépose ses <strong>2 textes</strong> et ses <strong>2 vidéos</strong> (Vidéo 1 &amp; Vidéo 2, MP4/MOV/WebM, max 100 Mo chacune) directement dans l&apos;espace <span className="font-mono">/depot</span>. Vous pouvez visionner et évaluer chaque vidéo ci-dessous puis libérer de l&apos;espace après validation.
                   </p>
                 </div>
+
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-sm shrink-0 ${
+                    submissionsStorageReady
+                      ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                      : 'bg-amber-50 text-amber-900 border-amber-300'
+                  }`}
+                >
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>
+                    {submissionsStorageReady ? 'Bucket vidéo actif' : 'Mode stockage local'}
+                  </span>
+                </span>
               </div>
 
-              {externalFormError && (
-                <div
-                  role="alert"
-                  className="p-3.5 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{externalFormError}</span>
+              {/* JAUGE QUOTA 1 Go */}
+              <div className="p-4 bg-ucaep-paper/65 border border-ucaep-brown/15 rounded-sm space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs tabular-nums">
+                  <div className="font-semibold text-ucaep-brown">
+                    Espace utilisé :{' '}
+                    <span className="text-sm font-bold">
+                      {formatFileSize(storageStats.totalBytes)}
+                    </span>{' '}
+                    / 1 Go ({storageStats.fileCount} vidéo{storageStats.fileCount > 1 ? 's' : ''} hébergée{storageStats.fileCount > 1 ? 's' : ''})
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 font-semibold border rounded-sm ${
+                      storageStats.usagePercent >= 90
+                        ? 'bg-red-50 text-red-900 border-red-300'
+                        : storageStats.usagePercent >= 75
+                          ? 'bg-amber-50 text-amber-900 border-amber-300'
+                          : 'bg-white text-ucaep-brown border-ucaep-brown/20'
+                    }`}
+                  >
+                    {storageStats.usagePercent.toFixed(1).replace('.', ',')} % utilisé
+                  </span>
                 </div>
-              )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="w-full h-2.5 bg-ucaep-brown/12 rounded-sm overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      storageStats.usagePercent >= 90
+                        ? 'bg-red-700'
+                        : storageStats.usagePercent >= 75
+                          ? 'bg-amber-600'
+                          : 'bg-ucaep-green'
+                    }`}
+                    style={{
+                      width: `${Math.min(100, Math.max(storageStats.totalBytes > 0 ? 2 : 0, storageStats.usagePercent))}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="text-[11px] text-ucaep-ink/75 leading-relaxed">
+                  <strong>Note Plan Gratuit Supabase :</strong> la limite applicative est fixée à <strong>100 Mo par vidéo</strong> (et 1 Go au total). Sur le Plan Gratuit Supabase, la passerelle serveur de stockage bloque parfois au-delà de <strong>50 Mo par fichier</strong> : en cas d&apos;erreur de taille, le site invite automatiquement le candidat à compresser sa vidéo (Proton Video Compressor).
+                </p>
+
+                {storageStats.usagePercent >= 75 && (
+                  <div
+                    role="alert"
+                    className={`p-3 border rounded-sm text-xs flex items-start gap-2 ${
+                      storageStats.usagePercent >= 90
+                        ? 'bg-red-50 border-red-300 text-red-900'
+                        : 'bg-amber-50 border-amber-300 text-amber-950'
+                    }`}
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      {storageStats.usagePercent >= 90
+                        ? 'Quota critique (≥ 90 % de 1 Go) : supprimez les vidéos déjà évaluées ou refusées via « Voir / Évaluer → Libérer l’espace » pour éviter tout blocage.'
+                        : 'Attention : plus de 75 % du quota gratuit (1 Go) est occupé. Pensez à purger les vidéos déjà traitées après notation.'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* ÉTAT RAPIDE D'OUVERTURE DES PHASES EN LIGNE */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(['phase-1', 'phase-2'] as const).map((phaseId) => {
                   const phaseInfo = data.phases.find((p) => p.id === phaseId);
-                  const draft = externalFormsDraft[phaseId] || {
-                    enabled: false,
-                    googleFormUrl: '',
-                    instructions: '',
-                  };
-                  const liveForm =
-                    data.settings?.siteDisplay?.externalForms?.[phaseId];
-                  const isBusy = externalFormSavingId === phaseId;
+                  if (!phaseInfo) return null;
+                  const isBusy = phaseSavingId === phaseId;
 
                   return (
                     <div
                       key={phaseId}
-                      className={`p-5 border rounded-sm space-y-4 ${
-                        liveForm?.enabled
-                          ? 'border-ucaep-green/45 bg-emerald-50/20'
-                          : 'border-ucaep-brown/15 bg-ucaep-paper/50'
-                      }`}
+                      className="p-4 border border-ucaep-brown/15 bg-ucaep-paper/45 rounded-sm flex flex-wrap items-center justify-between gap-3"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] font-semibold uppercase tracking-widest text-ucaep-brown/70">
-                            Phase {phaseInfo?.number || (phaseId === 'phase-1' ? '01' : '02')}
-                          </span>
-                          <h3 className="font-serif text-xl font-semibold text-ucaep-brown">
-                            {phaseInfo?.title || phaseId}
-                          </h3>
-                        </div>
-                        <span
-                          className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
-                            liveForm?.enabled
-                              ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                              : 'bg-white text-ucaep-ink/70 border-ucaep-brown/20'
-                          }`}
-                        >
-                          {liveForm?.enabled
-                            ? 'Google Form actif'
-                            : 'Stockage Supabase'}
-                        </span>
-                      </div>
-
-                      {liveForm?.enabled && phaseInfo && !phaseInfo.submissionsOpen && (
-                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950 space-y-2 leading-relaxed">
-                          <p>
-                            Le formulaire Google Form est actif, mais la saisie des textes (Texte 1 &amp; Texte 2) pour cette phase est encore fermée.
-                          </p>
-                          <button
-                            type="button"
-                            disabled={phaseSavingId === phaseInfo.id}
-                            onClick={() => handleToggleSubmissionsOpen(phaseInfo)}
-                            className="px-3 py-1.5 text-[11px] font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-50"
-                          >
-                            {phaseSavingId === phaseInfo.id
-                              ? 'Ouverture...'
-                              : 'Ouvrir les dépôts maintenant'}
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5">
-                        <label
-                          htmlFor={`gform-url-${phaseId}`}
-                          className="block text-xs font-semibold text-ucaep-brown"
-                        >
-                          Lien du formulaire Google Form
-                        </label>
-                        <input
-                          id={`gform-url-${phaseId}`}
-                          type="url"
-                          value={draft.googleFormUrl}
-                          onChange={(e) =>
-                            setExternalFormsDraft((prev) => ({
-                              ...prev,
-                              [phaseId]: { ...draft, googleFormUrl: e.target.value },
-                            }))
-                          }
-                          placeholder="https://docs.google.com/forms/d/e/.../viewform"
-                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label
-                          htmlFor={`gform-note-${phaseId}`}
-                          className="block text-xs font-semibold text-ucaep-brown"
-                        >
-                          Consigne rapide aux candidats (optionnel)
-                        </label>
-                        <input
-                          id={`gform-note-${phaseId}`}
-                          type="text"
-                          maxLength={500}
-                          value={draft.instructions}
-                          onChange={(e) =>
-                            setExternalFormsDraft((prev) => ({
-                              ...prev,
-                              [phaseId]: { ...draft, instructions: e.target.value },
-                            }))
-                          }
-                          placeholder="Ex. : Déposez vos deux vidéos MP4 dans le Google Form avec votre code UCAEP."
-                          className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
-                        />
-                      </div>
-
-                      <label className="flex items-center gap-2.5 text-xs font-medium text-ucaep-brown cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={draft.enabled}
-                          onChange={(e) =>
-                            setExternalFormsDraft((prev) => ({
-                              ...prev,
-                              [phaseId]: { ...draft, enabled: e.target.checked },
-                            }))
-                          }
-                          className="accent-ucaep-brown"
-                        />
-                        <span>
-                          Activer ce lien Google Form pour remplacer l&apos;envoi de
-                          fichiers via Supabase
-                        </span>
-                      </label>
-
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => handleSaveExternalForm(phaseId)}
-                          className="px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] disabled:opacity-50"
-                        >
-                          {isBusy ? 'Enregistrement...' : 'Enregistrer'}
-                        </button>
-                        {draft.googleFormUrl.trim() && (
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              handleSaveExternalForm(phaseId, !draft.enabled)
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-ucaep-brown/70">
+                          Phase {phaseInfo.number} · {phaseInfo.title}
+                        </p>
+                        <p className="text-xs font-semibold text-ucaep-brown">
+                          Dépôts textes &amp; vidéos :{' '}
+                          <span
+                            className={
+                              phaseInfo.submissionsOpen ? 'text-ucaep-green' : 'text-red-800'
                             }
-                            className={`px-4 py-2 text-xs font-semibold rounded-sm border transition-colors disabled:opacity-50 ${
-                              draft.enabled
-                                ? 'border-red-300 bg-red-50 text-red-900 hover:bg-red-100'
-                                : 'border-ucaep-green/40 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
-                            }`}
                           >
-                            {draft.enabled ? 'Désactiver le lien' : 'Activer le lien'}
-                          </button>
-                        )}
+                            {phaseInfo.submissionsOpen ? 'Ouverts' : 'Fermés'}
+                          </span>
+                        </p>
                       </div>
+
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => handleToggleSubmissionsOpen(phaseInfo)}
+                        className={`px-3.5 py-1.5 text-xs font-semibold rounded-sm border transition-colors disabled:opacity-50 ${
+                          phaseInfo.submissionsOpen
+                            ? 'bg-ucaep-gold text-ucaep-ink border-ucaep-gold hover:bg-[#c38c2d]'
+                            : 'bg-white text-ucaep-brown border-ucaep-brown/25 hover:bg-ucaep-paper'
+                        }`}
+                      >
+                        {isBusy
+                          ? 'Mise à jour...'
+                          : phaseInfo.submissionsOpen
+                            ? 'Fermer les dépôts'
+                            : 'Ouvrir les dépôts'}
+                      </button>
                     </div>
                   );
                 })}
@@ -3412,7 +3407,8 @@ export function GestionPage() {
                   { id: 'all', label: `Tout (${submissionStats.total})` },
                   { id: 'pending_t1', label: `À valider Texte 1 (${submissionStats.pendingT1})` },
                   { id: 'pending_t2', label: `À valider Texte 2 (${submissionStats.pendingT2})` },
-                  { id: 'both_validated', label: `Validés complets (${submissionStats.bothValidated})` },
+                  { id: 'pending_videos', label: `Vidéos à valider (${submissionStats.pendingVideos})` },
+                  { id: 'both_validated', label: `Dossiers validés (${submissionStats.bothValidated})` },
                   { id: 'rejected', label: `À reprendre (${submissionStats.anyRejected})` },
                 ] as const
               ).map((q) => {
@@ -3535,52 +3531,75 @@ export function GestionPage() {
                             Phase {item.phaseNumber} — {item.phaseTitle}
                           </td>
                           <td className="py-3.5 px-4 max-w-xs">
-                            {item.kind === 'file' ? (
-                              <div className="space-y-0.5">
-                                <div className="text-xs font-medium text-ucaep-ink truncate">
-                                  {item.fileName || 'Fichier'}
-                                </div>
-                                <div className="text-[11px] text-ucaep-ink/60">
-                                  {formatFileSize(item.sizeBytes)}
-                                </div>
+                            <div className="space-y-1.5">
+                              <div className="flex flex-wrap gap-1.5">
+                                <span
+                                  className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                    item.text1Status
+                                      ? SUBMISSION_STATUS_META[item.text1Status].badgeClass
+                                      : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                  }`}
+                                >
+                                  T1 :{' '}
+                                  {item.text1Status
+                                    ? SUBMISSION_STATUS_META[item.text1Status].label
+                                    : 'Vide'}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                    item.text2Status
+                                      ? SUBMISSION_STATUS_META[item.text2Status].badgeClass
+                                      : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                  }`}
+                                >
+                                  T2 :{' '}
+                                  {item.text2Status
+                                    ? SUBMISSION_STATUS_META[item.text2Status].label
+                                    : 'Vide'}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                    item.video1Status
+                                      ? SUBMISSION_STATUS_META[item.video1Status].badgeClass
+                                      : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                  }`}
+                                >
+                                  V1 :{' '}
+                                  {item.video1Status
+                                    ? SUBMISSION_STATUS_META[item.video1Status].label
+                                    : 'Vide'}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
+                                    item.video2Status
+                                      ? SUBMISSION_STATUS_META[item.video2Status].badgeClass
+                                      : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
+                                  }`}
+                                >
+                                  V2 :{' '}
+                                  {item.video2Status
+                                    ? SUBMISSION_STATUS_META[item.video2Status].label
+                                    : 'Vide'}
+                                </span>
                               </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <div className="inline-flex items-center gap-1 text-xs font-medium text-ucaep-brown">
-                                  <FileText className="w-3.5 h-3.5" />
-                                  <span>Textes (1 &amp; 2)</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  <span
-                                    className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
-                                      item.text1Status
-                                        ? SUBMISSION_STATUS_META[item.text1Status].badgeClass
-                                        : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
-                                    }`}
-                                  >
-                                    T1 :{' '}
-                                    {item.text1Status
-                                      ? SUBMISSION_STATUS_META[item.text1Status].label
-                                      : 'Vide'}
-                                  </span>
-                                  <span
-                                    className={`px-1.5 py-0.5 text-[10px] font-semibold border rounded-sm ${
-                                      item.text2Status
-                                        ? SUBMISSION_STATUS_META[item.text2Status].badgeClass
-                                        : 'bg-ucaep-paper text-ucaep-ink/60 border-ucaep-brown/20'
-                                    }`}
-                                  >
-                                    T2 :{' '}
-                                    {item.text2Status
-                                      ? SUBMISSION_STATUS_META[item.text2Status].label
-                                      : 'Vide'}
+                              {(item.totalFileBytes || item.sizeBytes) ? (
+                                <div className="inline-flex items-center gap-1 text-[11px] text-ucaep-brown font-medium tabular-nums">
+                                  <Video className="w-3 h-3" />
+                                  <span>
+                                    {formatFileSize(item.totalFileBytes ?? item.sizeBytes)}
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-ucaep-ink/65 line-clamp-2 break-words">
+                              ) : null}
+                              {item.textPreview ? (
+                                <p className="text-[11px] text-ucaep-ink/65 line-clamp-1 break-words">
                                   {item.textPreview}
                                 </p>
-                              </div>
-                            )}
+                              ) : item.fileName ? (
+                                <p className="text-[11px] text-ucaep-ink/65 truncate">
+                                  {item.fileName}
+                                </p>
+                              ) : null}
+                            </div>
                           </td>
                           <td className="py-3.5 px-4">
                             <span
@@ -3669,33 +3688,94 @@ export function GestionPage() {
                           </div>
                         )}
 
-                        {inspectingAccess.kind === 'text' ? (
-                          (() => {
-                            const slotLabels = getPhaseTextSlotLabels(
-                              inspectingItem.phaseId,
-                            );
-                            const t1HasContent = Boolean(
-                              inspectingAccess.text1Content?.trim(),
-                            );
-                            const t2HasContent = Boolean(
-                              inspectingAccess.text2Content?.trim(),
-                            );
-                            const t1Status = inspectingAccess.text1Status;
-                            const t2Status = inspectingAccess.text2Status;
-                            const t1Validated = t1Status === 'validated';
+                        {(() => {
+                          const slotLabels = getPhaseTextSlotLabels(inspectingItem.phaseId);
+                          const videoSlotLabels = getPhaseVideoSlotLabels(inspectingItem.phaseId);
+                          const t1HasContent = Boolean(inspectingAccess.text1Content?.trim());
+                          const t2HasContent = Boolean(inspectingAccess.text2Content?.trim());
+                          const t1Status = inspectingAccess.text1Status;
+                          const t2Status = inspectingAccess.text2Status;
+                          const t1Validated = t1Status === 'validated';
+                          const hasLegacyOnlyFile =
+                            inspectingAccess.kind === 'file' &&
+                            !t1HasContent &&
+                            !t2HasContent &&
+                            !inspectingAccess.video1 &&
+                            !inspectingAccess.video2 &&
+                            Boolean(inspectingAccess.signedUrl);
 
+                          const videoSlots = [
+                            {
+                              slot: 1 as const,
+                              title: videoSlotLabels.slot1Title,
+                              data: inspectingAccess.video1 || null,
+                              draft: reviewVideo1Draft,
+                              setDraft: setReviewVideo1Draft,
+                            },
+                            {
+                              slot: 2 as const,
+                              title: videoSlotLabels.slot2Title,
+                              data: inspectingAccess.video2 || null,
+                              draft: reviewVideo2Draft,
+                              setDraft: setReviewVideo2Draft,
+                            },
+                          ];
+
+                          if (hasLegacyOnlyFile) {
                             return (
-                              <div className="space-y-6">
-                                {/* ÉTAPE 1 : TEXTE 1 */}
+                              <div className="space-y-5">
+                                {inspectingAccess.mimeType?.startsWith('video/') && inspectingAccess.signedUrl && (
+                                  <video
+                                    controls
+                                    src={inspectingAccess.signedUrl}
+                                    className="w-full max-h-[50vh] bg-black rounded-sm"
+                                  />
+                                )}
+                                <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm">
+                                  <div className="text-xs text-ucaep-ink/75">
+                                    <span className="font-semibold text-ucaep-brown">
+                                      {inspectingAccess.fileName}
+                                    </span>{' '}
+                                    · {formatFileSize(inspectingAccess.sizeBytes)} · Lien temporaire 10 min
+                                  </div>
+                                  {inspectingAccess.signedUrl && (
+                                    <a
+                                      href={inspectingAccess.signedUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      download={inspectingAccess.fileName || undefined}
+                                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                      <span>Ouvrir / Télécharger</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-8">
+                              {/* SECTION 1 : TEXTES ÉCRITS */}
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 border-b border-ucaep-brown/15 pb-2">
+                                  <FileText className="w-4 h-4 text-ucaep-brown" />
+                                  <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                    1. Productions écrites (Texte 1 &amp; Texte 2)
+                                  </h4>
+                                </div>
+
+                                {/* TEXTE 1 */}
                                 <div className="p-5 bg-ucaep-paper/60 border border-ucaep-brown/20 rounded-sm space-y-4">
                                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-3">
                                     <div>
                                       <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                                        Validation étape 1 sur 2
+                                        Écrit 1 sur 2
                                       </span>
-                                      <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                      <h5 className="font-serif text-lg font-semibold text-ucaep-brown">
                                         {slotLabels.slot1Title}
-                                      </h4>
+                                      </h5>
                                     </div>
                                     <span
                                       className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
@@ -3741,7 +3821,7 @@ export function GestionPage() {
                                           </span>
                                         </button>
                                       </div>
-                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-72 overflow-y-auto">
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
                                         <p className="text-sm text-ucaep-ink whitespace-pre-wrap break-words leading-relaxed">
                                           {inspectingAccess.text1Content}
                                         </p>
@@ -3758,9 +3838,7 @@ export function GestionPage() {
                                           id="review-note-1"
                                           rows={2}
                                           value={reviewNote1Draft}
-                                          onChange={(e) =>
-                                            setReviewNote1Draft(e.target.value)
-                                          }
+                                          onChange={(e) => setReviewNote1Draft(e.target.value)}
                                           placeholder="Appréciation ou motif de reprise pour le Texte 1..."
                                           className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
                                         />
@@ -3771,36 +3849,28 @@ export function GestionPage() {
                                           type="button"
                                           disabled={reviewSaving}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 1,
-                                                status: 'validated',
-                                                organizerNote: reviewNote1Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 1,
+                                              status: 'validated',
+                                              organizerNote: reviewNote1Draft,
+                                            })
                                           }
                                           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
                                         >
                                           <CheckCircle2 className="w-3.5 h-3.5" />
                                           <span>
-                                            {t1Validated
-                                              ? 'Texte 1 validé'
-                                              : 'Valider le Texte 1'}
+                                            {t1Validated ? 'Texte 1 validé' : 'Valider le Texte 1'}
                                           </span>
                                         </button>
                                         <button
                                           type="button"
                                           disabled={reviewSaving}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 1,
-                                                status: 'rejected',
-                                                organizerNote: reviewNote1Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 1,
+                                              status: 'rejected',
+                                              organizerNote: reviewNote1Draft,
+                                            })
                                           }
                                           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
                                         >
@@ -3811,13 +3881,10 @@ export function GestionPage() {
                                           type="button"
                                           disabled={reviewSaving}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 1,
-                                                organizerNote: reviewNote1Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 1,
+                                              organizerNote: reviewNote1Draft,
+                                            })
                                           }
                                           className="px-3.5 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
                                         >
@@ -3832,7 +3899,7 @@ export function GestionPage() {
                                   )}
                                 </div>
 
-                                {/* ÉTAPE 2 : TEXTE 2 (VALIDATION SÉQUENTIELLE APRÈS TEXTE 1) */}
+                                {/* TEXTE 2 */}
                                 <div
                                   className={`p-5 border rounded-sm space-y-4 ${
                                     t1Validated
@@ -3843,11 +3910,11 @@ export function GestionPage() {
                                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-3">
                                     <div>
                                       <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
-                                        Validation étape 2 sur 2 · Après Texte 1
+                                        Écrit 2 sur 2 · Après Texte 1
                                       </span>
-                                      <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                      <h5 className="font-serif text-lg font-semibold text-ucaep-brown">
                                         {slotLabels.slot2Title}
-                                      </h4>
+                                      </h5>
                                     </div>
                                     <span
                                       className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
@@ -3867,8 +3934,7 @@ export function GestionPage() {
                                       <Lock className="w-3.5 h-3.5 shrink-0" />
                                       <span>
                                         Validation séquentielle : validez d&apos;abord le{' '}
-                                        <strong>Texte 1</strong> à l&apos;étape précédente
-                                        pour pouvoir valider le Texte 2.
+                                        <strong>Texte 1</strong> pour pouvoir valider le Texte 2.
                                       </span>
                                     </div>
                                   )}
@@ -3904,7 +3970,7 @@ export function GestionPage() {
                                           </span>
                                         </button>
                                       </div>
-                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-72 overflow-y-auto">
+                                      <div className="p-4 bg-white border border-ucaep-brown/15 rounded-sm max-h-64 overflow-y-auto">
                                         <p className="text-sm text-ucaep-ink whitespace-pre-wrap break-words leading-relaxed">
                                           {inspectingAccess.text2Content}
                                         </p>
@@ -3921,9 +3987,7 @@ export function GestionPage() {
                                           id="review-note-2"
                                           rows={2}
                                           value={reviewNote2Draft}
-                                          onChange={(e) =>
-                                            setReviewNote2Draft(e.target.value)
-                                          }
+                                          onChange={(e) => setReviewNote2Draft(e.target.value)}
                                           placeholder="Appréciation ou motif de reprise pour le Texte 2..."
                                           className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
                                         />
@@ -3934,14 +3998,11 @@ export function GestionPage() {
                                           type="button"
                                           disabled={reviewSaving || !t1Validated}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 2,
-                                                status: 'validated',
-                                                organizerNote: reviewNote2Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 2,
+                                              status: 'validated',
+                                              organizerNote: reviewNote2Draft,
+                                            })
                                           }
                                           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-45 disabled:cursor-not-allowed"
                                         >
@@ -3960,14 +4021,11 @@ export function GestionPage() {
                                           type="button"
                                           disabled={reviewSaving}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 2,
-                                                status: 'rejected',
-                                                organizerNote: reviewNote2Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 2,
+                                              status: 'rejected',
+                                              organizerNote: reviewNote2Draft,
+                                            })
                                           }
                                           className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
                                         >
@@ -3978,13 +4036,10 @@ export function GestionPage() {
                                           type="button"
                                           disabled={reviewSaving}
                                           onClick={() =>
-                                            handleUpdateSubmissionReview(
-                                              inspectingItem.id,
-                                              {
-                                                textSlot: 2,
-                                                organizerNote: reviewNote2Draft,
-                                              },
-                                            )
+                                            handleUpdateSubmissionReview(inspectingItem.id, {
+                                              textSlot: 2,
+                                              organizerNote: reviewNote2Draft,
+                                            })
                                           }
                                           className="px-3.5 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
                                         >
@@ -3999,129 +4054,207 @@ export function GestionPage() {
                                   )}
                                 </div>
                               </div>
-                            );
-                          })()
-                        ) : inspectingAccess.signedUrl ? (
-                          <div className="space-y-5">
-                            {inspectingAccess.mimeType?.startsWith('video/') && (
-                              <video
-                                controls
-                                src={inspectingAccess.signedUrl}
-                                className="w-full max-h-[50vh] bg-black rounded-sm"
-                              />
-                            )}
-                            {inspectingAccess.mimeType?.startsWith('audio/') && (
-                              <div className="p-4 bg-ucaep-paper border border-ucaep-brown/15 rounded-sm">
-                                <audio
-                                  controls
-                                  src={inspectingAccess.signedUrl}
-                                  className="w-full"
-                                />
-                              </div>
-                            )}
-                            {inspectingAccess.mimeType === 'application/pdf' && (
-                              <iframe
-                                title={inspectingAccess.fileName || 'Aperçu PDF'}
-                                src={inspectingAccess.signedUrl}
-                                className="w-full h-96 border border-ucaep-brown/15 rounded-sm"
-                              />
-                            )}
-                            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-ucaep-linen/60 border border-ucaep-brown/15 rounded-sm">
-                              <div className="text-xs text-ucaep-ink/75">
-                                <span className="font-semibold text-ucaep-brown">
-                                  {inspectingAccess.fileName}
-                                </span>{' '}
-                                · {formatFileSize(inspectingAccess.sizeBytes)} · Lien
-                                temporaire valable 10 minutes
-                              </div>
-                              <a
-                                href={inspectingAccess.signedUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                download={inspectingAccess.fileName || undefined}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Ouvrir / Télécharger</span>
-                              </a>
-                            </div>
 
-                            {/* VALIDATION & NOTE INTERNE POUR FICHIER */}
-                            <div className="pt-4 border-t border-ucaep-brown/15 space-y-4">
-                              <div className="space-y-1.5">
-                                <label
-                                  htmlFor="review-note"
-                                  className="block text-xs font-semibold uppercase tracking-wider text-ucaep-brown"
-                                >
-                                  Note interne (ou motif si refus)
-                                </label>
-                                <textarea
-                                  id="review-note"
-                                  rows={3}
-                                  value={reviewNoteDraft}
-                                  onChange={(e) => setReviewNoteDraft(e.target.value)}
-                                  placeholder="Observation de l'équipe UCAEP ou du jury..."
-                                  className="w-full px-3 py-2 text-sm border border-ucaep-brown/25 rounded-sm"
-                                />
-                              </div>
-
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={reviewSaving}
-                                    onClick={() =>
-                                      handleUpdateSubmissionReview(inspectingItem.id, {
-                                        status: 'validated',
-                                        organizerNote: reviewNoteDraft,
-                                      })
-                                    }
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Valider</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={reviewSaving}
-                                    onClick={() =>
-                                      handleUpdateSubmissionReview(inspectingItem.id, {
-                                        status: 'rejected',
-                                        organizerNote: reviewNoteDraft,
-                                      })
-                                    }
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                    <span>Refuser</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={reviewSaving}
-                                    onClick={() =>
-                                      handleUpdateSubmissionReview(inspectingItem.id, {
-                                        organizerNote: reviewNoteDraft,
-                                      })
-                                    }
-                                    className="px-4 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
-                                  >
-                                    Enregistrer la note
-                                  </button>
+                              {/* SECTION 2 : VIDÉOS FACE CAMÉRA */}
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 border-b border-ucaep-brown/15 pb-2">
+                                  <Video className="w-4 h-4 text-ucaep-brown" />
+                                  <h4 className="font-serif text-xl font-semibold text-ucaep-brown">
+                                    2. Vidéos d&apos;interprétation (Vidéo 1 &amp; Vidéo 2)
+                                  </h4>
                                 </div>
 
-                                <span
-                                  className={`px-2.5 py-1 text-xs font-semibold border rounded-sm ${
-                                    SUBMISSION_STATUS_META[inspectingItem.status]
-                                      .badgeClass
-                                  }`}
-                                >
-                                  Statut actuel :{' '}
-                                  {SUBMISSION_STATUS_META[inspectingItem.status].label}
-                                </span>
+                                {videoSlots.map(({ slot, title, data: vData, draft, setDraft }) => {
+                                  const vStatus = vData?.status;
+                                  const isConfirmingPurge = purgeConfirmSlot === slot;
+                                  const isPurging = purgeLoadingSlot === slot;
+
+                                  return (
+                                    <div
+                                      key={slot}
+                                      className="p-5 bg-ucaep-paper/60 border border-ucaep-brown/20 rounded-sm space-y-4"
+                                    >
+                                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ucaep-brown/12 pb-3">
+                                        <div>
+                                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                                            Vidéo {slot} sur 2
+                                          </span>
+                                          <h5 className="font-serif text-lg font-semibold text-ucaep-brown">
+                                            {title}
+                                          </h5>
+                                        </div>
+                                        <span
+                                          className={`px-2.5 py-1 text-[11px] font-semibold border rounded-sm ${
+                                            vStatus
+                                              ? SUBMISSION_STATUS_META[vStatus].badgeClass
+                                              : 'bg-white text-ucaep-ink/60 border-ucaep-brown/20'
+                                          }`}
+                                        >
+                                          {vStatus
+                                            ? SUBMISSION_STATUS_META[vStatus].label
+                                            : 'Non déposée'}
+                                        </span>
+                                      </div>
+
+                                      {vData ? (
+                                        <>
+                                          {vData.signedUrl ? (
+                                            <video
+                                              controls
+                                              preload="metadata"
+                                              src={vData.signedUrl}
+                                              className="w-full max-h-[38vh] bg-black rounded-sm"
+                                            />
+                                          ) : (
+                                            <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-950">
+                                              Fichier enregistré ({vData.fileName}), mais le lien de lecture temporaire n&apos;a pas pu être généré.
+                                            </div>
+                                          )}
+
+                                          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white border border-ucaep-brown/15 rounded-sm text-xs tabular-nums">
+                                            <div className="space-y-0.5 text-ucaep-ink/80">
+                                              <p className="font-semibold text-ucaep-brown break-all">
+                                                {vData.fileName}
+                                              </p>
+                                              <p className="text-[11px] text-ucaep-ink/65">
+                                                {formatFileSize(vData.sizeBytes)} · Lien signé 10 min
+                                              </p>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              {vData.signedUrl && (
+                                                <a
+                                                  href={vData.signedUrl}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  download={vData.fileName || undefined}
+                                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d]"
+                                                >
+                                                  <Download className="w-3.5 h-3.5" />
+                                                  <span>Télécharger</span>
+                                                </a>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="space-y-1.5">
+                                            <label
+                                              htmlFor={`review-video-${slot}`}
+                                              className="block text-[11px] font-semibold uppercase tracking-wider text-ucaep-brown"
+                                            >
+                                              Observation sur la Vidéo {slot} (optionnel)
+                                            </label>
+                                            <textarea
+                                              id={`review-video-${slot}`}
+                                              rows={2}
+                                              value={draft}
+                                              onChange={(e) => setDraft(e.target.value)}
+                                              placeholder={`Appréciation ou motif de reprise pour la Vidéo ${slot}...`}
+                                              className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm"
+                                            />
+                                          </div>
+
+                                          <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <button
+                                                type="button"
+                                                disabled={reviewSaving || isPurging}
+                                                onClick={() =>
+                                                  handleUpdateSubmissionReview(inspectingItem.id, {
+                                                    videoSlot: slot,
+                                                    status: 'validated',
+                                                    organizerNote: draft,
+                                                  })
+                                                }
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-ucaep-green text-ucaep-paper hover:bg-[#233d27] disabled:opacity-50"
+                                              >
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <span>
+                                                  {vStatus === 'validated'
+                                                    ? `Vidéo ${slot} validée`
+                                                    : `Valider la Vidéo ${slot}`}
+                                                </span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                disabled={reviewSaving || isPurging}
+                                                onClick={() =>
+                                                  handleUpdateSubmissionReview(inspectingItem.id, {
+                                                    videoSlot: slot,
+                                                    status: 'rejected',
+                                                    organizerNote: draft,
+                                                  })
+                                                }
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-sm bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                                              >
+                                                <XCircle className="w-3.5 h-3.5" />
+                                                <span>À reprendre (Vidéo {slot})</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                disabled={reviewSaving || isPurging}
+                                                onClick={() =>
+                                                  handleUpdateSubmissionReview(inspectingItem.id, {
+                                                    videoSlot: slot,
+                                                    organizerNote: draft,
+                                                  })
+                                                }
+                                                className="px-3.5 py-2 text-xs font-medium rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50"
+                                              >
+                                                Enregistrer la note
+                                              </button>
+                                            </div>
+
+                                            {/* PURGE / LIBÉRATION D'ESPACE SÉCURISÉE EN 2 CLICS */}
+                                            {isConfirmingPurge ? (
+                                              <div className="flex flex-wrap items-center gap-1.5 bg-red-50 border border-red-300 px-2.5 py-1.5 rounded-sm">
+                                                <span className="text-[11px] font-semibold text-red-900">
+                                                  Libérer {formatFileSize(vData.sizeBytes)} ?
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  disabled={isPurging}
+                                                  onClick={() =>
+                                                    handlePurgeSubmissionVideo(inspectingItem.id, slot)
+                                                  }
+                                                  className="px-2.5 py-1 text-[11px] font-semibold bg-red-800 text-white rounded-sm hover:bg-red-900 disabled:opacity-50"
+                                                >
+                                                  {isPurging ? 'Suppression...' : 'Confirmer'}
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  disabled={isPurging}
+                                                  onClick={() => setPurgeConfirmSlot(null)}
+                                                  className="px-2 py-1 text-[11px] font-medium border border-ucaep-brown/25 bg-white text-ucaep-brown rounded-sm"
+                                                >
+                                                  Annuler
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                disabled={reviewSaving || isPurging}
+                                                onClick={() => setPurgeConfirmSlot(slot)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-sm border border-red-300 bg-white text-red-800 hover:bg-red-50 disabled:opacity-50"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <span>Libérer l&apos;espace</span>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <p className="text-xs text-ucaep-ink/65 italic">
+                                          Le candidat n&apos;a pas encore déposé la Vidéo {slot}.
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
-                          </div>
-                        ) : null}
+                          );
+                        })()}
                       </div>
                     ) : null}
                   </div>

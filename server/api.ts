@@ -32,6 +32,7 @@ import {
   initCandidateSubmission,
   isSubmissionHttpError,
   listAdminSubmissions,
+  purgeAdminSubmissionVideo,
   resolveLocalSubmissionFile,
   updateAdminSubmissionReview,
 } from './submissions.ts';
@@ -473,7 +474,8 @@ export function registerApiRoutes(app: express.Express) {
     connexion: 'Connexion / Code UCAEP',
     textes: 'Dépôt des textes',
     video_compression: 'Vidéo > 100 Mo / Compression',
-    google_form: 'Accès Google Form vidéo',
+    video_upload: 'Envoi ou lecture des vidéos (Vidéo 1 / Vidéo 2)',
+    google_form: 'Envoi ou lecture des vidéos',
     autre: 'Autre difficulté',
   };
 
@@ -575,7 +577,7 @@ export function registerApiRoutes(app: express.Express) {
 
   app.post(
     '/api/submissions/local-upload',
-    express.raw({ type: '*/*', limit: '52mb' }),
+    express.raw({ type: '*/*', limit: '105mb' }),
     async (req, res) => {
       try {
         const headerToken = req.headers['x-upload-token'];
@@ -650,6 +652,7 @@ export function registerApiRoutes(app: express.Express) {
         phaseId?: string;
         kind?: SubmissionKind;
         textSlot?: number;
+        videoSlot?: number;
         fileName?: string;
         mimeType?: string;
         sizeBytes?: number;
@@ -657,12 +660,15 @@ export function registerApiRoutes(app: express.Express) {
       enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
       const textSlot =
         body.textSlot === 1 || body.textSlot === 2 ? body.textSlot : undefined;
+      const videoSlot =
+        body.videoSlot === 1 || body.videoSlot === 2 ? body.videoSlot : undefined;
       const result = await initCandidateSubmission({
         referenceCode: body.referenceCode || '',
         email: body.email || '',
         phaseId: body.phaseId || '',
         kind: body.kind || 'file',
         textSlot,
+        videoSlot,
         fileName: body.fileName,
         mimeType: body.mimeType,
         sizeBytes: body.sizeBytes,
@@ -689,6 +695,7 @@ export function registerApiRoutes(app: express.Express) {
         phaseId?: string;
         kind?: SubmissionKind;
         textSlot?: number;
+        videoSlot?: number;
         storagePath?: string;
         fileName?: string;
         mimeType?: string;
@@ -698,12 +705,15 @@ export function registerApiRoutes(app: express.Express) {
       enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
       const textSlot =
         body.textSlot === 1 || body.textSlot === 2 ? body.textSlot : undefined;
+      const videoSlot =
+        body.videoSlot === 1 || body.videoSlot === 2 ? body.videoSlot : undefined;
       const submission = await completeCandidateSubmission({
         referenceCode: body.referenceCode || '',
         email: body.email || '',
         phaseId: body.phaseId || '',
         kind: body.kind || 'file',
         textSlot,
+        videoSlot,
         storagePath: body.storagePath,
         fileName: body.fileName,
         mimeType: body.mimeType,
@@ -888,17 +898,21 @@ export function registerApiRoutes(app: express.Express) {
 
   app.patch('/api/admin/submissions/:id', requireAdmin, async (req, res) => {
     try {
-      const { status, organizerNote, textSlot } = (req.body || {}) as {
+      const { status, organizerNote, textSlot, videoSlot } = (req.body || {}) as {
         status?: SubmissionStatus;
         organizerNote?: string;
         textSlot?: number;
+        videoSlot?: number;
       };
-      const normalizedSlot =
+      const normalizedTextSlot =
         textSlot === 1 || textSlot === 2 ? textSlot : undefined;
+      const normalizedVideoSlot =
+        videoSlot === 1 || videoSlot === 2 ? videoSlot : undefined;
       const updated = await updateAdminSubmissionReview(String(req.params.id), {
         status,
         organizerNote,
-        textSlot: normalizedSlot,
+        textSlot: normalizedTextSlot,
+        videoSlot: normalizedVideoSlot,
       });
       res.json({ submission: updated });
     } catch (error) {
@@ -909,6 +923,33 @@ export function registerApiRoutes(app: express.Express) {
       res.status(500).json({ error: 'Mise à jour du dépôt impossible.' });
     }
   });
+
+  app.delete(
+    '/api/admin/submissions/:id/video/:slot',
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const slotNum = Number(req.params.slot);
+        if (slotNum !== 1 && slotNum !== 2) {
+          res.status(400).json({ error: 'Emplacement vidéo invalide (1 ou 2 requis).' });
+          return;
+        }
+        const result = await purgeAdminSubmissionVideo(
+          String(req.params.id),
+          slotNum as 1 | 2,
+        );
+        res.json({ ok: true, ...result });
+      } catch (error) {
+        if (isSubmissionHttpError(error)) {
+          res.status(error.statusCode).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({
+          error: 'Impossible de supprimer ce fichier vidéo pour le moment.',
+        });
+      }
+    },
+  );
 
   // Organizer CMS: Create News Article
   app.post('/api/admin/news', requireAdmin, async (req, res) => {
