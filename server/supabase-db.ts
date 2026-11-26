@@ -6,6 +6,8 @@ import type {
   CompetitionPhase,
   ContactMessageRecord,
   ContactPayload,
+  DepotResourceItem,
+  DepotResourceKind,
   MediaAssetKey,
   NewsArticle,
   PhaseExternalFormConfig,
@@ -32,6 +34,90 @@ export interface SupabaseStoreSnapshot {
   };
 }
 
+export function isSafeHttpUrl(raw: string): boolean {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export const DEFAULT_DEPOT_RESOURCES: DepotResourceItem[] = [
+  {
+    id: 'default-video-compressor',
+    title: 'Réduire la taille de votre vidéo (max 100 Mo sur Google Form)',
+    body: "Le formulaire Google Form officiel n'accepte pas les vidéos dépassant 100 Mo. Si votre enregistrement dépasse cette taille, compressez-le avant l'envoi avec Proton Video Compressor (Android) tout en conservant une image nette et un son audible.",
+    kind: 'tool',
+    actionLabel: 'Télécharger Proton Video Compressor (Play Store)',
+    actionUrl:
+      'https://play.google.com/store/apps/details?id=com.arthur.hritik.proton.video.compressor',
+    pinned: true,
+    active: true,
+    createdAt: '2026-04-01T08:00:00.000Z',
+    updatedAt: '2026-04-01T08:00:00.000Z',
+  },
+];
+
+const VALID_DEPOT_RESOURCE_KINDS: DepotResourceKind[] = [
+  'info',
+  'tool',
+  'warning',
+  'video_help',
+];
+
+export function normalizeDepotResources(
+  raw: unknown,
+): DepotResourceItem[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) return [];
+  const nowIso = new Date().toISOString();
+  const out: DepotResourceItem[] = [];
+  for (const item of raw.slice(0, 30)) {
+    if (!item || typeof item !== 'object') continue;
+    const rec = item as Record<string, unknown>;
+    const title = typeof rec.title === 'string' ? rec.title.trim().slice(0, 140) : '';
+    const body = typeof rec.body === 'string' ? rec.body.trim().slice(0, 1500) : '';
+    if (!title || !body) continue;
+    const kind: DepotResourceKind = VALID_DEPOT_RESOURCE_KINDS.includes(
+      rec.kind as DepotResourceKind,
+    )
+      ? (rec.kind as DepotResourceKind)
+      : 'info';
+    const rawUrl =
+      typeof rec.actionUrl === 'string' ? rec.actionUrl.trim().slice(0, 1000) : '';
+    const safeUrl = isSafeHttpUrl(rawUrl) ? rawUrl : '';
+    const rawLabel =
+      typeof rec.actionLabel === 'string' ? rec.actionLabel.trim().slice(0, 80) : '';
+    const actionLabel = safeUrl ? rawLabel || 'Ouvrir le lien' : undefined;
+    const id =
+      typeof rec.id === 'string' && rec.id.trim()
+        ? rec.id.trim().slice(0, 80)
+        : crypto.randomUUID();
+    out.push({
+      id,
+      title,
+      body,
+      kind,
+      ...(actionLabel ? { actionLabel } : {}),
+      ...(safeUrl ? { actionUrl: safeUrl } : {}),
+      pinned: Boolean(rec.pinned),
+      active: rec.active !== false,
+      createdAt:
+        typeof rec.createdAt === 'string' && rec.createdAt.trim()
+          ? rec.createdAt
+          : nowIso,
+      updatedAt:
+        typeof rec.updatedAt === 'string' && rec.updatedAt.trim()
+          ? rec.updatedAt
+          : nowIso,
+    });
+  }
+  return out;
+}
+
 function normalizeExternalForms(
   raw: unknown,
 ): Record<string, PhaseExternalFormConfig> {
@@ -46,8 +132,7 @@ function normalizeExternalForms(
       typeof rec.googleFormUrl === 'string'
         ? rec.googleFormUrl.trim().slice(0, 1000)
         : '';
-    const isHttpUrl = /^https?:\/\/.+/i.test(rawUrl);
-    const googleFormUrl = isHttpUrl ? rawUrl : '';
+    const googleFormUrl = isSafeHttpUrl(rawUrl) ? rawUrl : '';
     const enabled = Boolean(rec.enabled) && Boolean(googleFormUrl);
     const instructions =
       typeof rec.instructions === 'string'
@@ -83,7 +168,10 @@ export function parseSiteDisplayValue(raw: unknown): SiteDisplayConfig {
   const customNotice =
     typeof obj?.customNotice === 'string' ? obj.customNotice.trim().slice(0, 400) : '';
   const externalForms = normalizeExternalForms(obj?.externalForms);
-  return { mode, activePhaseId, customNotice, externalForms };
+  const parsedResources = normalizeDepotResources(obj?.depotResources);
+  const depotResources =
+    parsedResources !== undefined ? parsedResources : DEFAULT_DEPOT_RESOURCES;
+  return { mode, activePhaseId, customNotice, externalForms, depotResources };
 }
 
 export interface DbPhaseRowLike {
@@ -504,6 +592,7 @@ export async function readStoreViaSupabaseRest(defaults: {
       email: String(c.email),
       subject: String(c.subject),
       message: String(c.message),
+      status: normalizeContactStatusFromDb(c.status),
       createdAt: String(c.created_at),
     })),
     settings: {
@@ -960,28 +1049,153 @@ export async function markRegistrationSyncedViaSupabaseRest(id: string): Promise
     .eq('id', id);
 }
 
+export const TREATED_DB_STATUSES = [
+  'traite',
+  'traité',
+  'resolved',
+  'replied',
+  'read',
+  'lu',
+  'done',
+  'closed',
+  'cloture',
+  'clôturé',
+  'ferme',
+  'archived',
+  'archivé',
+] as const;
+
+export const UNREAD_DB_STATUSES = [
+  'non_lu',
+  'nouveau',
+  'unread',
+  'new',
+  'pending',
+  'en_attente',
+  'open',
+  'ouvert',
+  'received',
+] as const;
+
+export function normalizeContactStatusFromDb(raw: unknown): 'non_lu' | 'traite' {
+  const val = String(raw || '').trim().toLowerCase();
+  if ((TREATED_DB_STATUSES as readonly string[]).includes(val)) {
+    return 'traite';
+  }
+  return 'non_lu';
+}
+
+export function isContactStatusCheckError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as {
+    code?: unknown;
+    message?: unknown;
+    cause?: { code?: unknown; message?: unknown };
+  };
+  const code = String(e.cause?.code || e.code || '');
+  const msg = String(e.cause?.message || e.message || '').toLowerCase();
+  return (
+    code === '23514' ||
+    code === '23502' ||
+    msg.includes('contact_messages_status_check') ||
+    msg.includes('check constraint')
+  );
+}
+
 export async function saveContactViaSupabaseRest(
   payload: ContactPayload,
 ): Promise<ContactMessageRecord> {
   const admin = getSupabaseAdmin();
-  const record: ContactMessageRecord = {
-    ...payload,
+  const baseRow = {
     id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
+    name: payload.name,
+    email: payload.email,
+    subject: payload.subject,
+    message: payload.message,
+    created_at: new Date().toISOString(),
   };
 
-  const { error } = await admin.from('contact_messages').insert({
-    id: record.id,
-    name: record.name,
-    email: record.email,
-    subject: record.subject,
-    message: record.message,
-    status: 'non_lu',
-    created_at: record.createdAt,
-  });
+  // 1) Essai en laissant PostgreSQL appliquer la valeur DEFAULT de la colonne status
+  const defaultAttempt = await admin
+    .from('contact_messages')
+    .insert(baseRow)
+    .select('*')
+    .single();
 
-  if (error) throw new Error(error.message);
-  return record;
+  if (!defaultAttempt.error && defaultAttempt.data) {
+    return {
+      ...payload,
+      id: String(defaultAttempt.data.id),
+      status: normalizeContactStatusFromDb(defaultAttempt.data.status),
+      createdAt: String(defaultAttempt.data.created_at || baseRow.created_at),
+    };
+  }
+
+  let lastError = defaultAttempt.error;
+
+  // 2) Repli sur les valeurs possibles si la colonne status n'a pas de DEFAULT ou rejette une contrainte CHECK
+  for (const candidateStatus of UNREAD_DB_STATUSES) {
+    const attempt = await admin
+      .from('contact_messages')
+      .insert({ ...baseRow, status: candidateStatus })
+      .select('*')
+      .single();
+
+    if (!attempt.error && attempt.data) {
+      return {
+        ...payload,
+        id: String(attempt.data.id),
+        status: normalizeContactStatusFromDb(attempt.data.status),
+        createdAt: String(attempt.data.created_at || baseRow.created_at),
+      };
+    }
+    lastError = attempt.error;
+    if (!isContactStatusCheckError(attempt.error)) {
+      break;
+    }
+  }
+
+  throw new Error(lastError?.message || "Impossible d'enregistrer votre message.");
+}
+
+export async function updateContactStatusViaSupabaseRest(
+  id: string,
+  status: 'non_lu' | 'traite',
+): Promise<ContactMessageRecord | null> {
+  const admin = getSupabaseAdmin();
+  const candidates = status === 'traite' ? TREATED_DB_STATUSES : UNREAD_DB_STATUSES;
+  let lastError: { message?: string } | null = null;
+
+  for (const candidate of candidates) {
+    const { data, error } = await admin
+      .from('contact_messages')
+      .update({ status: candidate })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (!error) {
+      if (!data) return null;
+      return {
+        id: String(data.id),
+        name: String(data.name),
+        email: String(data.email),
+        subject: String(data.subject),
+        message: String(data.message),
+        status: normalizeContactStatusFromDb(data.status),
+        createdAt: String(data.created_at),
+      };
+    }
+
+    lastError = error;
+    if (!isContactStatusCheckError(error)) {
+      break;
+    }
+  }
+
+  throw new Error(
+    lastError?.message || 'Impossible de mettre à jour le statut du message.',
+  );
 }
 
 export function normalizeCandidateRefCode(raw: string): string {

@@ -12,11 +12,15 @@ import {
   LayoutTemplate,
   Lock,
   LogOut,
+  Mail,
+  MessageSquare,
   Monitor,
+  Pin,
   Plus,
   RefreshCw,
   Search,
   Smartphone,
+  Trash2,
   Unlock,
   X,
   XCircle,
@@ -31,6 +35,8 @@ import type {
   Announcement,
   CompetitionPhase,
   ContactMessageRecord,
+  DepotResourceItem,
+  DepotResourceKind,
   MediaAssetKey,
   NewsArticle,
   PhaseExternalFormConfig,
@@ -96,6 +102,7 @@ type GestionTab =
   | 'parcours'
   | 'candidats'
   | 'depots'
+  | 'messages'
   | 'config';
 
 const VALID_TABS: GestionTab[] = [
@@ -105,6 +112,7 @@ const VALID_TABS: GestionTab[] = [
   'parcours',
   'candidats',
   'depots',
+  'messages',
   'config',
 ];
 
@@ -266,6 +274,27 @@ export function GestionPage() {
   const [externalFormError, setExternalFormError] = useState('');
   const externalFormsInitializedRef = useRef(false);
 
+  // Depot resources (infos, guides & tool buttons pushed to /depot)
+  const [depotResources, setDepotResources] = useState<DepotResourceItem[]>([]);
+  const depotResourcesInitializedRef = useRef(false);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
+  const [resTitle, setResTitle] = useState('');
+  const [resBody, setResBody] = useState('');
+  const [resKind, setResKind] = useState<DepotResourceKind>('tool');
+  const [resActionLabel, setResActionLabel] = useState('');
+  const [resActionUrl, setResActionUrl] = useState('');
+  const [resPinned, setResPinned] = useState(true);
+  const [resActive, setResActive] = useState(true);
+  const [depotResourcesSaving, setDepotResourcesSaving] = useState(false);
+  const [depotResourcesError, setDepotResourcesError] = useState('');
+
+  // Candidate difficulties & contact messages state
+  const [contactFilter, setContactFilter] = useState<
+    'all' | 'depot' | 'non_lu' | 'traite'
+  >('all');
+  const [contactSavingId, setContactSavingId] = useState<string | null>(null);
+  const [contactActionError, setContactActionError] = useState('');
+
   function buildAuthHeaders(
     extraHeaders?: Record<string, string>,
     overrideAdminToken?: string,
@@ -315,6 +344,13 @@ export function GestionPage() {
             instructions: forms['phase-2']?.instructions || '',
           },
         });
+      }
+      if (
+        !depotResourcesInitializedRef.current &&
+        json.settings?.siteDisplay?.depotResources
+      ) {
+        depotResourcesInitializedRef.current = true;
+        setDepotResources(json.settings.siteDisplay.depotResources);
       }
       setPhaseDeadlines((prev) => {
         const next = { ...prev };
@@ -931,6 +967,230 @@ export function GestionPage() {
     }
   }
 
+  function resetResourceForm() {
+    setEditingResourceId(null);
+    setResTitle('');
+    setResBody('');
+    setResKind('tool');
+    setResActionLabel('');
+    setResActionUrl('');
+    setResPinned(true);
+    setResActive(true);
+    setDepotResourcesError('');
+  }
+
+  function loadVideoCompressorPreset() {
+    setEditingResourceId(null);
+    setResKind('tool');
+    setResTitle('Réduire la taille de votre vidéo (max 100 Mo sur Google Form)');
+    setResBody(
+      "Le Google Form officiel limite les vidéos à 100 Mo. Compressez votre vidéo sur Android avec Proton Video Compressor avant l'envoi tout en gardant un son clair.",
+    );
+    setResActionLabel('Télécharger Proton Video Compressor (Play Store)');
+    setResActionUrl(
+      'https://play.google.com/store/apps/details?id=com.arthur.hritik.proton.video.compressor',
+    );
+    setResPinned(true);
+    setResActive(true);
+    setDepotResourcesError('');
+  }
+
+  function startEditResource(item: DepotResourceItem) {
+    setEditingResourceId(item.id);
+    setResTitle(item.title);
+    setResBody(item.body);
+    setResKind(item.kind);
+    setResActionLabel(item.actionLabel || '');
+    setResActionUrl(item.actionUrl || '');
+    setResPinned(Boolean(item.pinned));
+    setResActive(item.active !== false);
+    setDepotResourcesError('');
+  }
+
+  async function saveDepotResourcesList(
+    nextList: DepotResourceItem[],
+    successMsg: string,
+  ) {
+    setDepotResourcesSaving(true);
+    setDepotResourcesError('');
+    setNotice('');
+    try {
+      const res = await fetchApiJson<{
+        siteDisplay: SiteDisplayConfig;
+        depotResources: DepotResourceItem[];
+      }>('/api/admin/depot-resources', {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ resources: nextList }),
+      });
+
+      setDepotResources(res.depotResources);
+      depotResourcesInitializedRef.current = true;
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: {
+                ...prev.settings,
+                siteDisplay: res.siteDisplay,
+              },
+            }
+          : prev,
+      );
+      await refreshSiteConfig();
+      setNotice(successMsg);
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Impossible d'enregistrer les notes et outils du dépôt.";
+      setDepotResourcesError(msg);
+    } finally {
+      setDepotResourcesSaving(false);
+    }
+  }
+
+  async function handleSubmitDepotResource(e: FormEvent) {
+    e.preventDefault();
+    const cleanTitle = resTitle.trim();
+    const cleanBody = resBody.trim();
+    const cleanUrl = resActionUrl.trim();
+    const cleanLabel = resActionLabel.trim();
+
+    if (!cleanTitle || !cleanBody) {
+      setDepotResourcesError('Renseignez le titre et le message explicatif.');
+      return;
+    }
+
+    if (cleanUrl) {
+      try {
+        const parsed = new URL(cleanUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          throw new Error('bad protocol');
+        }
+      } catch {
+        setDepotResourcesError(
+          'Le lien du bouton doit commencer par https:// ou http://.',
+        );
+        return;
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    if (editingResourceId) {
+      const nextList = depotResources.map((item) =>
+        item.id === editingResourceId
+          ? {
+              ...item,
+              title: cleanTitle,
+              body: cleanBody,
+              kind: resKind,
+              actionUrl: cleanUrl || undefined,
+              actionLabel: cleanUrl ? cleanLabel || 'Ouvrir le lien' : undefined,
+              pinned: resPinned,
+              active: resActive,
+              updatedAt: nowIso,
+            }
+          : item,
+      );
+      await saveDepotResourcesList(
+        nextList,
+        'Carte d’information mise à jour dans l’espace dépôt.',
+      );
+      resetResourceForm();
+    } else {
+      const newItem: DepotResourceItem = {
+        id:
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `res-${Date.now()}`,
+        title: cleanTitle,
+        body: cleanBody,
+        kind: resKind,
+        ...(cleanUrl
+          ? { actionUrl: cleanUrl, actionLabel: cleanLabel || 'Ouvrir le lien' }
+          : {}),
+        pinned: resPinned,
+        active: resActive,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      await saveDepotResourcesList(
+        [newItem, ...depotResources],
+        'Information et bouton publiés dans l’espace dépôt des candidats.',
+      );
+      resetResourceForm();
+    }
+  }
+
+  async function handleToggleResourceActive(id: string) {
+    const nextList = depotResources.map((item) =>
+      item.id === id ? { ...item, active: !item.active } : item,
+    );
+    await saveDepotResourcesList(
+      nextList,
+      'Visibilité de la carte mise à jour sur /depot.',
+    );
+  }
+
+  async function handleToggleResourcePinned(id: string) {
+    const nextList = depotResources.map((item) =>
+      item.id === id ? { ...item, pinned: !item.pinned } : item,
+    );
+    await saveDepotResourcesList(nextList, 'Épinglage mis à jour.');
+  }
+
+  async function handleDeleteResource(id: string) {
+    const nextList = depotResources.filter((item) => item.id !== id);
+    if (editingResourceId === id) {
+      resetResourceForm();
+    }
+    await saveDepotResourcesList(
+      nextList,
+      'Carte supprimée de l’espace dépôt.',
+    );
+  }
+
+  async function handleToggleContactStatus(item: ContactMessageRecord) {
+    const nextStatus = item.status === 'traite' ? 'non_lu' : 'traite';
+    setContactSavingId(item.id);
+    setContactActionError('');
+    setNotice('');
+    try {
+      const res = await fetchApiJson<{ contact: ContactMessageRecord }>(
+        `/api/admin/contacts/${encodeURIComponent(item.id)}`,
+        {
+          method: 'PATCH',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              contacts: prev.contacts.map((c) =>
+                c.id === item.id ? res.contact : c,
+              ),
+            }
+          : prev,
+      );
+      setNotice(
+        nextStatus === 'traite'
+          ? `Signalement de ${item.name} marqué comme traité.`
+          : `Signalement de ${item.name} rouvert en non lu.`,
+      );
+    } catch (err) {
+      setContactActionError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de mettre à jour le statut de ce message.',
+      );
+    } finally {
+      setContactSavingId(null);
+    }
+  }
+
   function exportSubmissionsCsv() {
     if (!filteredSubmissions.length) return;
     const headers = [
@@ -1226,6 +1486,49 @@ export function GestionPage() {
     };
   }, [submissions]);
 
+  const contactStats = useMemo(() => {
+    const list = data?.contacts || [];
+    let unread = 0;
+    let depotUnread = 0;
+    let depotTotal = 0;
+    let traite = 0;
+    for (const c of list) {
+      const isDepot = c.subject.startsWith('[Difficulté Dépôt');
+      if (isDepot) depotTotal += 1;
+      if (c.status === 'traite') {
+        traite += 1;
+      } else {
+        unread += 1;
+        if (isDepot) depotUnread += 1;
+      }
+    }
+    return {
+      total: list.length,
+      unread,
+      depotTotal,
+      depotUnread,
+      traite,
+    };
+  }, [data?.contacts]);
+
+  const filteredContacts = useMemo(() => {
+    const list = [...(data?.contacts || [])].sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    );
+    return list.filter((c) => {
+      if (contactFilter === 'depot') {
+        return c.subject.startsWith('[Difficulté Dépôt');
+      }
+      if (contactFilter === 'non_lu') {
+        return c.status !== 'traite';
+      }
+      if (contactFilter === 'traite') {
+        return c.status === 'traite';
+      }
+      return true;
+    });
+  }, [data?.contacts, contactFilter]);
+
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
       if (submissionPhaseFilter !== 'all' && s.phaseId !== submissionPhaseFilter) {
@@ -1432,6 +1735,12 @@ export function GestionPage() {
                 ['parcours', 'Phases'],
                 ['candidats', `Inscrits (${data.registrations.length})`],
                 ['depots', `Dépôts${submissions.length ? ` (${submissions.length})` : ''}`],
+                [
+                  'messages',
+                  contactStats.unread > 0
+                    ? `Messages & Difficultés (${contactStats.unread})`
+                    : `Messages (${contactStats.total})`,
+                ],
                 ['config', 'Paramètres'],
               ] as const
             ).map(([id, label]) => (
@@ -1439,7 +1748,7 @@ export function GestionPage() {
                 key={id}
                 type="button"
                 onClick={() => selectTab(id)}
-                className={`px-3.5 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 tabular-nums ${
                   tab === id
                     ? 'bg-ucaep-brown text-ucaep-paper'
                     : 'text-ucaep-brown hover:bg-white/60'
@@ -1564,6 +1873,25 @@ export function GestionPage() {
             </p>
           </div>
         </div>
+
+        {contactStats.unread > 0 && tab !== 'messages' && (
+          <div className="px-5 py-3 bg-[#FBF6EB] border border-ucaep-gold/50 rounded-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span className="text-ucaep-brown font-medium tabular-nums">
+              <strong>{contactStats.unread}</strong> message(s) non lu(s) dont{' '}
+              <strong>{contactStats.depotUnread}</strong> difficulté(s) signalée(s) depuis l&apos;espace de dépôt.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setContactFilter(contactStats.depotUnread > 0 ? 'depot' : 'non_lu');
+                selectTab('messages');
+              }}
+              className="font-semibold text-ucaep-brown underline hover:text-ucaep-gold whitespace-nowrap shrink-0"
+            >
+              Consulter les signalements →
+            </button>
+          </div>
+        )}
 
         {data && data.databaseConnected === false && (
           <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-sm text-sm space-y-1.5 shadow-xs">
@@ -2713,6 +3041,314 @@ export function GestionPage() {
               </div>
             </div>
 
+            {/* INFORMATIONS, OUTILS & LIENS UTILES DIFFUSÉS SUR /DEPOT */}
+            <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+                <div className="space-y-1 max-w-2xl">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                    Assistance &amp; ressources sur /depot
+                  </p>
+                  <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                    Publier des notes et boutons d&apos;outils (ex. compression vidéo 100 Mo)
+                  </h2>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Ajoutez ici des informations complémentaires, des consignes de dernière minute ou des boutons de téléchargement vers des applications utiles. Chaque carte active s&apos;affiche immédiatement dans l&apos;espace candidat <span className="font-mono">/depot</span>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadVideoCompressorPreset}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-sm border border-ucaep-green/40 bg-emerald-50/70 text-ucaep-green hover:bg-emerald-100/70 transition-colors whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Charger modèle Proton Video Compressor (100 Mo)</span>
+                </button>
+              </div>
+
+              {depotResourcesError && (
+                <div
+                  role="alert"
+                  className="p-3.5 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{depotResourcesError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <form
+                  onSubmit={handleSubmitDepotResource}
+                  className="lg:col-span-5 p-5 bg-ucaep-paper/60 border border-ucaep-brown/15 rounded-sm space-y-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-serif text-lg font-semibold text-ucaep-brown">
+                      {editingResourceId
+                        ? 'Modifier la note publiée'
+                        : 'Nouvelle note ou outil candidat'}
+                    </h3>
+                    {editingResourceId && (
+                      <button
+                        type="button"
+                        onClick={resetResourceForm}
+                        className="text-xs font-medium text-ucaep-brown underline"
+                      >
+                        Annuler l&apos;édition
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="res-kind"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Type d&apos;encadré
+                    </label>
+                    <select
+                      id="res-kind"
+                      value={resKind}
+                      onChange={(e) =>
+                        setResKind(e.target.value as DepotResourceKind)
+                      }
+                      className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                    >
+                      <option value="tool">Outil / Application à télécharger</option>
+                      <option value="video_help">Aide vidéo (limite 100 Mo)</option>
+                      <option value="info">Information complémentaire</option>
+                      <option value="warning">Point d&apos;attention important</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="res-title"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Titre affiché aux candidats *
+                    </label>
+                    <input
+                      id="res-title"
+                      type="text"
+                      maxLength={140}
+                      required
+                      value={resTitle}
+                      onChange={(e) => setResTitle(e.target.value)}
+                      placeholder="Ex. : Réduire votre vidéo sous 100 Mo"
+                      className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="res-body"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Message / explication *
+                    </label>
+                    <textarea
+                      id="res-body"
+                      rows={3}
+                      maxLength={1500}
+                      required
+                      value={resBody}
+                      onChange={(e) => setResBody(e.target.value)}
+                      placeholder="Expliquez la consigne ou comment utiliser l'application..."
+                      className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="res-btn-url"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Lien du bouton (optionnel, https://...)
+                    </label>
+                    <input
+                      id="res-btn-url"
+                      type="url"
+                      maxLength={1000}
+                      value={resActionUrl}
+                      onChange={(e) => setResActionUrl(e.target.value)}
+                      placeholder="https://play.google.com/store/apps/details?id=..."
+                      className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="res-btn-label"
+                      className="block text-xs font-semibold text-ucaep-brown"
+                    >
+                      Texte du bouton (si un lien est saisi)
+                    </label>
+                    <input
+                      id="res-btn-label"
+                      type="text"
+                      maxLength={80}
+                      value={resActionLabel}
+                      onChange={(e) => setResActionLabel(e.target.value)}
+                      placeholder="Ex. : Télécharger l'application"
+                      className="w-full px-3 py-2 text-xs bg-white border border-ucaep-brown/25 rounded-sm focus:border-ucaep-gold focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-ucaep-brown">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={resPinned}
+                        onChange={(e) => setResPinned(e.target.checked)}
+                        className="accent-ucaep-brown"
+                      />
+                      <span>Épingler en tête</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={resActive}
+                        onChange={(e) => setResActive(e.target.checked)}
+                        className="accent-ucaep-brown"
+                      />
+                      <span>Visible sur /depot</span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={depotResourcesSaving}
+                    className="w-full px-4 py-2.5 text-xs font-semibold rounded-sm bg-ucaep-gold text-ucaep-ink hover:bg-[#c38c2d] transition-colors disabled:opacity-50"
+                  >
+                    {depotResourcesSaving
+                      ? 'Enregistrement...'
+                      : editingResourceId
+                        ? 'Mettre à jour sur /depot'
+                        : 'Publier sur /depot'}
+                  </button>
+                </form>
+
+                <div className="lg:col-span-7 space-y-3">
+                  <div className="flex items-center justify-between text-xs text-ucaep-ink/70">
+                    <span className="font-semibold uppercase tracking-wider text-ucaep-brown">
+                      Cartes configurées ({depotResources.length})
+                    </span>
+                    <Link
+                      to="/depot"
+                      className="inline-flex items-center gap-1 font-semibold text-ucaep-brown underline hover:text-ucaep-gold"
+                    >
+                      <span>Voir l&apos;espace dépôt public</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  {depotResources.length === 0 ? (
+                    <div className="p-6 bg-ucaep-paper/40 border border-dashed border-ucaep-brown/25 rounded-sm text-xs text-ucaep-ink/70">
+                      Aucune note complémentaire configurée. Utilisez le formulaire à gauche ou le modèle Proton Video Compressor pour en ajouter une.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {depotResources.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-4 border rounded-sm space-y-2.5 ${
+                            item.active
+                              ? 'bg-white border-ucaep-brown/18'
+                              : 'bg-ucaep-paper/45 border-ucaep-brown/10 opacity-75'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2 py-0.5 font-semibold border border-ucaep-brown/20 bg-ucaep-paper text-ucaep-brown rounded-sm">
+                                {item.kind === 'tool'
+                                  ? 'Outil'
+                                  : item.kind === 'video_help'
+                                    ? 'Aide vidéo'
+                                    : item.kind === 'warning'
+                                      ? 'Attention'
+                                      : 'Information'}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 font-semibold border rounded-sm ${
+                                  item.active
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-white text-ucaep-ink/60 border-ucaep-brown/20'
+                                }`}
+                              >
+                                {item.active ? 'En ligne' : 'Masqué'}
+                              </span>
+                              {item.pinned && (
+                                <span className="inline-flex items-center gap-1 text-ucaep-gold font-semibold">
+                                  <Pin className="w-3 h-3" />
+                                  <span>Épinglé</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={depotResourcesSaving}
+                                onClick={() => startEditResource(item)}
+                                className="px-2 py-1 border border-ucaep-brown/20 rounded-sm text-ucaep-brown hover:bg-ucaep-paper"
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                type="button"
+                                disabled={depotResourcesSaving}
+                                onClick={() => handleToggleResourcePinned(item.id)}
+                                className="px-2 py-1 border border-ucaep-brown/20 rounded-sm text-ucaep-brown hover:bg-ucaep-paper"
+                              >
+                                {item.pinned ? 'Détacher' : 'Épingler'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={depotResourcesSaving}
+                                onClick={() => handleToggleResourceActive(item.id)}
+                                className="px-2 py-1 border border-ucaep-brown/20 rounded-sm text-ucaep-brown hover:bg-ucaep-paper"
+                              >
+                                {item.active ? 'Masquer' : 'Activer'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={depotResourcesSaving}
+                                onClick={() => handleDeleteResource(item.id)}
+                                aria-label={`Supprimer ${item.title}`}
+                                className="p-1 border border-red-200 rounded-sm text-red-800 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <h4 className="font-serif text-base font-semibold text-ucaep-brown">
+                            {item.title}
+                          </h4>
+                          <p className="text-xs text-ucaep-ink/80 leading-relaxed whitespace-pre-line">
+                            {item.body}
+                          </p>
+
+                          {item.actionUrl && (
+                            <p className="text-[11px] text-ucaep-green font-medium break-all">
+                              Bouton « {item.actionLabel || 'Ouvrir le lien'} » →{' '}
+                              <a
+                                href={item.actionUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                              >
+                                {item.actionUrl}
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {!submissionsStorageReady && (
               <div className="p-4 bg-amber-50 border border-amber-300 rounded-sm text-xs text-amber-900 leading-relaxed">
                 Les variables serveur <code className="font-mono font-bold">SUPABASE_URL</code> et{' '}
@@ -3428,6 +4064,169 @@ export function GestionPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ONGLET MESSAGES & DIFFICULTÉS CANDIDATS */}
+        {tab === 'messages' && (
+          <div className="space-y-6">
+            <div className="p-6 bg-white border border-ucaep-brown/15 rounded-sm space-y-5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-ucaep-brown/12 pb-4">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ucaep-green">
+                    Support candidats &amp; messagerie
+                  </p>
+                  <h2 className="font-serif text-2xl font-semibold text-ucaep-brown">
+                    Difficultés signalées sur /depot et messages de contact
+                  </h2>
+                  <p className="text-xs text-ucaep-ink/75 leading-relaxed">
+                    Retrouvez ici toutes les demandes envoyées depuis le bouton « Signaler une difficulté » sur l&apos;espace de dépôt ainsi que les messages de la page Contact.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadOverview()}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper disabled:opacity-50 whitespace-nowrap shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>Actualiser</span>
+                </button>
+              </div>
+
+              {contactActionError && (
+                <div
+                  role="alert"
+                  className="p-3.5 bg-red-50 border border-red-300 rounded-sm text-xs text-red-900 flex items-start gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{contactActionError}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 tabular-nums">
+                {(
+                  [
+                    { id: 'all', label: `Tout (${contactStats.total})` },
+                    { id: 'depot', label: `Difficultés dépôt (${contactStats.depotTotal})` },
+                    { id: 'non_lu', label: `Non lus (${contactStats.unread})` },
+                    { id: 'traite', label: `Traités (${contactStats.traite})` },
+                  ] as const
+                ).map((flt) => (
+                  <button
+                    key={flt.id}
+                    type="button"
+                    onClick={() => setContactFilter(flt.id)}
+                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-sm border transition-colors whitespace-nowrap shrink-0 ${
+                      contactFilter === flt.id
+                        ? 'bg-ucaep-brown text-ucaep-paper border-ucaep-brown'
+                        : 'bg-ucaep-paper/50 text-ucaep-brown border-ucaep-brown/20 hover:border-ucaep-gold'
+                    }`}
+                  >
+                    {flt.label}
+                  </button>
+                ))}
+              </div>
+
+              {filteredContacts.length === 0 ? (
+                <div className="p-8 bg-ucaep-paper/45 border border-ucaep-brown/12 rounded-sm text-sm text-ucaep-ink/70 text-center">
+                  Aucun message ou signalement dans cette catégorie pour le moment.
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredContacts.map((item) => {
+                    const isDepotReport = item.subject.startsWith('[Difficulté Dépôt');
+                    const isTreated = item.status === 'traite';
+                    const isBusy = contactSavingId === item.id;
+                    const mailSubject = encodeURIComponent(`Re: ${item.subject} — Concours UCAEP`);
+
+                    return (
+                      <article
+                        key={item.id}
+                        className={`p-5 border rounded-sm space-y-3 ${
+                          isTreated
+                            ? 'bg-ucaep-paper/40 border-ucaep-brown/12'
+                            : 'bg-white border-ucaep-gold/45'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 font-semibold border rounded-sm ${
+                                  isDepotReport
+                                    ? 'bg-amber-50 text-amber-950 border-amber-300'
+                                    : 'bg-ucaep-paper text-ucaep-brown border-ucaep-brown/20'
+                                }`}
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>
+                                  {isDepotReport ? 'Difficulté dépôt' : 'Contact général'}
+                                </span>
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 font-semibold border rounded-sm ${
+                                  isTreated
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-red-50 text-red-900 border-red-300'
+                                }`}
+                              >
+                                {isTreated ? 'Traité' : 'Non lu'}
+                              </span>
+                              <span className="text-ucaep-ink/60 tabular-nums">
+                                {formatFrenchDate(item.createdAt)}
+                              </span>
+                            </div>
+
+                            <h3 className="font-serif text-lg font-semibold text-ucaep-brown">
+                              {item.subject}
+                            </h3>
+                            <p className="text-xs text-ucaep-ink/75">
+                              De <strong>{item.name}</strong> ·{' '}
+                              <span className="font-mono">{item.email}</span>
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={`mailto:${item.email}?subject=${mailSubject}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper whitespace-nowrap shrink-0"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>Répondre par e-mail</span>
+                            </a>
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => handleToggleContactStatus(item)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors disabled:opacity-50 whitespace-nowrap shrink-0 ${
+                                isTreated
+                                  ? 'border border-ucaep-brown/25 bg-white text-ucaep-brown hover:bg-ucaep-paper'
+                                  : 'bg-ucaep-green text-ucaep-paper hover:bg-[#233d27]'
+                              }`}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>
+                                {isBusy
+                                  ? 'Mise à jour...'
+                                  : isTreated
+                                    ? 'Rouvrir (non lu)'
+                                    : 'Marquer comme traité'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 bg-ucaep-paper/55 border border-ucaep-brown/10 rounded-sm text-xs sm:text-sm text-ucaep-ink/88 leading-relaxed whitespace-pre-line">
+                          {item.message}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

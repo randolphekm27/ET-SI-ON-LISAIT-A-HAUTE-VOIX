@@ -179,16 +179,33 @@ export interface ContactPayload {
 
 export interface ContactMessageRecord extends ContactPayload {
   id: string;
+  status?: 'non_lu' | 'traite';
   createdAt: string;
 }
 
 export type SiteDisplayMode = 'multi_page' | 'phase_single_page';
+
+export type DepotResourceKind = 'info' | 'tool' | 'warning' | 'video_help';
+
+export interface DepotResourceItem {
+  id: string;
+  title: string;
+  body: string;
+  kind: DepotResourceKind;
+  actionLabel?: string;
+  actionUrl?: string;
+  pinned?: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface SiteDisplayConfig {
   mode: SiteDisplayMode;
   activePhaseId: string;
   customNotice?: string;
   externalForms?: Record<string, PhaseExternalFormConfig>;
+  depotResources?: DepotResourceItem[];
 }
 
 export interface PublicSiteConfigPayload {
@@ -203,4 +220,5 @@ export interface PublicSiteConfigPayload {
   }>;
   announcements: PublicAnnouncement[];
 }
+
 

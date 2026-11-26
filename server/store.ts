@@ -23,16 +23,22 @@ import {
 import {
   createAnnouncementViaSupabaseRest,
   createNewsViaSupabaseRest,
+  isContactStatusCheckError,
   isNetworkOrDnsError,
   isPgFallbackEligibleError,
+  isSafeHttpUrl,
   markPreferSupabaseRest,
   markRegistrationSyncedViaSupabaseRest,
+  normalizeContactStatusFromDb,
   parseSiteDisplayValue,
   readStoreViaSupabaseRest,
   saveContactViaSupabaseRest,
   saveRegistrationViaSupabaseRest,
   shouldUseSupabaseRestFallback,
+  TREATED_DB_STATUSES,
+  UNREAD_DB_STATUSES,
   updateAnnouncementViaSupabaseRest,
+  updateContactStatusViaSupabaseRest,
   updateNewsViaSupabaseRest,
   updatePhaseViaSupabaseRest,
   updateSettingsViaSupabaseRest,
@@ -55,6 +61,8 @@ import type {
   SubmissionKind,
   SubmissionStatus,
 } from '../src/types/competition';
+
+export { isSafeHttpUrl };
 
 export function normalizeSiteDisplayConfig(raw: unknown): SiteDisplayConfig {
   return parseSiteDisplayValue(raw);
@@ -676,6 +684,7 @@ export async function readStore(): Promise<StoreData> {
           email: c.email,
           subject: c.subject,
           message: c.message,
+          status: normalizeContactStatusFromDb(c.status),
           createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
         })),
         settings: {
@@ -2134,6 +2143,7 @@ export async function saveContactMessage(
       const record: ContactMessageRecord = {
         ...payload,
         id: crypto.randomUUID(),
+        status: 'non_lu',
         createdAt: new Date().toISOString(),
       };
       store.contacts.push(record);
@@ -2143,20 +2153,68 @@ export async function saveContactMessage(
 
   try {
     await ensureDbSeeded();
+    const recordId = crypto.randomUUID();
+    const createdDate = new Date();
+    let insertedRow: typeof contactMessagesTable.$inferSelect | undefined;
+
+    // 1) Essai sans préciser status pour laisser PostgreSQL appliquer son DEFAULT
+    try {
+      const rows = await db
+        .insert(contactMessagesTable)
+        .values({
+          id: recordId,
+          name: payload.name,
+          email: payload.email,
+          subject: payload.subject,
+          message: payload.message,
+          createdAt: createdDate,
+        })
+        .returning();
+      insertedRow = rows[0];
+    } catch (defaultErr) {
+      if (!isContactStatusCheckError(defaultErr)) {
+        throw defaultErr;
+      }
+      // 2) Repli sur les valeurs candidates si une contrainte CHECK existe sans DEFAULT compatible
+      let lastCheckErr: unknown = defaultErr;
+      for (const candidateStatus of UNREAD_DB_STATUSES) {
+        try {
+          const rows = await db
+            .insert(contactMessagesTable)
+            .values({
+              id: recordId,
+              name: payload.name,
+              email: payload.email,
+              subject: payload.subject,
+              message: payload.message,
+              status: candidateStatus,
+              createdAt: createdDate,
+            })
+            .returning();
+          insertedRow = rows[0];
+          break;
+        } catch (err) {
+          lastCheckErr = err;
+          if (!isContactStatusCheckError(err)) {
+            throw err;
+          }
+        }
+      }
+      if (!insertedRow) {
+        throw lastCheckErr;
+      }
+    }
+
     const record: ContactMessageRecord = {
       ...payload,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
+      id: insertedRow?.id || recordId,
+      status: normalizeContactStatusFromDb(insertedRow?.status),
+      createdAt:
+        insertedRow?.createdAt instanceof Date
+          ? insertedRow.createdAt.toISOString()
+          : createdDate.toISOString(),
     };
-    await db.insert(contactMessagesTable).values({
-      id: record.id,
-      name: record.name,
-      email: record.email,
-      subject: record.subject,
-      message: record.message,
-      status: 'non_lu',
-      createdAt: new Date(),
-    });
+
     withJsonStoreLock((store) => {
       store.contacts.push(record);
     }).catch(() => {});
@@ -2171,6 +2229,93 @@ export async function saveContactMessage(
     throw new Error("Impossible d'enregistrer votre message pour le moment.", {
       cause: error,
     });
+  }
+}
+
+export async function updateContactStatusRecord(
+  id: string,
+  status: 'non_lu' | 'traite',
+): Promise<ContactMessageRecord | null> {
+  if (shouldUseSupabaseRestFallback() || (!isCloudSqlConfigured() && isSupabaseAdminConfigured())) {
+    const updated = await updateContactStatusViaSupabaseRest(id, status);
+    if (updated && cachedStore) {
+      const idx = cachedStore.contacts.findIndex((c) => c.id === id);
+      if (idx >= 0) cachedStore.contacts[idx] = updated;
+    }
+    return updated;
+  }
+
+  if (!isCloudSqlConfigured()) {
+    return withJsonStoreLock((store) => {
+      const idx = store.contacts.findIndex((c) => c.id === id);
+      if (idx < 0) return null;
+      store.contacts[idx] = { ...store.contacts[idx], status };
+      if (cachedStore) {
+        const cIdx = cachedStore.contacts.findIndex((c) => c.id === id);
+        if (cIdx >= 0) cachedStore.contacts[cIdx] = store.contacts[idx];
+      }
+      return store.contacts[idx];
+    });
+  }
+
+  try {
+    await ensureDbSeeded();
+    const candidates = status === 'traite' ? TREATED_DB_STATUSES : UNREAD_DB_STATUSES;
+    let updatedRow: typeof contactMessagesTable.$inferSelect | undefined;
+    let foundAny = true;
+
+    for (const candidate of candidates) {
+      try {
+        const rows = await db
+          .update(contactMessagesTable)
+          .set({ status: candidate })
+          .where(eq(contactMessagesTable.id, id))
+          .returning();
+        if (rows.length === 0) {
+          foundAny = false;
+          break;
+        }
+        updatedRow = rows[0];
+        break;
+      } catch (err) {
+        if (!isContactStatusCheckError(err)) {
+          throw err;
+        }
+      }
+    }
+
+    if (!foundAny) return null;
+    if (!updatedRow) {
+      throw new Error('Impossible de mettre à jour ce statut dans la base.');
+    }
+
+    const mapped: ContactMessageRecord = {
+      id: updatedRow.id,
+      name: updatedRow.name,
+      email: updatedRow.email,
+      subject: updatedRow.subject,
+      message: updatedRow.message,
+      status: normalizeContactStatusFromDb(updatedRow.status),
+      createdAt:
+        updatedRow.createdAt instanceof Date
+          ? updatedRow.createdAt.toISOString()
+          : String(updatedRow.createdAt),
+    };
+    if (cachedStore) {
+      const idx = cachedStore.contacts.findIndex((c) => c.id === id);
+      if (idx >= 0) cachedStore.contacts[idx] = mapped;
+    }
+    withJsonStoreLock((store) => {
+      const idx = store.contacts.findIndex((c) => c.id === id);
+      if (idx >= 0) store.contacts[idx] = mapped;
+    }).catch(() => {});
+    return mapped;
+  } catch (error) {
+    if (isPgFallbackEligibleError(error) && isSupabaseAdminConfigured()) {
+      markPreferSupabaseRest();
+      return updateContactStatusViaSupabaseRest(id, status);
+    }
+    throw new Error('Impossible de mettre à jour ce message.', { cause: error });
   }
 }
 

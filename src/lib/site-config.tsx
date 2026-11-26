@@ -27,6 +27,7 @@ const DEFAULT_SITE_CONFIG: SiteDisplayConfig = {
   mode: 'multi_page',
   activePhaseId: 'phase-1',
   customNotice: '',
+  depotResources: [],
 };
 
 const CACHE_KEY = 'ucaep_site_config_v1';

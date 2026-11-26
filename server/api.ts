@@ -6,6 +6,7 @@ import {
   createAnnouncementRecord,
   createNewsRecord,
   isAnnouncementPublic,
+  isSafeHttpUrl,
   readStore,
   reconcileActiveExternalFormPhasesOnce,
   sanitizeAnnouncementForPublic,
@@ -14,6 +15,7 @@ import {
   saveContactMessage,
   saveRegistration,
   updateAnnouncementRecord,
+  updateContactStatusRecord,
   updateNewsRecord,
   updatePhaseRecord,
   updateSettingsRecord,
@@ -34,10 +36,13 @@ import {
   updateAdminSubmissionReview,
 } from './submissions.ts';
 import type {
+  DepotResourceItem,
+  DepotResourceKind,
   MediaAssetKey,
   NewsArticle,
   PublicationStatus,
   RegistrationPayload,
+  SiteDisplayConfig,
   SubmissionKind,
   SubmissionStatus,
 } from '../src/types/competition';
@@ -207,7 +212,11 @@ export function registerApiRoutes(app: express.Express) {
     try {
       await reconcileActiveExternalFormPhasesOnce().catch(() => {});
       const store = await readStore();
-      const siteConfig = normalizeSiteDisplayConfig(store.settings?.siteDisplay);
+      const rawSiteConfig = normalizeSiteDisplayConfig(store.settings?.siteDisplay);
+      const siteConfig: SiteDisplayConfig = {
+        ...rawSiteConfig,
+        depotResources: (rawSiteConfig.depotResources || []).filter((r) => r.active),
+      };
       const rawActive =
         store.phases.find((p) => p.id === siteConfig.activePhaseId) ||
         store.phases[0] ||
@@ -217,7 +226,7 @@ export function registerApiRoutes(app: express.Express) {
       const announcements = store.announcements
         .filter((a) => isAnnouncementPublic(a, now))
         .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
-        .slice(0, 6)
+        .slice(0, 10)
         .map(sanitizeAnnouncementForPublic);
 
       res.json({
@@ -458,6 +467,107 @@ export function registerApiRoutes(app: express.Express) {
     }
     return req.ip || 'unknown';
   };
+
+  // Public API: Candidate difficulty report from /depot
+  const SUPPORT_CATEGORY_LABELS: Record<string, string> = {
+    connexion: 'Connexion / Code UCAEP',
+    textes: 'Dépôt des textes',
+    video_compression: 'Vidéo > 100 Mo / Compression',
+    google_form: 'Accès Google Form vidéo',
+    autre: 'Autre difficulté',
+  };
+
+  app.post('/api/depot/support', async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        name?: string;
+        email?: string;
+        referenceCode?: string;
+        phaseId?: string;
+        category?: string;
+        message?: string;
+      };
+
+      enforceSubmissionRateLimit(extractClientIp(req), body.referenceCode);
+
+      const cleanName = (body.name || '').trim();
+      const cleanEmail = (body.email || '').trim();
+      const cleanRef = (body.referenceCode || '').trim().slice(0, 40);
+      const cleanPhaseId = ['phase-1', 'phase-2', 'phase-3'].includes(
+        (body.phaseId || '').trim(),
+      )
+        ? (body.phaseId || '').trim()
+        : '';
+      const rawCategory = (body.category || '').trim();
+      const categoryLabel = SUPPORT_CATEGORY_LABELS[rawCategory];
+      const cleanMessage = (body.message || '').trim();
+
+      if (cleanName.length < 2 || cleanName.length > 100) {
+        res.status(400).json({
+          error: 'Indiquez votre nom complet (entre 2 et 100 caractères).',
+        });
+        return;
+      }
+      if (!isValidEmail(cleanEmail)) {
+        res.status(400).json({ error: 'Cette adresse e-mail ne semble pas correcte.' });
+        return;
+      }
+      if (!categoryLabel) {
+        res.status(400).json({
+          error: 'Sélectionnez la nature de la difficulté rencontrée.',
+        });
+        return;
+      }
+      if (cleanMessage.length < 10 || cleanMessage.length > 2600) {
+        res.status(400).json({
+          error:
+            'Décrivez votre difficulté en au moins 10 caractères (maximum 2600 caractères).',
+        });
+        return;
+      }
+
+      const subject = `[Difficulté Dépôt · ${categoryLabel}]`.slice(0, 150);
+      const metaParts = [`Catégorie : ${categoryLabel}`];
+      if (cleanRef) metaParts.push(`Code UCAEP : ${cleanRef}`);
+      if (cleanPhaseId) {
+        metaParts.push(
+          `Phase : ${
+            cleanPhaseId === 'phase-1'
+              ? 'Phase 01 — La Plume'
+              : cleanPhaseId === 'phase-2'
+                ? 'Phase 02 — La Connaissance'
+                : 'Phase 03 — La Finale'
+          }`,
+        );
+      }
+
+      const fullMessage = `${metaParts.join(' · ')}\n\n${cleanMessage}`.slice(0, 3000);
+
+      const saved = await saveContactMessage({
+        name: cleanName,
+        email: cleanEmail,
+        subject,
+        message: fullMessage,
+      });
+
+      res.status(201).json({ saved: true, id: saved.id });
+    } catch (error) {
+      if (isSubmissionHttpError(error)) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      const err = error as Error & { statusCode?: number };
+      if (err.statusCode === 503) {
+        res.status(503).json({ error: err.message });
+        return;
+      }
+      res.status(500).json({
+        error:
+          err.message ||
+          "Votre signalement n'a pas pu être transmis pour le moment. Réessayez dans un instant.",
+      });
+    }
+  });
 
   app.get('/api/submissions/config', (_req, res) => {
     res.json(getSubmissionsPublicConfig());
@@ -1004,6 +1114,128 @@ export function registerApiRoutes(app: express.Express) {
       const err = error as Error;
       res.status(500).json({
         error: err.message || "Impossible d'enregistrer le lien Google Form.",
+      });
+    }
+  });
+
+  // Organizer CMS: Manage Depot Information Cards & Useful Tool Links
+  app.patch('/api/admin/depot-resources', requireAdmin, async (req, res) => {
+    try {
+      const body = (req.body || {}) as {
+        resources?: Array<Partial<DepotResourceItem>>;
+      };
+
+      if (!Array.isArray(body.resources)) {
+        res.status(400).json({ error: 'Liste de ressources invalide.' });
+        return;
+      }
+      if (body.resources.length > 30) {
+        res.status(400).json({
+          error: 'Maximum 30 cartes d’information autorisées dans l’espace dépôt.',
+        });
+        return;
+      }
+
+      const allowedKinds: DepotResourceKind[] = [
+        'info',
+        'tool',
+        'warning',
+        'video_help',
+      ];
+      const nowIso = new Date().toISOString();
+      const validated: DepotResourceItem[] = [];
+
+      for (const raw of body.resources) {
+        if (!raw || typeof raw !== 'object') continue;
+        const title = (raw.title || '').trim().slice(0, 140);
+        const textBody = (raw.body || '').trim().slice(0, 1500);
+        if (!title || !textBody) {
+          res.status(400).json({
+            error:
+              'Chaque note d’information doit comporter un titre et un message explicatif.',
+          });
+          return;
+        }
+        const actionUrl = (raw.actionUrl || '').trim().slice(0, 1000);
+        if (actionUrl && !isSafeHttpUrl(actionUrl)) {
+          res.status(400).json({
+            error:
+              'Chaque lien de bouton doit être une URL valide commençant par https:// ou http://.',
+          });
+          return;
+        }
+        const actionLabel = (raw.actionLabel || '').trim().slice(0, 80);
+        const kind: DepotResourceKind = allowedKinds.includes(
+          raw.kind as DepotResourceKind,
+        )
+          ? (raw.kind as DepotResourceKind)
+          : 'info';
+
+        validated.push({
+          id:
+            typeof raw.id === 'string' && raw.id.trim()
+              ? raw.id.trim().slice(0, 80)
+              : crypto.randomUUID(),
+          title,
+          body: textBody,
+          kind,
+          ...(actionUrl
+            ? { actionUrl, actionLabel: actionLabel || 'Ouvrir le lien' }
+            : {}),
+          pinned: Boolean(raw.pinned),
+          active: raw.active !== false,
+          createdAt:
+            typeof raw.createdAt === 'string' && raw.createdAt.trim()
+              ? raw.createdAt
+              : nowIso,
+          updatedAt: nowIso,
+        });
+      }
+
+      const existingStore = await readStore();
+      const existingConfig = normalizeSiteDisplayConfig(
+        existingStore.settings?.siteDisplay,
+      );
+      const nextConfig = normalizeSiteDisplayConfig({
+        ...existingConfig,
+        depotResources: validated,
+      });
+      const saved = await updateSiteDisplayRecord(nextConfig);
+      res.json({
+        siteDisplay: saved,
+        depotResources: saved.depotResources || [],
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        error:
+          err.message ||
+          "Impossible d'enregistrer les informations de l'espace dépôt.",
+      });
+    }
+  });
+
+  // Organizer CMS: Update Contact / Candidate Difficulty Status
+  app.patch('/api/admin/contacts/:id', requireAdmin, async (req, res) => {
+    try {
+      const status = req.body?.status;
+      if (status !== 'non_lu' && status !== 'traite') {
+        res.status(400).json({ error: 'Statut de message invalide.' });
+        return;
+      }
+      const updated = await updateContactStatusRecord(
+        String(req.params.id),
+        status,
+      );
+      if (!updated) {
+        res.status(404).json({ error: 'Message introuvable.' });
+        return;
+      }
+      res.json({ contact: updated });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        error: err.message || 'Impossible de mettre à jour le statut du message.',
       });
     }
   });
